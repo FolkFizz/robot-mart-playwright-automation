@@ -29,10 +29,8 @@ export class ShopPage {
     await expect(card).toBeVisible({ timeout: 15000 });
     await card.scrollIntoViewIfNeeded();
     const productLink = card.locator('a').first();
-    await Promise.all([
-      this.page.waitForURL(/\/product\//, { timeout: 10000 }),
-      productLink.click(),
-    ]);
+    await productLink.click({ force: true });
+    await expect(this.page).toHaveURL(/\/product\//, { timeout: 10000 });
   }
 
   async goToPage(pageNumber: number): Promise<void> {

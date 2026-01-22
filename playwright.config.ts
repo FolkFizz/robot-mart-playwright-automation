@@ -33,35 +33,33 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     testIdAttribute: 'data-testid',
-    storageState: 'playwright/.auth/user.json',
   },
 
   /* Configure projects for major browsers */
   projects: [
     {
       name: 'setup',
-      testMatch: 'tests/auth.setup.ts',
+      testMatch: /auth\.setup\.ts/,
       use: {
         ...devices['Desktop Chrome'],
-        storageState: undefined,
       },
     },
     {
       name: 'Desktop Chrome',
       dependencies: ['setup'],
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
     },
 
     /* Test against mobile viewports. */
     {
       name: 'Mobile Chrome',
       dependencies: ['setup'],
-      use: { ...devices['Pixel 5'] },
+      use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
     },
     {
       name: 'Mobile Safari',
       dependencies: ['setup'],
-      use: { ...devices['iPhone 12'] },
+      use: { ...devices['iPhone 12'], storageState: 'playwright/.auth/user.json' },
     },
 
     /* Test against branded browsers. */
