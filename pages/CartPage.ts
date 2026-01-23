@@ -6,17 +6,17 @@ export class CartPage {
   readonly checkoutButton: Locator;
   readonly couponInput: Locator;
   readonly applyCouponButton: Locator;
-  readonly removeCouponButton: Locator;
   readonly discountValue: Locator;
   readonly grandTotal: Locator;
+  readonly body: Locator;
 
   constructor(page: Page) {
     this.page = page;
+    this.body = page.locator('body');
     this.cartItemNames = page.locator('[data-testid^="cart-item-name-"]');
     this.checkoutButton = page.getByTestId('cart-checkout');
     this.couponInput = page.getByTestId('cart-coupon-input');
     this.applyCouponButton = page.getByTestId('cart-apply-coupon');
-    this.removeCouponButton = page.getByTestId('cart-remove-coupon');
     this.discountValue = page.getByTestId('cart-discount');
     this.grandTotal = page.getByTestId('cart-grand-total');
   }
@@ -39,11 +39,37 @@ export class CartPage {
     await this.checkoutButton.click();
   }
 
-  async applyCoupon(code: string): Promise<void> {
-    if (await this.removeCouponButton.isVisible()) {
-      await this.removeCouponButton.click();
-      await expect(this.applyCouponButton).toBeVisible({ timeout: 15000 });
+  async clearCart(): Promise<void> {
+    await this.navigate();
+
+    const clearAllButton = this.page.getByTestId('cart-clear');
+    const removeButtons = this.page.locator('[data-testid^="cart-remove-"]');
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      if (await clearAllButton.isVisible()) {
+        await Promise.all([
+          this.page.waitForLoadState('domcontentloaded'),
+          clearAllButton.click(),
+        ]);
+      } else {
+        const removeCount = await removeButtons.count();
+        if (removeCount === 0) {
+          break;
+        }
+        await Promise.all([
+          this.page.waitForLoadState('domcontentloaded'),
+          removeButtons.first().click(),
+        ]);
+      }
     }
+
+    await expect(this.cartItemNames).toHaveCount(0);
+  }
+
+  async applyCoupon(code: string): Promise<void> {
+    await expect(this.body).not.toHaveAttribute('data-loading', 'true', { timeout: 15000 });
+    await expect(this.applyCouponButton).toBeVisible({ timeout: 15000 });
+    await expect(this.applyCouponButton).not.toBeDisabled();
 
     const beforeTotal = await this.readMoney(this.grandTotal);
 
@@ -53,6 +79,7 @@ export class CartPage {
       this.applyCouponButton.click(),
     ]);
 
+    await expect(this.body).not.toHaveAttribute('data-loading', 'true', { timeout: 15000 });
     await expect(this.discountValue).toBeVisible({ timeout: 15000 });
     const afterTotal = await this.readMoney(this.grandTotal);
 

@@ -8,9 +8,11 @@ export class ProductDetailPage {
   readonly qtyIncreaseButton: Locator;
   readonly qtyDecreaseButton: Locator;
   readonly addToCartButton: Locator;
+  readonly body: Locator;
 
   constructor(page: Page) {
     this.page = page;
+    this.body = page.locator('body');
     this.title = page.getByTestId('product-title');
     this.price = page.getByTestId('product-price');
     this.qtyInput = page.getByTestId('product-qty');
@@ -50,10 +52,10 @@ export class ProductDetailPage {
 
   async addToCart(): Promise<void> {
     await expect(this.addToCartButton).toBeVisible({ timeout: 15000 });
-    if (await this.isAddToCartDisabled()) {
-      throw new Error('Add to Cart is disabled (likely admin view).');
-    }
+    await expect(this.body).not.toHaveAttribute('data-loading', 'true', { timeout: 15000 });
+    await expect(this.addToCartButton).not.toBeDisabled();
     await this.addToCartButton.click();
+    await expect(this.body).not.toHaveAttribute('data-loading', 'true', { timeout: 15000 });
   }
 
   async isAddToCartDisabled(): Promise<boolean> {

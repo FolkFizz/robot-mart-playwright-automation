@@ -33,6 +33,40 @@ export class ShopPage {
     await expect(this.page).toHaveURL(/\/product\//, { timeout: 10000 });
   }
 
+  async pickFirstAvailableProduct(): Promise<string> {
+    await expect(this.productCards.first()).toBeVisible({ timeout: 15000 });
+
+    const totalCards = await this.productCards.count();
+    for (let index = 0; index < totalCards; index += 1) {
+      const card = this.productCards.nth(index);
+      const cardText = (await card.innerText()).toLowerCase();
+      if (cardText.includes('out of stock')) {
+        continue;
+      }
+
+      const addToCartButton = card.locator('button:has-text("Add to Cart")');
+      if (await addToCartButton.count()) {
+        if (await addToCartButton.first().isDisabled()) {
+          continue;
+        }
+      }
+
+      const nameLocator = card.locator('.product-name');
+      const productName = (await nameLocator.textContent())?.trim();
+      if (!productName) {
+        continue;
+      }
+
+      await card.scrollIntoViewIfNeeded();
+      const productLink = card.locator('a').first();
+      await productLink.click({ force: true });
+      await expect(this.page).toHaveURL(/\/product\//, { timeout: 10000 });
+      return productName;
+    }
+
+    throw new Error('No available products found (all appear out of stock).');
+  }
+
   async goToPage(pageNumber: number): Promise<void> {
     const target = this.page.locator('.pagination .btn-page', { hasText: String(pageNumber) }).first();
     if (await target.count()) {
