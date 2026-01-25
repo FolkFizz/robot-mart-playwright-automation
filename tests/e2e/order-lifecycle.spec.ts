@@ -191,7 +191,7 @@ test('Order lifecycle: user purchase -> notification -> admin verification', asy
   test.slow();
 
   const baseURL = test.info().project.use?.baseURL as string | undefined;
-  const resolvedBaseURL = baseURL || 'http://localhost:3000';
+  const resolvedBaseURL = baseURL || 'https://robot-store-sandbox.onrender.com';
 
   const adminContext = await browser.newContext({
     baseURL: resolvedBaseURL,
@@ -219,3 +219,4 @@ test('Order lifecycle: user purchase -> notification -> admin verification', asy
     await Promise.all([adminContext.close(), userContext.close()]);
   }
 });
+

@@ -49,7 +49,7 @@ test('Customer successfully purchases a product', async ({ page, request }) => {
   await expect(page.getByTestId('checkout-form')).toBeVisible({ timeout: 15000 });
 
   // Step 9: Fill Stripe Payment Element (test mode) using snapshot-proven locators.
-  await page.getByTestId('checkout-name').fill('Robot Mart QA User');
+  await page.getByTestId('checkout-name').fill('Robot Store Sandbox QA User');
   await page.getByTestId('checkout-email').fill('user@robotmart.test');
 
   await expect(page.getByTestId('payment-element')).toBeVisible({ timeout: 15000 });
@@ -75,3 +75,4 @@ test('Customer successfully purchases a product', async ({ page, request }) => {
   await expect(page).toHaveURL(/\/order\/success/, { timeout: 30000 });
   await expect(page.getByTestId('order-success-message')).toHaveText(/payment successful/i);
 });
+
