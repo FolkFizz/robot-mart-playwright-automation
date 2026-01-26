@@ -45,18 +45,18 @@ export default defineConfig({
       },
     },
     {
-      name: 'Desktop Chrome',
+      name: 'chrome',
       dependencies: ['setup'],
       use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
     },
 
     {
-      name: 'Desktop Firefox',
+      name: 'firefox',
       dependencies: ['setup'],
       use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
     },
     {
-      name: 'Desktop Safari',
+      name: 'safari',
       dependencies: ['setup'],
       use: { ...devices['Desktop Safari'], storageState: 'playwright/.auth/user.json' },
     },
