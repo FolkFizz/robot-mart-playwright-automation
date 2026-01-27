@@ -4,7 +4,7 @@ test.describe('Product API', () => {
 
   test('POST /api/products/reset-stock should reset stock with correct key', async ({ request }) => {
     const res = await request.post('/api/products/reset-stock', {
-      headers: { 'X-RESET-KEY': 'resetstock2026' }
+      headers: { 'X-RESET-KEY': process.env.RESET_KEY || '' }
     });
     expect(res.ok()).toBeTruthy();
     const body = await res.json();

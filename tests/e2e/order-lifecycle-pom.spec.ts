@@ -4,7 +4,7 @@ import { generateUser } from '../helpers/user-helper';
 test('E2E: Order Lifecycle (POM)', async ({ page, loginPage, productPage, checkoutPage, adminPage, browser }) => {
   // 1. Setup Data (Reset Stock)
   await page.request.post('/api/products/reset-stock', {
-    headers: { 'X-RESET-KEY': 'resetstock2026' }
+    headers: { 'X-RESET-KEY': process.env.RESET_KEY || '' }
   });
 
   // 2. Register & Login
