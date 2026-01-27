@@ -1,25 +1,30 @@
-import { Page, Locator } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
+import { BasePage } from './BasePage';
 
-export class LoginPage {
-  readonly page: Page;
-  readonly usernameInput: Locator;
-  readonly passwordInput: Locator;
-  readonly loginButton: Locator;
+export class LoginPage extends BasePage {
+  readonly userInput: Locator;
+  readonly passInput: Locator;
+  readonly loginBtn: Locator;
+  readonly registerLink: Locator;
 
   constructor(page: Page) {
-    this.page = page;
-    this.usernameInput = page.getByTestId('login-username');
-    this.passwordInput = page.getByTestId('login-password');
-    this.loginButton = page.getByTestId('login-submit');
+    super(page);
+    this.userInput = page.getByTestId('login-username');
+    this.passInput = page.getByTestId('login-password');
+    this.loginBtn = page.getByTestId('login-submit');
   }
 
-  async navigate(): Promise<void> {
-    await this.page.goto('/login', { waitUntil: 'domcontentloaded' });
+  async navigate() {
+    await this.page.goto('/login');
   }
 
-  async login(user: string, pass: string): Promise<void> {
-    await this.usernameInput.fill(user);
-    await this.passwordInput.fill(pass);
-    await this.loginButton.click();
+  async login(username: string, pass: string) {
+    await this.userInput.fill(username);
+    await this.passInput.fill(pass);
+    await this.loginBtn.click();
+  }
+
+  async verifyLoggedIn() {
+    await expect(this.page.getByTestId('nav-account-menu')).toBeVisible();
   }
 }

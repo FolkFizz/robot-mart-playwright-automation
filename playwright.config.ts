@@ -54,6 +54,7 @@ export default defineConfig({
       name: 'firefox',
       dependencies: ['setup'],
       use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
+      retries: 2,
     },
     {
       name: 'safari',
