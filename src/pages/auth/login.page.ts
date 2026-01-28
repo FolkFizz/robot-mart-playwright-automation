@@ -1,12 +1,13 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Page, Locator } from '@playwright/test';
 import { BasePage } from '../base.page';
 
 export class LoginPage extends BasePage {
+  // Selectors from login.ejs
   readonly usernameInput: Locator;
   readonly passwordInput: Locator;
   readonly loginButton: Locator;
-  readonly successMessage: Locator;
   readonly errorMessage: Locator;
+  readonly successMessage: Locator;
   readonly forgotPasswordLink: Locator;
   readonly registerLink: Locator;
 
@@ -15,8 +16,8 @@ export class LoginPage extends BasePage {
     this.usernameInput = page.getByTestId('login-username');
     this.passwordInput = page.getByTestId('login-password');
     this.loginButton = page.getByTestId('login-submit');
-    this.successMessage = page.locator('.success');
     this.errorMessage = page.locator('.error');
+    this.successMessage = page.locator('.success');
     this.forgotPasswordLink = page.getByRole('link', { name: 'Forgot Password?' });
     this.registerLink = page.getByRole('link', { name: 'Create an account' });
   }
@@ -25,20 +26,25 @@ export class LoginPage extends BasePage {
     await this.page.goto('/login');
   }
 
-  async loginAs(username: string, pass: string) {
+  async login(username: string, password: string) {
     await this.usernameInput.fill(username);
-    await this.passwordInput.fill(pass);
+    await this.passwordInput.fill(password);
     await this.loginButton.click();
   }
 
-  async verifyLoginSuccess() {
-      // Assuming redirect or success message
-      // If redirect:
-      // await this.page.waitForURL('/dashboard'); 
-      // OR check for some element. 
-      // Based on EJS, there is a likely redirect.
-      // But for now, we will wait for url or check state.
-      // EJS has <div class="success"> if rendered? 
-      // Usually redirects to home or dashboard.
+  async isErrorVisible(): Promise<boolean> {
+    return await this.errorMessage.isVisible();
+  }
+
+  async getErrorText(): Promise<string> {
+    return await this.errorMessage.textContent() || '';
+  }
+
+  async clickForgotPassword() {
+    await this.forgotPasswordLink.click();
+  }
+
+  async clickRegisterLink() {
+    await this.registerLink.click();
   }
 }
