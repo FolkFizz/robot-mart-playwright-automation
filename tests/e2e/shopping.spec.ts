@@ -1,78 +1,65 @@
-import { test, expect } from '@playwright/test';
-import { ShopPage } from '../../pages/ShopPage';
-import { ProductDetailPage } from '../../pages/ProductDetailPage';
-import { CartPage } from '../../pages/CartPage';
+import { test, expect } from '../fixtures/pom';
 
+// Use pre-authenticated user session
 test.use({ storageState: 'playwright/.auth/user.json' });
 
-test('Customer successfully purchases a product', async ({ page, request }) => {
-
+test('Customer successfully purchases a product', async ({ 
+  page, 
+  request,
+  checkoutPage  // Use CheckoutPage from POM fixture
+}) => {
   test.slow();
 
-  // Step 1: Auth is handled via storageState for a regular user.
-  const shopPage = new ShopPage(page);
-  const productPage = new ProductDetailPage(page);
-  const cartPage = new CartPage(page);
-
-  // Step 0: Reset state via testability APIs.
+  // Step 0: Reset state via testability APIs
   const resetCart = await request.delete('/api/cart/reset');
   expect(resetCart.ok(), 'Expected cart reset to succeed').toBeTruthy();
-  const resetProducts = await request.post('/api/products/reset');
+  const resetProducts = await request.post('/api/products/reset-stock', {
+    headers: { 'X-RESET-KEY': process.env.RESET_KEY || '' }
+  });
   expect(resetProducts.ok(), 'Expected product reset to succeed').toBeTruthy();
 
-  // Step 2: Navigate to the Shop page.
-  await shopPage.navigate();
-
-  // Step 3: Search and open a specific product (stock guaranteed by reset).
+  // Step 1: Navigate to Shop and search for product
+  await page.goto('/');
   const productName = 'Rusty-Bot 101';
-  await shopPage.searchProduct(productName);
-  await shopPage.openProductByName(productName);
+  await page.locator('input[name="q"][type="text"]').fill(productName);
+  await page.locator('input[name="q"][type="text"]').press('Enter');
 
-  // Step 4: Verify product detail page title.
-  await expect(productPage.title).toContainText(productName);
+  // Step 2: Select and open product
+  const productCard = page.locator('[data-testid^="product-card-"]')
+    .filter({ has: page.getByText(productName) })
+    .first();
+  await productCard.locator('a').first().click();
 
-  // Step 5: Add the product to the cart.
-  await productPage.addToCart();
+  // Step 3: Verify product page and add to cart
+  await expect(page.getByTestId('product-title')).toContainText(productName);
+  await page.getByTestId('product-add-to-cart').click();
+  await page.waitForLoadState('networkidle');
 
-  // Step 6: Verify a success indicator (cart badge after reload).
+  // Step 4: Verify cart badge updated
   await page.reload();
   const cartBadge = page.getByTestId('nav-cart-count');
   await expect(cartBadge).toHaveText('1');
 
-  // Step 7: Go to the cart and apply coupon.
-  await cartPage.navigate();
-  await cartPage.expectItemInCart(productName);
-  await cartPage.applyCoupon('ROBOT99');
+  // Step 5: Navigate to cart and verify item
+  await page.goto('/cart');
+  await expect(page.locator('[data-testid^="cart-item-name-"]').filter({ hasText: productName })).toBeVisible();
 
-  // Step 8: Proceed to checkout.
-  await cartPage.proceedToCheckout();
+  // Step 6: Apply coupon
+  await page.getByTestId('cart-coupon-input').fill('ROBOT99');
+  await page.getByTestId('cart-apply-coupon').click();
+  await expect(page.getByTestId('cart-discount')).toBeVisible({ timeout: 15000 });
+
+  // Step 7: Proceed to checkout
+  await page.getByTestId('cart-checkout').click();
   await expect(page.getByTestId('checkout-form')).toBeVisible({ timeout: 15000 });
 
-  // Step 9: Fill Stripe Payment Element (test mode) using snapshot-proven locators.
-  await page.getByTestId('checkout-name').fill('Robot Store Sandbox QA User');
-  await page.getByTestId('checkout-email').fill('user@robotmart.test');
+  // Step 8: Fill checkout form using CheckoutPage POM
+  await checkoutPage.fillPaymentDetails('Robot Store Sandbox QA User', 'user@robotmart.test');
+  
+  // Step 9: Submit order using CheckoutPage POM with built-in retry logic
+  await checkoutPage.submitOrder();
 
-  await expect(page.getByTestId('payment-element')).toBeVisible({ timeout: 15000 });
-
-  const stripeFrame = page.frameLocator('iframe[src*="stripe"]').first();
-
-  const cardInput = stripeFrame.getByPlaceholder('1234 1234 1234 1234');
-  await expect(cardInput).toBeVisible({ timeout: 20000 });
-  await cardInput.fill('4242424242424242');
-
-  const expInput = stripeFrame.getByPlaceholder('MM / YY');
-  await expect(expInput).toBeVisible({ timeout: 20000 });
-  await expInput.fill('12 / 30');
-
-  const cvcInput = stripeFrame.getByPlaceholder('CVC');
-  await expect(cvcInput).toBeVisible({ timeout: 20000 });
-  await cvcInput.fill('123');
-  await cvcInput.press('Tab');
-  await page.waitForTimeout(1000);
-
-  // Step 10: Submit payment and verify order success page.
-  await page.getByTestId('checkout-submit').click();
-  await expect(page).toHaveURL(/\/order\/success/, { timeout: 30000 });
+  // Step 10: Verify order success
   await expect(page.getByTestId('order-success-message')).toHaveText(/payment successful/i);
 });
 

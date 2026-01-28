@@ -8,7 +8,8 @@ export class ProductPage extends BasePage {
 
   async searchProduct(name: string) {
     // Note: Search box might not be on every page, but usually in navbar
-    const searchInput = this.page.locator('input[name="q"]');
+    // Use type="text" to avoid selecting hidden inputs
+    const searchInput = this.page.locator('input[name="q"][type="text"]');
     await searchInput.fill(name);
     await searchInput.press('Enter');
   }

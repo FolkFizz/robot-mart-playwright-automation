@@ -9,7 +9,7 @@ export const generateUser = (): TestUser => {
   const rand = Math.floor(Math.random() * 10000);
   return {
     username: `user_${stamp}_${rand}`,
-    email: `test_${stamp}_${rand}@robotmart.local`,
+    email: `test_${stamp}_${rand}@robot.test`,
     password: `Robot#${rand}123`,
   };
 };

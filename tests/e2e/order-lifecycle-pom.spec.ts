@@ -1,5 +1,6 @@
 import { test, expect } from '../fixtures/pom';
 import { generateUser } from '../helpers/user-helper';
+import { AdminPage } from '../../pages/AdminPage';
 
 test('E2E: Order Lifecycle (POM)', async ({ page, loginPage, productPage, checkoutPage, adminPage, browser }) => {
   // 1. Setup Data (Reset Stock)
@@ -8,8 +9,8 @@ test('E2E: Order Lifecycle (POM)', async ({ page, loginPage, productPage, checko
   });
 
   // 2. Register & Login
-  const user = generateUser();
-  await loginPage.navigate();
+  const user = generateUser(); // from helpers/user-helper.ts
+  await loginPage.navigate(); // from LoginPage.ts
   // Register flow isn't in POM yet, keeping inline or adding to LoginPage?
   // Ideally add register to LoginPage or AuthPage. For now, inline register to keep it simple or expand LoginPage.
   // Let's expand LoginPage to include register for cleaner code.
@@ -42,10 +43,10 @@ test('E2E: Order Lifecycle (POM)', async ({ page, loginPage, productPage, checko
 
   // Create new context for Admin to avoid session conflict
   const adminContext = await browser.newContext({ storageState: 'playwright/.auth/admin.json' });
-  const adminPageObj = new (await import('../../pages/AdminPage')).AdminPage(await adminContext.newPage());
+  const adminPageInstance = new AdminPage(await adminContext.newPage());
   
   if (orderId) {
-     await adminPageObj.verifyOrder(orderId);
+     await adminPageInstance.verifyOrder(orderId);
   }
 
   await adminContext.close();
