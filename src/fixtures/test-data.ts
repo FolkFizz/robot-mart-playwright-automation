@@ -1,15 +1,11 @@
 import { test as base, expect } from '@playwright/test';
 import { LoginPage } from '../pages/auth/login.page';
 import { RegisterPage } from '../pages/auth/register.page';
-import { CatalogPage } from '../pages/shop/catalog.page';
-import { ProductDetailPage } from '../pages/shop/product-detail.page';
-import { CartPage } from '../pages/shop/cart.page';
+import { CartPage } from '../pages/shopping/cart.page';
 
 type MyFixtures = {
   loginPage: LoginPage;
   registerPage: RegisterPage;
-  catalogPage: CatalogPage;
-  productDetailPage: ProductDetailPage;
   cartPage: CartPage;
   authedPage: LoginPage;
 };
@@ -25,16 +21,6 @@ export const test = base.extend<MyFixtures>({
     await use(registerPage);
   },
 
-  catalogPage: async ({ page }, use) => {
-    const catalogPage = new CatalogPage(page);
-    await use(catalogPage);
-  },
-
-  productDetailPage: async ({ page }, use) => {
-    const productDetailPage = new ProductDetailPage(page);
-    await use(productDetailPage);
-  },
-
   cartPage: async ({ page }, use) => {
     const cartPage = new CartPage(page);
     await use(cartPage);
@@ -46,7 +32,6 @@ export const test = base.extend<MyFixtures>({
     await loginPage.goto();
     
     // Use default test credentials
-    // TODO: Replace with API-based user creation
     const username = process.env.TEST_USERNAME || 'testuser';
     const password = process.env.TEST_PASSWORD || 'password123';
     
