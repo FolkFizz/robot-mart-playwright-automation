@@ -1,15 +1,25 @@
 import { test, expect } from '@playwright/test';
+import { CatalogPage } from '../../../pages/shopping/product-list.page';
 
 test.describe('Public - Search and Filter', () => {
-  test('should search for products', async ({ page }) => {
-    await page.goto('/');
+  test('should search for products and find results', async ({ page }) => {
+    const catalogPage = new CatalogPage(page);
+    await catalogPage.goto();
     
-    const searchInput = page.locator('input[name="q"]');
-    await searchInput.fill('robot');
-    await searchInput.press('Enter');
+    await catalogPage.search('robot');
     
-    await page.waitForLoadState('networkidle');
-    const products = page.locator('[data-testid^="product-card-"]');
-    await expect(products.first()).toBeVisible();
+    const productCount = await catalogPage.getProductCount();
+    expect(productCount).toBeGreaterThan(0);
+  });
+
+  test('should show no results for a nonsense search', async ({ page }) => {
+    const catalogPage = new CatalogPage(page);
+    await catalogPage.goto();
+
+    await catalogPage.search('__nonsense_search_term__');
+
+    await expect(catalogPage.emptyResultsMessage).toBeVisible();
+    const productCount = await catalogPage.getProductCount();
+    expect(productCount).toBe(0);
   });
 });
