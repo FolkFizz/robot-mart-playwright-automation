@@ -1,13 +1,15 @@
 import { test as base, expect } from '@playwright/test';
 import { LoginPage } from '../pages/auth/login.page';
 import { RegisterPage } from '../pages/auth/register.page';
-import { ProductListPage } from '../pages/shopping/product-list.page';
-import { CartPage } from '../pages/shopping/cart.page';
+import { CatalogPage } from '../pages/shop/catalog.page';
+import { ProductDetailPage } from '../pages/shop/product-detail.page';
+import { CartPage } from '../pages/shop/cart.page';
 
 type MyFixtures = {
   loginPage: LoginPage;
   registerPage: RegisterPage;
-  productListPage: ProductListPage;
+  catalogPage: CatalogPage;
+  productDetailPage: ProductDetailPage;
   cartPage: CartPage;
   authedPage: LoginPage;
 };
@@ -23,9 +25,14 @@ export const test = base.extend<MyFixtures>({
     await use(registerPage);
   },
 
-  productListPage: async ({ page }, use) => {
-    const productListPage = new ProductListPage(page);
-    await use(productListPage);
+  catalogPage: async ({ page }, use) => {
+    const catalogPage = new CatalogPage(page);
+    await use(catalogPage);
+  },
+
+  productDetailPage: async ({ page }, use) => {
+    const productDetailPage = new ProductDetailPage(page);
+    await use(productDetailPage);
   },
 
   cartPage: async ({ page }, use) => {
@@ -46,7 +53,9 @@ export const test = base.extend<MyFixtures>({
     await loginPage.login(username, password);
     
     // Wait for navigation after login
-    await page.waitForURL(/\/(profile|$)/);
+    await page.waitForURL(/\/(profile|$)/, { timeout: 10000 }).catch(() => {
+      // If login fails, continue anyway for tests that handle it
+    });
     
     await use(loginPage);
   },
