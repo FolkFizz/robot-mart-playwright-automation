@@ -1,48 +1,62 @@
 import { test as base, expect } from '@playwright/test';
 import { LoginPage } from '../pages/auth/login.page';
 import { RegisterPage } from '../pages/auth/register.page';
+import { ProductListPage } from '../pages/shopping/product-list.page';
+import { ProductDetailPage } from '../pages/shopping/product-detail.page';
 import { CartPage } from '../pages/shopping/cart.page';
+import { CheckoutPage } from '../pages/shopping/checkout.page';
+import { OrderSuccessPage } from '../pages/shopping/order-success.page';
 
-type MyFixtures = {
+type TestFixtures = {
   loginPage: LoginPage;
   registerPage: RegisterPage;
+  productListPage: ProductListPage;
+  productDetailPage: ProductDetailPage;
   cartPage: CartPage;
-  authedPage: LoginPage;
+  checkoutPage: CheckoutPage;
+  orderSuccessPage: OrderSuccessPage;
+  authedPage: any;
 };
 
-export const test = base.extend<MyFixtures>({
+export const test = base.extend<TestFixtures>({
   loginPage: async ({ page }, use) => {
-    const loginPage = new LoginPage(page);
-    await use(loginPage);
+    await use(new LoginPage(page));
   },
 
   registerPage: async ({ page }, use) => {
-    const registerPage = new RegisterPage(page);
-    await use(registerPage);
+    await use(new RegisterPage(page));
+  },
+
+  productListPage: async ({ page }, use) => {
+    await use(new ProductListPage(page));
+  },
+
+  productDetailPage: async ({ page }, use) => {
+    await use(new ProductDetailPage(page));
   },
 
   cartPage: async ({ page }, use) => {
-    const cartPage = new CartPage(page);
-    await use(cartPage);
+    await use(new CartPage(page));
   },
 
-  // Authenticated page fixture - logs in automatically
+  checkoutPage: async ({ page }, use) => {
+    await use(new CheckoutPage(page));
+  },
+
+  orderSuccessPage: async ({ page }, use) => {
+    await use(new OrderSuccessPage(page));
+  },
+
+  // Auto-login fixture for tests that require authentication
   authedPage: async ({ page }, use) => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
-    
-    // Use default test credentials
-    const username = process.env.TEST_USERNAME || 'testuser';
-    const password = process.env.TEST_PASSWORD || 'password123';
-    
-    await loginPage.login(username, password);
-    
-    // Wait for navigation after login
-    await page.waitForURL(/\/(profile|$)/, { timeout: 10000 }).catch(() => {
-      // If login fails, continue anyway for tests that handle it
-    });
-    
-    await use(loginPage);
+    await loginPage.login(
+      process.env.TEST_USERNAME || 'testuser',
+      process.env.TEST_PASSWORD || 'password123'
+    );
+    await page.waitForURL(/\/(profile|$)/);
+    await use(page);
   },
 });
 
