@@ -28,7 +28,7 @@ jobs:
               run: npx playwright install --with-deps
 
             - name: Run Playwright tests on ${{ matrix.browser }}
-              run: npx playwright test --project=${{ matrix.browser }} --config=configs/playwright.config.ts
+              run: npx playwright test --project=${{ matrix.browser }}
 
             - uses: actions/upload-artifact@v4
               if: always()
