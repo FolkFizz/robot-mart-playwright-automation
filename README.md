@@ -209,6 +209,58 @@ npx playwright test src/tests/performance/load-test.spec.ts
 npx playwright test src/tests/performance/stress-test.spec.ts
 ```
 
+#### 6. K6 Load Tests
+
+**Prerequisites:**
+
+Install K6 first:
+
+```bash
+# Windows (using Chocolatey)
+choco install k6
+
+# macOS (using Homebrew)
+brew install k6
+
+# Linux
+sudo gpg -k
+sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+sudo apt-get update
+sudo apt-get install k6
+```
+
+**Run K6 Tests:**
+
+```bash
+# Race condition / Stock management test
+k6 run -e RESET_KEY=your_reset_key src/tests/performance/race-stock.k6.js
+
+# With mock payment (faster)
+k6 run -e RESET_KEY=your_key -e PAYMENT_MOCK=mock src/tests/performance/race-stock.k6.js
+
+# Custom number of virtual users
+k6 run -e RESET_KEY=your_key --vus 100 src/tests/performance/race-stock.k6.js
+
+# Save results to JSON
+k6 run -e RESET_KEY=your_key --out json=reports/performance-results/k6-results.json src/tests/performance/race-stock.k6.js
+```
+
+**What K6 Tests Validate:**
+
+- ✅ Stock management under concurrent load (50 VUs)
+- ✅ Race condition handling
+- ✅ Oversell prevention
+- ✅ System behavior under stress
+- ✅ Database transaction integrity
+
+**K6 Test Configuration:**
+
+- **Virtual Users:** 50 concurrent users
+- **Iterations:** 1 per user
+- **Max Duration:** 1 minute
+- **Threshold:** HTTP failure rate < 10%
+
 ### Run Tests by Browser
 
 ```bash
