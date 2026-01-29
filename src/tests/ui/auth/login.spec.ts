@@ -5,6 +5,7 @@ test.describe('@smoke Authentication - Login', () => {
   test('should allow user to login with valid credentials', async ({ loginPage }) => {
     await loginPage.goto();
     
+    
     // Use valid test credentials
     await loginPage.login('testuser', 'password123');
     

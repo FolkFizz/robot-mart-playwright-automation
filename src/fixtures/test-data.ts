@@ -52,12 +52,13 @@ export const test = base.extend<TestFixtures>({
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.login(
-      process.env.TEST_USERNAME || 'testuser',
-      process.env.TEST_PASSWORD || 'password123'
+      process.env.USER_USERNAME || 'user',
+      process.env.USER_PASSWORD || 'user123'
     );
-    await page.waitForURL(/\/(profile|$)/);
+    await page.getByTestId('nav-account-menu').waitFor({state: 'visible', timeout: 15000})
     await use(page);
   },
 });
 
 export { expect };
+
