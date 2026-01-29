@@ -1,6 +1,7 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from '../base.page';
 
+// LoginPage inherits from BasePage
 export class LoginPage extends BasePage {
   // Selectors from login.ejs
   readonly usernameInput: Locator;
