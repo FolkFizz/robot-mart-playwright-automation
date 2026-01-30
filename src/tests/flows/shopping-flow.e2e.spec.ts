@@ -1,30 +1,30 @@
 import { test, expect } from '../../../fixtures/test-data';
-import { CatalogPage } from '../../../pages/shop/catalog.page';
-import { ProductDetailPage } from '../../../pages/shop/product-detail.page';
-import { CartPage } from '../../../pages/shop/cart.page';
+import { ProductListPage } from '../../../pages/public/product-list.page';
+import { ProductDetailPage } from '../../../pages/public/product-detail.page';
+import { CartPage } from '../../../pages/shopping/cart.page';
 
 test.describe('@e2e Shopping Flow', () => {
   
   test('complete shopping journey from search to cart', async ({ page }) => {
-    const catalogPage = new CatalogPage(page);
+    const productListPage = new ProductListPage(page);
     const productDetailPage = new ProductDetailPage(page);
     const cartPage = new CartPage(page);
 
     // 1. Browse catalog
-    await catalogPage.goto();
-    expect(await catalogPage.hasResults()).toBe(true);
+    await productListPage.goto();
+    expect(await productListPage.hasResults()).toBe(true);
 
     // 2. Search for product
-    await catalogPage.search('robot');
-    expect(await catalogPage.hasResults()).toBe(true);
+    await productListPage.search('robot');
+    expect(await productListPage.hasResults()).toBe(true);
 
     // 3. Click first product
-    await catalogPage.clickProduct(0);
+    await productListPage.clickProduct(0);
     await page.waitForLoadState('networkidle');
 
     // 4. Add to cart
-    const productName = await productDetailPage.getProductName();
-    await productDetailPage.addToCart(1);
+    await productDetailPage.setQuantity(1);
+    await productDetailPage.addToCart();
 
     // 5. Go to cart
     await cartPage.goto();
@@ -32,20 +32,21 @@ test.describe('@e2e Shopping Flow', () => {
   });
 
   test('filter by category and add to cart', async ({ page }) => {
-    const catalogPage = new CatalogPage(page);
+    const productListPage = new ProductListPage(page);
     const cartPage = new CartPage(page);
 
-    await catalogPage.goto();
-    await catalogPage.selectCategory('automation');
+    await productListPage.goto();
+    await productListPage.selectCategory('automation');
     
-    const productCount = await catalogPage.getProductCount();
+    const productCount = await productListPage.getProductCount();
     expect(productCount).toBeGreaterThan(0);
 
-    await catalogPage.clickProduct(0);
+    await productListPage.clickProduct(0);
     await page.waitForLoadState('networkidle');
 
     const productDetailPage = new ProductDetailPage(page);
-    await productDetailPage.addToCart(2);
+    await productDetailPage.setQuantity(2);
+    await productDetailPage.addToCart();
 
     await cartPage.goto();
     expect(await cartPage.getCartItemCount()).toBeGreaterThan(0);

@@ -5,7 +5,7 @@ import { BasePage } from '../base.page';
  * Unified Catalog Page - handles product browsing, search, filtering, and sorting
  * Consolidates functionality from: product-list, category, search-results pages
  */
-export class CatalogPage extends BasePage {
+export class ProductListPage extends BasePage {
   // Search & Navigation
   readonly searchInput: Locator;
   readonly searchButton: Locator;

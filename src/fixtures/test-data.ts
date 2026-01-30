@@ -1,8 +1,8 @@
 import { test as base, expect } from '@playwright/test';
 import { LoginPage } from '../pages/auth/login.page';
 import { RegisterPage } from '../pages/auth/register.page';
-import { ProductListPage } from '../pages/shopping/product-list.page';
-import { ProductDetailPage } from '../pages/shopping/product-detail.page';
+import { ProductListPage } from '../pages/public/product-list.page';
+import { ProductDetailPage } from '../pages/public/product-detail.page';
 import { CartPage } from '../pages/shopping/cart.page';
 import { CheckoutPage } from '../pages/shopping/checkout.page';
 import { OrderSuccessPage } from '../pages/shopping/order-success.page';
