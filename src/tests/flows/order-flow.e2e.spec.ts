@@ -1,6 +1,6 @@
-import { test, expect } from '../../../fixtures/test-data';
+import { test, expect } from '../../fixtures/test-data';
 
-test.describe('@e2e Complete Order Flow - Mock Payment', () => {
+test.describe('@e2e @shopping Complete Order Flow - Mock Payment', () => {
   test('should complete full order lifecycle from browsing to checkout', async ({ 
     page, 
     productListPage, 

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { ChaosHelper } from '../../../utils/chaos.helper';
 import { ProductListPage } from '../../../pages/public/product-list.page';
 
-test.describe('QA Tools - Chaos Lab', () => {
+test.describe('@ui @qa QA Tools - Chaos Lab', () => {
   let productListPage: ProductListPage;
 
   test.beforeEach(async ({ page }) => {

@@ -1,6 +1,6 @@
 import { test, expect } from '../../../fixtures/test-data';
 
-test.describe('Shopping - Checkout Page', () => {
+test.describe('@ui @shopping Shopping - Checkout Page', () => {
   test.beforeEach(async ({ productListPage, productDetailPage, cartPage }) => {
     // Setup: Add a product to cart before each test
     await productListPage.goto();

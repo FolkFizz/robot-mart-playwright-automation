@@ -1,6 +1,6 @@
 import { test, expect } from '../../../fixtures/test-data';
 
-test.describe('Shopping - Cart Management', () => {
+test.describe('@ui @shopping Shopping - Cart Management', () => {
   test('should add product to cart and update quantity', async ({ 
     productListPage,
     productDetailPage,

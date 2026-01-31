@@ -1,7 +1,7 @@
 import { test, expect } from '../../../fixtures/test-data';
 import { generateRandomUser } from '../../../fixtures/users';
 
-test.describe('@smoke Authentication - Register', () => {
+test.describe('@ui @auth @smoke Authentication - Register', () => {
   
   test('should allow user to register with valid details', async ({ registerPage }) => {
     await registerPage.goto();

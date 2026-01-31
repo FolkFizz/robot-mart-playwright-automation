@@ -1,9 +1,9 @@
-import { test, expect } from '../../../fixtures/test-data';
-import { ProductListPage } from '../../../pages/public/product-list.page';
-import { ProductDetailPage } from '../../../pages/public/product-detail.page';
-import { CartPage } from '../../../pages/shopping/cart.page';
+import { test, expect } from '../../fixtures/test-data';
+import { ProductListPage } from '../../pages/public/product-list.page';
+import { ProductDetailPage } from '../../pages/public/product-detail.page';
+import { CartPage } from '../../pages/shopping/cart.page';
 
-test.describe('@e2e Shopping Flow', () => {
+test.describe('@e2e @shopping Shopping Flow', () => {
   
   test('complete shopping journey from search to cart', async ({ page }) => {
     const productListPage = new ProductListPage(page);

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ChatbotHelper } from '../../../utils/chatbot.helper';
 
-test.describe('Chatbot - Gemini Integration', () => {
+test.describe('@ui @chatbot Chatbot - Gemini Integration', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
   });

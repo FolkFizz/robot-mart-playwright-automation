@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('QA Tools - API Docs', () => {
+test.describe('@ui @qa QA Tools - API Docs', () => {
   test('should display API documentation', async ({ page }) => {
     await page.goto('/api-docs');
     

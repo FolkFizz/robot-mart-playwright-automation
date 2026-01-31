@@ -123,6 +123,14 @@ export class ProductListPage extends BasePage {
     await this.productCards.nth(index).click();
   }
 
+  async clickFirstProduct() {
+    await this.clickProduct(0);
+  }
+
+  async clickProductByIndex(index: number) {
+    await this.clickProduct(index);
+  }
+
   async clickProductById(productId: string) {
     await this.page.getByTestId(`product-card-${productId}`).click();
   }

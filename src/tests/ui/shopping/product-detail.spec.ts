@@ -1,6 +1,6 @@
 import { test, expect } from '../../../fixtures/test-data';
 
-test.describe('Shopping - Product Detail Page', () => {
+test.describe('@ui @shopping Shopping - Product Detail Page', () => {
   test('should display product information correctly', async ({ productDetailPage, productListPage }) => {
     await productListPage.goto();
     await productListPage.clickFirstProduct();

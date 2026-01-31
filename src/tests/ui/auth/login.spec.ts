@@ -1,6 +1,6 @@
 import { test, expect } from '../../../fixtures/test-data';
 
-test.describe('@smoke Authentication - Login', () => {
+test.describe('@ui @auth @smoke Authentication - Login', () => {
   
   test('should allow user to login with valid credentials', async ({ loginPage }) => {
     await loginPage.goto();

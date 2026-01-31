@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ProductListPage } from '../../../pages/public/product-list.page';
 
-test.describe('Public - Search and Filter', () => {
+test.describe('@ui @public Public - Search and Filter', () => {
   test('should search for products and find results', async ({ page }) => {
     const productListPage = new ProductListPage(page);
     await productListPage.goto();

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('@smoke Shopping - Product Browsing', () => {
+test.describe('@ui @shopping @smoke Shopping - Product Browsing', () => {
   test('should display products on homepage', async ({ page }) => {
     await page.goto('/');
     
