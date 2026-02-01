@@ -46,7 +46,7 @@ export class BasePage {
     }
 
     // รอจน network ว่าง (กรณีหน้าข้อมูลโหลดเยอะ)
-    async waitForNetworkIde(): Promise<void> {
+    async waitForNetworkIdle(): Promise<void> {
         await this.page.waitForLoadState('networkidle');
     }
 
