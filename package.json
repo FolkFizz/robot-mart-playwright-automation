@@ -1,0 +1,24 @@
+{
+  "name": "robot-store-playwright-automation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "test": "playwright test",
+    "test:smoke": "playwright test --grep \"@smoke\" --grep-invert \"@stripe|@chaos|@ai\"",
+    "test:regression": "playwright test --grep \"@regression\"",
+    "test:api": "playwright test tests/functional/api --grep \"@api\"",
+    "test:a11y": "playwright test tests/non-functional/a11y --grep \"@a11y\"",
+    "report:allure": "allure generate allure-results -o allure-report --clean",
+    "report:open": "allure open allure-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^20.11.30",
+    "allure-playwright": "^2.15.1",
+    "typescript": "^5.5.4"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}
