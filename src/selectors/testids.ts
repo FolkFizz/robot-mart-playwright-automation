@@ -1,7 +1,5 @@
 // รวม helpers สร้าง data-testid เพื่อให้เรียกซ้ำง่าย
 
-import { register } from "node:module";
-
 // --- Auth ---
 
 export const testIdAuth = {
@@ -29,12 +27,12 @@ export const testIdNav = {
 export const testIdProduct = {
     // dynamic card ในหน้า catalog
     card: (id: number | string) => `product-card-${id}`,
-    titleIncard: (id: number | string) => `product-title-${id}`,
+    titleInCard: (id: number | string) => `product-title-${id}`,
     priceInCard: (id: number | string) => `product-price-${id}`,
 
     // หน้า product detail
     detailTitle: 'product-title',
-    detailPrice: 'price-price',
+    detailPrice: 'product-price',
     qtyInput: 'product-qty',
     qtyIncrease: 'product-qty-increase',
     qtyDecrease: 'product-qty-decrease',

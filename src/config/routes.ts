@@ -37,7 +37,7 @@ export const routes = {
         cartUpdate: '/api/cart/update',
         cartRemove: '/api/cart/remove',
         cart: '/api/cart',
-        cartItem: (id: number | string) => `/api/cart/items/$${id}`,
+        cartItem: (id: number | string) => `/api/cart/items/${id}`,
         cartCoupons: '/api/cart/coupons',
         cartReset: '/api/cart/reset',
 
@@ -56,6 +56,6 @@ export const routes = {
 
         // Notifications
         notifications: '/notifications/list',
-        adminNotification: '/admin/notifications/list'
+        adminNotifications: '/admin/notifications/list'
     }
 } as const;
