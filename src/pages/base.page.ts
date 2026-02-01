@@ -1,5 +1,4 @@
-import {Page, Locator} from '@playwright/test';
-import { promises } from 'node:dns';
+import { Page, Locator } from '@playwright/test';
 
 // BasePage: Class แม่ของทุก Page Object
 
