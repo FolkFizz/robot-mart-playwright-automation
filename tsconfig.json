@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2023", "DOM"],
+    "types": ["node", "@playwright/test"],
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@config/*": ["src/config/*"],
+      "@api/*": ["src/api/*"],
+      "@fixtures/*": ["src/fixtures/*"],
+      "@pages/*": ["src/pages/*"],
+      "@components/*": ["src/components/*"],
+      "@utils/*": ["src/utils/*"],
+      "@selectors/*": ["src/selectors/*"],
+      "@types/*": ["src/types/*"]
+    },
+    "outDir": "dist"
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts", "playwright.config.ts"],
+  "exclude": ["node_modules", "dist"]
+}
