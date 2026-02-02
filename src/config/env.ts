@@ -1,7 +1,9 @@
 import dotenv from 'dotenv';
+import path from 'path';
 
-// โหลด env ให้พร้อมใช้งานในทุกที่
-dotenv.config();
+// โหลด env ให้พร้อมใช้งานในทุกที่ (รองรับ .env.test)
+const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
+dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 
 // -------------------------------------------------------------
 // Helper Functions

@@ -1,12 +1,12 @@
 import { createApiContext } from '@api/http';
-import { resetDb, seedDb } from '@api/test-hooks.api';
+import { resetDb } from '@api/test-hooks.api';
 
 // reset + seed database สำหรับเทส (ใช้ TEST_API_KEY)
 export const resetAndSeed = async () => {
   const api = await createApiContext();
   try {
-    await resetDb(api);
-    await seedDb(api);
+    const stockAll = process.env.SEED_STOCK ? Number(process.env.SEED_STOCK) : undefined;
+    await resetDb(api, { stockAll });
   } finally {
     await api.dispose();
   }
