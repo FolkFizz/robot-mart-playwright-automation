@@ -1,0 +1,15 @@
+{
+  "cookies": [
+    {
+      "name": "connect.sid",
+      "value": "s%3A5gUIYJ8BJRRddlWwvJOqgnwjwGOgdueR.2dFAUD9BGpS3vl39HwUqyb%2F7TS9K7Bv2ZuZWhtHWvgQ",
+      "domain": "robot-store-sandbox.onrender.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}

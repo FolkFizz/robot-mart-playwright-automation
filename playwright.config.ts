@@ -7,7 +7,7 @@ dotenv.config({path: path.resolve(__dirname, '.env')});
 
 // ตั้งค่า Playwright หลักของโปรเจค
 export default defineConfig({
-    testDir: './test',
+    testDir: './tests',
 
     // รันคู่ขนานได้ยกเว้นตอน CI เพื่อความนิ่ง
     fullyParallel: true,
