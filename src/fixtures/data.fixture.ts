@@ -19,7 +19,7 @@ export const test = base.extend<{}, WorkerFixtures>({
         await api.dispose();
       }
     },
-    { scope: 'worker' }
+    { scope: 'worker', auto: true }
   ]
 });
 
