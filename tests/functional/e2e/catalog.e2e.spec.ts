@@ -8,7 +8,7 @@ import { seededProducts } from '../../_support/test-data/products';
 
 const parsePrice = (text: string) => Number.parseFloat(text.replace(/[^0-9.]/g, ''));
 
-baseTest.describe('catalog ui @e2e', () => {
+baseTest.describe('catalog ui @e2e @safe', () => {
 
   baseTest.describe('positive cases', () => {
 
@@ -74,7 +74,7 @@ baseTest.describe('catalog ui @e2e', () => {
   });
 });
 
-dataTest.describe('catalog seeded @e2e', () => {
+dataTest.describe('catalog seeded @e2e @destructive', () => {
 
   dataTest.describe('positive cases', () => {
 

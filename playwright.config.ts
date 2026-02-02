@@ -2,9 +2,8 @@ import {defineConfig, devices} from '@playwright/test';
 import dotenv from 'dotenv';
 import path from 'path';
 
-// โหลดค่า env จากไฟล์ที่เหมาะสม (.env หรือ .env.test)
-const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
-dotenv.config({path: path.resolve(__dirname, envFile)});
+// โหลดค่า env จาก .env เพียงไฟล์เดียว (Single Source of Truth)
+dotenv.config({path: path.resolve(__dirname, '.env')});
 
 // ตั้งค่า Playwright หลักของโปรเจค
 export default defineConfig({

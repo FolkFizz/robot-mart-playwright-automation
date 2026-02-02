@@ -24,6 +24,15 @@ type ProductRow = {
   is_buggy?: boolean;
 };
 
+const isProdBaseUrl = (value: string) => {
+  try {
+    const { hostname } = new URL(value);
+    return hostname === 'robot-store-sandbox.onrender.com';
+  } catch {
+    return value.includes('robot-store-sandbox.onrender.com');
+  }
+};
+
 const setAllProductStock = async (ctx: APIRequestContext, stockAll: number) => {
   // ถ้าเป็น 100 ใช้ endpoint reset-stock ได้เลย (ไม่ต้อง admin)
   if (stockAll === 100) {
@@ -64,6 +73,12 @@ const setAllProductStock = async (ctx: APIRequestContext, stockAll: number) => {
 
 // ยิง /api/test/reset หรือ /api/test/seed (factory reset)
 export const resetDb = async (ctx: APIRequestContext, options: ResetOptions = {}) => {
+  if (isProdBaseUrl(env.baseUrl)) {
+    // ป้องกันการลบข้อมูลจริงเมื่อยิงไป Production
+    console.warn(`[test-hooks] Skip reset/seed on production baseUrl: ${env.baseUrl}`);
+    return null;
+  }
+
   const factoryReset = options.factoryReset ?? true;
 
   if (factoryReset) {
@@ -81,6 +96,12 @@ export const resetDb = async (ctx: APIRequestContext, options: ResetOptions = {}
 
 // ยิง /api/test/seed (reset + seed) และรองรับการปรับ stock หลัง seed
 export const seedDb = async (ctx: APIRequestContext, options: SeedOptions = {}) => {
+  if (isProdBaseUrl(env.baseUrl)) {
+    // ป้องกันการ seed เมื่อยิงไป Production
+    console.warn(`[test-hooks] Skip seed on production baseUrl: ${env.baseUrl}`);
+    return null;
+  }
+
   const res = await ctx.post(routes.api.testSeed, {
     headers: {
       'test-api-key': env.testApiKey

@@ -1,9 +1,8 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-// โหลด env ให้พร้อมใช้งานในทุกที่ (รองรับ .env.test)
-const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
-dotenv.config({ path: path.resolve(process.cwd(), envFile) });
+// โหลด env จาก .env เพียงไฟล์เดียว (Single Source of Truth)
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 // -------------------------------------------------------------
 // Helper Functions
@@ -38,6 +37,9 @@ const getEnvRequired = (key: string) => {
 export const env = {
   // URL หลักของเว็บ (ใช้ใน Playwright baseURL หรือ API calls)
   baseUrl: getEnv('BASE_URL', 'http://localhost:3000'),
+
+  // Database URL (Source of Truth เดียว)
+  databaseUrl: getEnvRequired('DATABASE_URL'),
 
   // API Keys: บังคับต้องมี (ใช้ getEnvRequired)
   testApiKey: getEnvRequired('TEST_API_KEY'),

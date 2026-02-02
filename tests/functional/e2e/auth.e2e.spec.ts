@@ -11,7 +11,7 @@ import { testIdAuth } from '@selectors/testids';
 
 
 
-base.describe('auth @e2e', () => {
+base.describe('auth @e2e @safe', () => {
 
     base.describe('positive cases', () => {
 
@@ -64,7 +64,7 @@ base.describe('auth @e2e', () => {
     });
 });
 
-dataTest.describe('register @e2e (seeded)', () => {
+dataTest.describe('register @e2e @destructive (seeded)', () => {
 
     dataTest.describe('positive cases', () => {
         
