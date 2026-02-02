@@ -20,7 +20,7 @@ export const registerAllureHooks = (test: TestType<any, any>) => {
     }
 
     if (testInfo.error) {
-      await attachText('error.message', testInfo.error.message);
+      await attachText('error.message', testInfo.error.message ?? 'Unknown error');
     }
   });
 };

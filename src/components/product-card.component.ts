@@ -1,6 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { testIdProduct } from '@selectors/testids';
-import type { IdLike } from '@types/app.types';
+import type { IdLike } from '@app-types/app.types';
 
 // Component สำหรับการ์ดสินค้าในหน้า Catalog
 export class ProductCardComponent {

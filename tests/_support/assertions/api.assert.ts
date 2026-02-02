@@ -1,6 +1,6 @@
 import { APIResponse, expect } from '@playwright/test';
 import { readJson } from '@api/http';
-import type { ApiResponse } from '@types/app.types';
+import type { ApiResponse } from '@app-types/app.types';
 
 // assert ว่า status ตรงตามที่คาด
 export const expectStatus = (res: APIResponse, status: number) => {

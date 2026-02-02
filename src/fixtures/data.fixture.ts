@@ -1,15 +1,23 @@
 import { test as base } from './base.fixture';
+import { createApiContext } from '@api/http';
 import { resetDb, seedDb } from '@api/test-hooks.api';
 
 // fixture สำหรับเตรียมข้อมูล (reset + seed) ให้ deterministic
-export const test = base.extend<{
+type WorkerFixtures = {
   seedData: boolean;
-}>({
+};
+
+export const test = base.extend<{}, WorkerFixtures>({
   seedData: [
-    async ({ api }, use) => {
-      await resetDb(api);
-      await seedDb(api);
-      await use(true);
+    async ({}, use) => {
+      const api = await createApiContext();
+      try {
+        await resetDb(api);
+        await seedDb(api);
+        await use(true);
+      } finally {
+        await api.dispose();
+      }
     },
     { scope: 'worker' }
   ]

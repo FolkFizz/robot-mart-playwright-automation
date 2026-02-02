@@ -20,7 +20,7 @@
       "@components/*": ["src/components/*"],
       "@utils/*": ["src/utils/*"],
       "@selectors/*": ["src/selectors/*"],
-      "@types/*": ["src/types/*"]
+      "@app-types/*": ["src/types/*"]
     },
     "outDir": "dist"
   },

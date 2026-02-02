@@ -1,6 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { testIdCart } from '@selectors/testids';
-import type { IdLike } from '@types/app.types';
+import type { IdLike } from '@app-types/app.types';
 
 // Component สำหรับแถวสินค้าในตะกร้า
 export class CartItemRowComponent {
