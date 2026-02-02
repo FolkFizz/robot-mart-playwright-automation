@@ -22,6 +22,16 @@ export class ProductCardComponent {
     this.badge = this.root.locator('.badge');
   }
 
+  // รอให้การ์ดแสดง
+  async waitForVisible(): Promise<void> {
+    await this.root.waitFor({ state: 'visible' });
+  }
+
+  // เช็คว่าการ์ดแสดงหรือไม่
+  async isVisible(): Promise<boolean> {
+    return await this.root.isVisible().catch(() => false);
+  }
+
   // คลิกการ์ดเพื่อไปหน้ารายละเอียดสินค้า
   async click(): Promise<void> {
     await this.root.click();
