@@ -1,7 +1,8 @@
-import { APIRequestContext, expect } from '@playwright/test';
+import { APIRequestContext } from '@playwright/test';
 import { env } from '@config/env';
-import { routes } from '@config/routes';
-import { loginAsAdmin } from '@api/auth.api';
+import fs from 'fs';
+import path from 'path';
+import { Client } from 'pg';
 
 type SeedOptions = {
   // กำหนด stock ให้ทุกสินค้าหลัง seed (เช่น 100 สำหรับ load test)
@@ -13,15 +14,63 @@ type ResetOptions = SeedOptions & {
   factoryReset?: boolean;
 };
 
-type ProductRow = {
-  id: number;
-  name: string;
-  price: string | number;
-  stock: number;
-  category?: string;
-  description?: string;
-  serial_number?: string;
-  is_buggy?: boolean;
+const resolveStockAll = (stockAll?: number) => {
+  if (typeof stockAll === 'number' && !Number.isNaN(stockAll)) return stockAll;
+
+  const envValue = process.env.SEED_STOCK;
+  if (envValue !== undefined && envValue !== '') {
+    const parsed = Number(envValue);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+
+  // Default rich stock for stability in large test runs
+  return 100;
+};
+
+const resolveInitSqlPath = () => {
+  const customPath = process.env.INIT_SQL_PATH;
+  if (customPath) return path.resolve(customPath);
+  return path.resolve(process.cwd(), '..', 'robot-store-sandbox', 'database', 'init.sql');
+};
+
+const resolveSsl = () => {
+  try {
+    const url = new URL(env.databaseUrl);
+    const isLocal =
+      url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1' ||
+      url.hostname === '::1';
+    const sslMode = url.searchParams.get('sslmode');
+    if (!isLocal || sslMode === 'require') {
+      return { rejectUnauthorized: false };
+    }
+  } catch {
+    // ignore invalid URL, fall back to no ssl
+  }
+  return undefined;
+};
+
+const seedFromInitSql = async (stockAll?: number) => {
+  const filePath = resolveInitSqlPath();
+  if (!fs.existsSync(filePath)) {
+    throw new Error(
+      `[test-hooks] init.sql not found: ${filePath}. Set INIT_SQL_PATH if your web repo is in a different location.`
+    );
+  }
+
+  const sql = fs.readFileSync(filePath, 'utf-8').replace(/^\uFEFF/, '');
+  const client = new Client({
+    connectionString: env.databaseUrl,
+    ssl: resolveSsl()
+  });
+  await client.connect();
+  try {
+    await client.query(sql);
+    const resolvedStock = resolveStockAll(stockAll);
+    await client.query('UPDATE products SET stock = $1', [resolvedStock]);
+  } finally {
+    await client.end();
+  }
 };
 
 const isProdBaseUrl = (value: string) => {
@@ -33,46 +82,8 @@ const isProdBaseUrl = (value: string) => {
   }
 };
 
-const setAllProductStock = async (ctx: APIRequestContext, stockAll: number) => {
-  // ถ้าเป็น 100 ใช้ endpoint reset-stock ได้เลย (ไม่ต้อง admin)
-  if (stockAll === 100) {
-    const res = await ctx.post(routes.api.resetStockSafe, {
-      headers: {
-        'x-reset-key': env.resetKey
-      }
-    });
-    expect(res.ok()).toBeTruthy();
-    return;
-  }
-
-  // กรณีต้องการค่าอื่น ๆ: ต้อง login admin แล้ว PATCH ทีละสินค้า
-  await loginAsAdmin(ctx);
-
-  const listRes = await ctx.get(routes.api.products, {
-    headers: { Accept: 'application/json' }
-  });
-  expect(listRes.ok()).toBeTruthy();
-  const body = await listRes.json();
-  const products: ProductRow[] = body.products || [];
-
-  for (const product of products) {
-    const res = await ctx.patch(`/api/admin/products/${product.id}`, {
-      data: {
-        name: product.name,
-        price: product.price,
-        stock: stockAll,
-        category: product.category ?? '',
-        description: product.description ?? '',
-        serial_number: product.serial_number ?? '',
-        is_buggy: product.is_buggy ? 'on' : ''
-      }
-    });
-    expect(res.ok()).toBeTruthy();
-  }
-};
-
 // ยิง /api/test/reset หรือ /api/test/seed (factory reset)
-export const resetDb = async (ctx: APIRequestContext, options: ResetOptions = {}) => {
+export const resetDb = async (_ctx: APIRequestContext, options: ResetOptions = {}) => {
   if (isProdBaseUrl(env.baseUrl)) {
     // ป้องกันการลบข้อมูลจริงเมื่อยิงไป Production
     console.warn(`[test-hooks] Skip reset/seed on production baseUrl: ${env.baseUrl}`);
@@ -80,38 +91,22 @@ export const resetDb = async (ctx: APIRequestContext, options: ResetOptions = {}
   }
 
   const factoryReset = options.factoryReset ?? true;
-
-  if (factoryReset) {
-    return await seedDb(ctx, { stockAll: options.stockAll });
+  if (!factoryReset) {
+    console.warn('[test-hooks] factoryReset=false ถูก ignore เพื่อความ deterministic');
   }
 
-  const res = await ctx.post(routes.api.testReset, {
-    headers: {
-      'test-api-key': env.testApiKey
-    }
-  });
-  expect(res.ok()).toBeTruthy();
-  return res;
+  await seedFromInitSql(options.stockAll);
+  return null;
 };
 
 // ยิง /api/test/seed (reset + seed) และรองรับการปรับ stock หลัง seed
-export const seedDb = async (ctx: APIRequestContext, options: SeedOptions = {}) => {
+export const seedDb = async (_ctx: APIRequestContext, options: SeedOptions = {}) => {
   if (isProdBaseUrl(env.baseUrl)) {
     // ป้องกันการ seed เมื่อยิงไป Production
     console.warn(`[test-hooks] Skip seed on production baseUrl: ${env.baseUrl}`);
     return null;
   }
 
-  const res = await ctx.post(routes.api.testSeed, {
-    headers: {
-      'test-api-key': env.testApiKey
-    }
-  });
-  expect(res.ok()).toBeTruthy();
-
-  if (typeof options.stockAll === 'number') {
-    await setAllProductStock(ctx, options.stockAll);
-  }
-
-  return res;
+  await seedFromInitSql(options.stockAll);
+  return null;
 };

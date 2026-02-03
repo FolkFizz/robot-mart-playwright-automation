@@ -27,3 +27,4 @@ Summary of GitHub Actions workflows and how they map to tags.
 - Smoke is fast and PR-friendly.
 - Regression and load/perf are scheduled.
 - Production-safe runs should use `@safe` tags only.
+- Prod runs skip reset/seed automatically when BASE_URL points to Render.

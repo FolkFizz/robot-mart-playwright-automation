@@ -22,6 +22,12 @@ These are expected by the test project:
 - `PAYMENT_MOCK` (e.g. `mock` or `stripe` if UI supports)
 - `SEED_DATA` (`false` to skip auto seed/reset)
 - `SEED_STOCK` (number to override stock after seed)
+- `INIT_SQL_PATH` (absolute path to `init.sql` if the web repo is not at the default location)
+
+## Seed source (important)
+- Local reset/seed uses the SQL script from the **web repo**: `robot-store-sandbox/database/init.sql`.
+- Default location: `../robot-store-sandbox/database/init.sql`
+- Override with `INIT_SQL_PATH` if your web repo lives elsewhere.
 
 ## Example .env
 ```env
@@ -37,6 +43,7 @@ CHAOS_ENABLED=false
 PAYMENT_MOCK=mock
 SEED_DATA=true
 SEED_STOCK=100
+INIT_SQL_PATH=C:\QA-SANDBOX\robot-store-sandbox\database\init.sql
 ```
 
 ## Safety notes

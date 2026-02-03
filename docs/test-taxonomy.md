@@ -15,5 +15,9 @@
 - Use `@destructive` for tests that modify data.
 - Add `@smoke` for fast checks, `@regression` for full suites.
 
+## Seeded tests
+- Seeded suites are **destructive** by nature and should be tagged `@destructive`.
+- Local seed uses `init.sql` from the web repo; prod runs skip reset/seed.
+
 ## Goal
 Clear separation by type + tags makes it easy to run the right subset locally, in CI, or against production safely.
