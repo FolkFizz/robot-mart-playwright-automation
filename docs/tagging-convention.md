@@ -1,23 +1,41 @@
 # Tagging Convention
 
-ใช้ `@tag` ในชื่อเทส เพื่อคุมชุดรันและความเร็ว
+Tags are used in test titles to control what runs in CI and in production.
 
-## Tag หลัก
-- `@smoke` : ชุดทดสอบเร็วที่สุด (PR)
-- `@regression` : ชุดทดสอบเต็ม (nightly)
-- `@api` : API tests
-- `@a11y` : Accessibility tests
-- `@security` : Security tests
-- `@perf` : Performance/Load (เช่น k6)
+## Core tags
+- `@smoke`: fast sanity checks
+- `@regression`: full suite
+- `@api`: API tests
+- `@a11y`: accessibility tests
+- `@security`: security checks
+- `@perf`: performance/load (e.g. k6)
 
-## Tag เฉพาะเคส
-- `@stripe` : เคส Stripe จริง
-- `@chaos` : เคส Chaos Lab
-- `@ai` : เคส AI/Chat
+## Safety tags (important)
+- `@safe`: **non-destructive** tests (read-only)
+- `@destructive`: tests that **modify data** or can affect real users
 
-## ตัวอย่าง
+### Use `@safe` when tests are:
+- Read-only UI checks (title, elements visible)
+- GET-only API requests
+- A11y tests
+- Visual regression (if any)
+
+### Use `@destructive` when tests:
+- Reset/seed database
+- Register users / modify accounts
+- Checkout or payment flows
+- Admin operations (create/update/delete)
+
+## Production run behavior
+`npm run test:prod` runs with:
+```
+--grep "@smoke|@safe"
+```
+So only safe tests are executed.
+
+## Example
 ```ts
-test('checkout with coupon @smoke @e2e', async () => {
+test('home page loads @smoke @safe @e2e', async () => {
   // ...
 });
 ```

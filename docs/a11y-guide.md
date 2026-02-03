@@ -1,34 +1,34 @@
 # A11y Guide (axe)
 
-เอกสารสรุปการเขียน/รัน A11y tests ด้วย `axe` สำหรับโปรเจคนี้
+This guide explains how to run accessibility tests using `axe`.
 
-## สิ่งที่ต้องมี
-- ติดตั้งแพ็กเกจ: `@axe-core/playwright`
-- ใช้ helper ใน `tests/non-functional/a11y/_support`
+## Prerequisites
+- `@axe-core/playwright` installed
+- Helper modules:
+  - `src/fixtures/a11y.fixture.ts`
+  - `tests/non-functional/a11y/_support/axe-runner.ts`
+  - `tests/non-functional/a11y/_support/axe-rules.ts`
 
-## โครงสร้างที่เกี่ยวข้อง
-- `src/fixtures/a11y.fixture.ts` (fixture สำหรับ a11y)
-- `tests/non-functional/a11y/_support/axe-runner.ts` (รัน axe)
-- `tests/non-functional/a11y/_support/axe-rules.ts` (กติกา/ข้อยกเว้น)
-
-## วิธีรัน
+## Run commands
 ```bash
+npm run test:a11y
+# or
 npx playwright test tests/non-functional/a11y --grep "@a11y"
 ```
 
-## ตัวอย่างการใช้
+## Example
 ```ts
 import { test } from '@fixtures/a11y.fixture';
 
-test('home a11y @a11y', async ({ page, runA11y, expectNoA11yViolations }) => {
+test('home a11y @a11y @safe', async ({ page, runA11y, expectNoA11yViolations }) => {
   await page.goto('/');
   const results = await runA11y(page);
   expectNoA11yViolations(results);
 });
 ```
 
-## ปรับกติกา/ยกเว้น
-ไปที่ `tests/non-functional/a11y/_support/axe-rules.ts` แล้วแก้:
-- `a11yExcludeSelectors` เพื่อ ignore UI บางส่วน (เช่น chaos widget)
-- `a11yRules` เพื่อ enable/disable rule
-- `allowedViolationIds` สำหรับรายการที่ยอมรับชั่วคราว
+## Customize rules/exclusions
+Edit `tests/non-functional/a11y/_support/axe-rules.ts`:
+- `a11yExcludeSelectors`: ignore known UI blocks
+- `a11yRules`: enable/disable rules
+- `allowedViolationIds`: temporary accepted issues

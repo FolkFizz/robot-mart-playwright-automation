@@ -1,20 +1,15 @@
 # CI Pipeline
 
-สรุปภาพรวม workflow ที่ใช้ใน GitHub Actions
+Summary of GitHub Actions workflows and how they map to tags.
 
-## ไฟล์หลัก
+## Workflows
 - `.github/workflows/ui-smoke.yml`
 - `.github/workflows/api.yml`
 - `.github/workflows/a11y.yml`
 - `.github/workflows/regression-nightly.yml`
 - `.github/workflows/k6-nightly.yml`
 
-## แนวคิด
-- แยกชนิดการทดสอบตามโฟลเดอร์และ tag
-- Smoke รันเร็วสุด ใช้สำหรับ PR
-- Regression และ k6 รันแบบ schedule
-
-## ตัวอย่างคำสั่งที่ใช้ใน CI
+## Typical commands
 - UI Smoke:
   ```bash
   npx playwright test --grep "@smoke" --grep-invert "@stripe|@chaos|@ai"
@@ -27,3 +22,8 @@
   ```bash
   npx playwright test tests/non-functional/a11y --grep "@a11y"
   ```
+
+## Notes
+- Smoke is fast and PR-friendly.
+- Regression and load/perf are scheduled.
+- Production-safe runs should use `@safe` tags only.

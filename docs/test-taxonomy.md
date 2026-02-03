@@ -1,17 +1,19 @@
 # Test Taxonomy
 
-โครงสร้างการแบ่งชนิดเทสของโปรเจคนี้
-
 ## Functional
-- `tests/functional/api` : ทดสอบ API ด้วย request context
-- `tests/functional/integration` : ทดสอบ flow ที่เชื่อมหลายส่วน (API + UI)
-- `tests/functional/e2e` : ทดสอบ User Journey แบบครบเส้นทาง
+- `tests/functional/api`: API tests using request context
+- `tests/functional/integration`: flows spanning API + UI
+- `tests/functional/e2e`: full user journeys
 
 ## Non-functional
-- `tests/non-functional/a11y` : Accessibility (axe)
-- `tests/non-functional/security` : Security checks เบื้องต้น
-- `tests/non-functional/perf` : Performance/Load (ถ้ามี)
+- `tests/non-functional/a11y`: accessibility
+- `tests/non-functional/security`: basic security checks
+- `tests/non-functional/perf`: performance/load (if any)
 
-## เป้าหมาย
-- แยกประเภทให้ชัด → เลือกรันเฉพาะกลุ่มได้
-- ใช้ tag เพื่อคุมชุดเทสใน CI
+## Tagging strategy
+- Use `@safe` for read-only tests.
+- Use `@destructive` for tests that modify data.
+- Add `@smoke` for fast checks, `@regression` for full suites.
+
+## Goal
+Clear separation by type + tags makes it easy to run the right subset locally, in CI, or against production safely.
