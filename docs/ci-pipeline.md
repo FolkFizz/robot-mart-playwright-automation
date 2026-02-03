@@ -28,3 +28,7 @@ Summary of GitHub Actions workflows and how they map to tags.
 - Regression and load/perf are scheduled.
 - Production-safe runs should use `@safe` tags only.
 - Prod runs skip reset/seed automatically when BASE_URL points to Render.
+
+## See also
+- [Quick Guide](./quick-guide.md)
+- [Tagging Convention](./tagging-convention.md)

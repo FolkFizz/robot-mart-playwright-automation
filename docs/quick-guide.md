@@ -68,3 +68,11 @@ INIT_SQL_PATH=C:\path\to\robot-store-sandbox\database\init.sql npx playwright te
 - `INIT_SQL_PATH`
 
 > Tip: keep `.env` updated and consistent with the web app config.
+
+## See also
+- [Environments & .env](./environments.md)
+- [Tagging Convention](./tagging-convention.md)
+- [Test Taxonomy](./test-taxonomy.md)
+- [CI Pipeline](./ci-pipeline.md)
+- [A11y Guide](./a11y-guide.md)
+- [Allure Guide](./allure-guide.md)

@@ -39,3 +39,7 @@ test('home page loads @smoke @safe @e2e', async () => {
   // ...
 });
 ```
+
+## See also
+- [Quick Guide](./quick-guide.md)
+- [Test Taxonomy](./test-taxonomy.md)

@@ -50,3 +50,7 @@ INIT_SQL_PATH=C:\QA-SANDBOX\robot-store-sandbox\database\init.sql
 - When `BASE_URL` points to production (`robot-store-sandbox.onrender.com`),
   the reset/seed logic is automatically **skipped** to avoid destructive actions.
 - For local runs, reset/seed will run (unless `SEED_DATA=false`).
+
+## See also
+- [Quick Guide](./quick-guide.md)
+- [Tagging Convention](./tagging-convention.md)

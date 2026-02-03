@@ -21,3 +21,7 @@
 
 ## Goal
 Clear separation by type + tags makes it easy to run the right subset locally, in CI, or against production safely.
+
+## See also
+- [Quick Guide](./quick-guide.md)
+- [Tagging Convention](./tagging-convention.md)
