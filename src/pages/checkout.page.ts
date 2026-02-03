@@ -35,7 +35,16 @@ export class CheckoutPage extends BasePage {
   async waitForStripeReady(): Promise<void> {
     const paymentElement = this.getByTestId(testIdCheckout.paymentElement);
     await paymentElement.waitFor({ state: 'visible', timeout: 15000 });
-    await expect(paymentElement).toHaveAttribute('data-stripe-ready', 'true', { timeout: 15000 });
+    try {
+      await expect(paymentElement).toHaveAttribute('data-stripe-ready', 'true', { timeout: 15000 });
+    } catch {
+      // Fallback: บางครั้ง data-stripe-ready อัปเดตช้า ให้เช็คว่า input ใน iframe โผล่แทน
+      const frame = this.page.frameLocator('iframe[name^="__privateStripeFrame"]:not([aria-hidden="true"])');
+      await frame
+        .locator('input[name="cardnumber"], input[name="number"]')
+        .first()
+        .waitFor({ state: 'visible', timeout: 15000 });
+    }
   }
 
   // กดจ่ายเงิน (ทั้ง mock และ stripe ใช้ปุ่มเดียวกัน)
