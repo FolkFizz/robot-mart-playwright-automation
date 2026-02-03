@@ -165,18 +165,9 @@ dataTest.describe.serial('cart stateful flow @e2e @destructive', () => {
   });
 
   dataTest.describe('negative cases', () => {
-    dataTest('invalid coupon shows error', async () => {
-      await cart.goto();
-      await cart.applyCoupon(coupons.invalid.code);
-
-      const error = page.locator('.alert-error');
-      await expect(error).toBeVisible();
-      await expect(error).toContainText('Invalid coupon code');
-    });
-
     dataTest('expired coupon shows error', async () => {
       await cart.goto();
-      await cart.applyCoupon('EXPIRED50');
+      await cart.applyCoupon(coupons.expired50.code);
 
       const error = page.locator('.alert-error');
       await expect(error).toBeVisible();

@@ -19,7 +19,7 @@ export class CartPage extends BasePage {
 
   // จำนวนสินค้าทั้งหมดใน cart (นับจาก row)
   async getItemCount(): Promise<number> {
-    return await this.page.locator('[data-testid^="cart-item-"]').count();
+    return await this.page.locator('tr[data-testid^="cart-item-"]').count();
   }
 
   // อ่าน subtotal
