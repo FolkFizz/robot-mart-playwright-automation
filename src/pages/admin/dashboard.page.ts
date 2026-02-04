@@ -1,7 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from '../base.page';
 import { routes } from '@config/routes';
-import { testIdAdmin } from '@selectors/testids';
 
 // POM สำหรับหน้า Admin Dashboard
 export class AdminDashboardPage extends BasePage {
@@ -29,7 +28,7 @@ export class AdminDashboardPage extends BasePage {
 
   // คืน locator ของแถว order ตาม orderId
   getOrderRow(orderId: string): Locator {
-    return this.getByTestId(testIdAdmin.orderRow(orderId));
+    return this.getByTestId(`order-row-${orderId}`);
   }
 
   // เช็คว่าแถว order ถูก highlight หรือไม่

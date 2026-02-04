@@ -18,8 +18,8 @@
       "@fixtures/*": ["src/fixtures/*"],
       "@pages/*": ["src/pages/*"],
       "@components/*": ["src/components/*"],
+      "@data/*": ["src/data/*"],
       "@utils/*": ["src/utils/*"],
-      "@selectors/*": ["src/selectors/*"],
       "@app-types/*": ["src/types/*"]
     },
     "outDir": "dist"

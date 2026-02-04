@@ -1,19 +1,20 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from '../base.page';
 import { routes } from '@config/routes';
-import { testIdAuth, testIdNav } from '@selectors/testids';
 
 // POM สำหรับหน้า Login
 export class LoginPage extends BasePage {
   private readonly usernameInput: Locator;
   private readonly passwordInput: Locator;
   private readonly submitButton: Locator;
+  private readonly accountMenu: Locator;
 
   constructor(page: Page) {
     super(page);
-    this.usernameInput = this.getByTestId(testIdAuth.loginUsername);
-    this.passwordInput = this.getByTestId(testIdAuth.loginPassword);
-    this.submitButton = this.getByTestId(testIdAuth.loginSubmit);
+    this.usernameInput = this.getByTestId('login-username');
+    this.passwordInput = this.getByTestId('login-password');
+    this.submitButton = this.getByTestId('login-submit');
+    this.accountMenu = this.getByTestId('nav-account-menu');
   }
 
   // เปิดหน้า login
@@ -27,6 +28,22 @@ export class LoginPage extends BasePage {
     await this.passwordInput.fill(password);
     await this.submitButton.click();
     // รอจนเมนู account โผล่ (แปลว่า login สำเร็จ)
-    await this.getByTestId(testIdNav.accountMenu).waitFor({ state: 'visible', timeout: 15000 });
+    await this.accountMenu.waitFor({ state: 'visible', timeout: 15000 });
+  }
+
+  async fillUsername(value: string): Promise<void> {
+    await this.usernameInput.fill(value);
+  }
+
+  async fillPassword(value: string): Promise<void> {
+    await this.passwordInput.fill(value);
+  }
+
+  async submit(): Promise<void> {
+    await this.submitButton.click();
+  }
+
+  getUsernameInput(): Locator {
+    return this.usernameInput;
   }
 }

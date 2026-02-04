@@ -1,5 +1,4 @@
 import { Page, Locator } from '@playwright/test';
-import { testIdCart } from '@selectors/testids';
 
 // Component สำหรับการใช้/ลบคูปองในตะกร้า
 export class CouponComponent {
@@ -10,9 +9,9 @@ export class CouponComponent {
 
   constructor(page: Page) {
     this.page = page;
-    this.input = page.getByTestId(testIdCart.couponInput);
-    this.applyButton = page.getByTestId(testIdCart.applyCoupon);
-    this.removeButton = page.getByTestId(testIdCart.removeCoupon);
+    this.input = page.getByTestId('cart-coupon-input');
+    this.applyButton = page.getByTestId('cart-apply-coupon');
+    this.removeButton = page.getByTestId('cart-remove-coupon');
   }
 
   // ใส่โค้ดคูปองและกดใช้

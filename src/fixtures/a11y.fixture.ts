@@ -1,5 +1,5 @@
 import { test as base } from './base.fixture';
-import { runA11y, expectNoA11yViolations } from '../../tests/non-functional/a11y/_support/axe-runner';
+import { runA11y, expectNoA11yViolations } from '@utils/a11y-runner';
 
 type A11yFixtures = {
   runA11y: typeof runA11y;

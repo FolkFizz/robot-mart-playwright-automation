@@ -1,7 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from '../base.page';
 import { routes } from '@config/routes';
-import { testIdAuth, testIdNav } from '@selectors/testids';
 
 // POM สำหรับหน้า Register
 export class RegisterPage extends BasePage {
@@ -13,11 +12,11 @@ export class RegisterPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.usernameInput = this.getByTestId(testIdAuth.registerUsername);
-    this.emailInput = this.getByTestId(testIdAuth.registerEmail);
-    this.passwordInput = this.getByTestId(testIdAuth.registerPassword);
-    this.confirmPasswordInput = this.getByTestId(testIdAuth.registerConfirm);
-    this.submitButton = this.getByTestId(testIdAuth.registerSubmit);
+    this.usernameInput = this.getByTestId('register-username');
+    this.emailInput = this.getByTestId('register-email');
+    this.passwordInput = this.getByTestId('register-password');
+    this.confirmPasswordInput = this.getByTestId('register-confirm-password');
+    this.submitButton = this.getByTestId('register-submit');
   }
 
   // เปิดหน้า register
@@ -35,5 +34,25 @@ export class RegisterPage extends BasePage {
     // หลังสมัครสำเร็จจะ redirect ไป login หรือหน้าอื่น
     // เลยใช้ wait network idle กันไว้
     await this.waitForNetworkIdle();
+  }
+
+  async fillUsername(value: string): Promise<void> {
+    await this.usernameInput.fill(value);
+  }
+
+  async fillEmail(value: string): Promise<void> {
+    await this.emailInput.fill(value);
+  }
+
+  async fillPassword(value: string): Promise<void> {
+    await this.passwordInput.fill(value);
+  }
+
+  async fillConfirmPassword(value: string): Promise<void> {
+    await this.confirmPasswordInput.fill(value);
+  }
+
+  async submit(): Promise<void> {
+    await this.submitButton.click();
   }
 }

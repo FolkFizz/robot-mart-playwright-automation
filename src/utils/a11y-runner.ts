@@ -1,5 +1,5 @@
 import { Page, expect } from '@playwright/test';
-import { a11yExcludeSelectors, a11yRules, a11yTags, allowedViolationIds } from './axe-rules';
+import { a11yExcludeSelectors, a11yRules, a11yTags, allowedViolationIds } from './a11y-rules';
 
 export type AxeViolation = {
   id: string;

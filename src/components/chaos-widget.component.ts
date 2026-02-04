@@ -1,5 +1,4 @@
 import { Page, Locator } from '@playwright/test';
-import { testIdChaos } from '@selectors/testids';
 
 // ชื่อ toggle ทั้งหมดใน Chaos Widget
 export type ChaosToggle =
@@ -22,9 +21,9 @@ export class ChaosWidgetComponent {
 
   constructor(page: Page) {
     this.page = page;
-    this.root = page.getByTestId(testIdChaos.widget);
+    this.root = page.getByTestId('chaos-widget');
     this.header = this.root.locator('.chaos-header');
-    this.saveButton = page.getByTestId(testIdChaos.save);
+    this.saveButton = page.getByTestId('save-chaos-btn');
     this.resetButton = this.root.locator('.btn-reset');
   }
 

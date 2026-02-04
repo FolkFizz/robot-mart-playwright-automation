@@ -1,14 +1,14 @@
 # Test Taxonomy
 
 ## Functional
-- `tests/functional/api`: API tests using request context
-- `tests/functional/integration`: flows spanning API + UI
-- `tests/functional/e2e`: full user journeys
+- `tests/api`: API tests using request context
+- `tests/integration`: flows spanning API + UI
+- `tests/e2e`: full user journeys
 
 ## Non-functional
-- `tests/non-functional/a11y`: accessibility
-- `tests/non-functional/security`: basic security checks
-- `tests/non-functional/perf`: performance/load (if any)
+- `tests/a11y`: accessibility
+- `tests/security`: basic security checks
+- `tests/perf`: performance/load (if any)
 
 ## Tagging strategy
 - Use `@safe` for read-only tests.

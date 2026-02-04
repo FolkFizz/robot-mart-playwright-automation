@@ -1,5 +1,4 @@
 import { Page, Locator } from '@playwright/test';
-import { testIdCart } from '@selectors/testids';
 import type { IdLike } from '@app-types/app.types';
 
 // Component สำหรับแถวสินค้าในตะกร้า
@@ -18,14 +17,14 @@ export class CartItemRowComponent {
   constructor(page: Page, id: IdLike) {
     this.page = page;
     this.id = id;
-    this.row = page.getByTestId(testIdCart.itemRow(id));
-    this.name = page.getByTestId(testIdCart.itemName(id));
-    this.price = page.getByTestId(testIdCart.itemPrice(id));
-    this.total = page.getByTestId(testIdCart.itemTotal(id));
-    this.qtyValue = page.getByTestId(testIdCart.qtyValue(id));
-    this.increaseButton = page.getByTestId(testIdCart.qtyIncrease(id));
-    this.decreaseButton = page.getByTestId(testIdCart.qtyDecrease(id));
-    this.removeButton = page.getByTestId(testIdCart.removeItem(id));
+    this.row = page.getByTestId(`cart-item-${id}`);
+    this.name = page.getByTestId(`cart-item-name-${id}`);
+    this.price = page.getByTestId(`cart-item-price-${id}`);
+    this.total = page.getByTestId(`cart-item-total-${id}`);
+    this.qtyValue = page.getByTestId(`cart-qty-value-${id}`);
+    this.increaseButton = page.getByTestId(`cart-qty-increase-${id}`);
+    this.decreaseButton = page.getByTestId(`cart-qty-decrease-${id}`);
+    this.removeButton = page.getByTestId(`cart-remove-${id}`);
   }
 
   // เช็คว่าแถวนี้มีอยู่หรือไม่

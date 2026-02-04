@@ -1,5 +1,4 @@
 import { Page, Locator } from '@playwright/test';
-import { testIdProduct } from '@selectors/testids';
 import type { IdLike } from '@app-types/app.types';
 
 // Component สำหรับการ์ดสินค้าในหน้า Catalog
@@ -15,9 +14,9 @@ export class ProductCardComponent {
   constructor(page: Page, id: IdLike) {
     this.page = page;
     this.id = id;
-    this.root = page.getByTestId(testIdProduct.card(id));
-    this.title = page.getByTestId(testIdProduct.titleInCard(id));
-    this.price = page.getByTestId(testIdProduct.priceInCard(id));
+    this.root = page.getByTestId(`product-card-${id}`);
+    this.title = page.getByTestId(`product-title-${id}`);
+    this.price = page.getByTestId(`product-price-${id}`);
     this.stockStatus = this.root.locator('.stock-status');
     this.badge = this.root.locator('.badge');
   }

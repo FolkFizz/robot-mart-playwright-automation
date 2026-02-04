@@ -8,8 +8,8 @@
     "test:prod": "cross-env BASE_URL=https://robot-store-sandbox.onrender.com playwright test --grep \"@smoke|@safe\"",
     "test:smoke": "playwright test --grep \"@smoke\" --grep-invert \"@stripe|@chaos|@ai\"",
     "test:regression": "playwright test --grep \"@regression\"",
-    "test:api": "playwright test tests/functional/api --grep \"@api\"",
-    "test:a11y": "playwright test tests/non-functional/a11y --grep \"@a11y\"",
+    "test:api": "playwright test tests/api --grep \"@api\"",
+    "test:a11y": "playwright test tests/a11y --grep \"@a11y\"",
     "report:allure": "allure generate allure-results -o allure-report --clean",
     "report:open": "allure open allure-report"
   },

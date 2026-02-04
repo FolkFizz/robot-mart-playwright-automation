@@ -27,7 +27,7 @@ npm run test:prod
 
 ## 3) Run a single file
 ```bash
-npx playwright test tests/functional/e2e/catalog.e2e.spec.ts --project=chromium
+npx playwright test tests/e2e/catalog.e2e.spec.ts --project=chromium
 ```
 
 ## 4) Tag-based runs

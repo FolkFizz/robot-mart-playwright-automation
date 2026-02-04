@@ -16,11 +16,11 @@ Summary of GitHub Actions workflows and how they map to tags.
   ```
 - API:
   ```bash
-  npx playwright test tests/functional/api --grep "@api"
+  npx playwright test tests/api --grep "@api"
   ```
 - A11y:
   ```bash
-  npx playwright test tests/non-functional/a11y --grep "@a11y"
+  npx playwright test tests/a11y --grep "@a11y"
   ```
 
 ## Notes

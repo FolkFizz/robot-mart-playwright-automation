@@ -1,17 +1,16 @@
-import type { BrowserContext, Page } from '@playwright/test';
+import type { APIRequestContext, Page } from '@playwright/test';
 import { test as dataTest, expect } from '@fixtures/data.fixture';
 
-import { LoginPage } from '@pages/auth/login.page';
 import { HomePage } from '@pages/home.page';
 import { ProductPage } from '@pages/product.page';
 import { CartPage } from '@pages/cart.page';
 import { NavbarComponent } from '@components/navbar.component';
 import { CartItemRowComponent } from '@components/cart-item-row.component';
 
-import { users } from '../../_support/test-data/users';
-import { seededProducts } from '../../_support/test-data/products';
-import { coupons } from '../../_support/test-data/coupons';
-import { testIdCart } from '@selectors/testids';
+import { loginAsUser } from '@api/auth.api';
+import { addToCart, clearCart } from '@api/cart.api';
+import { seededProducts } from '@data/products';
+import { coupons } from '@data/coupons';
 
 const parsePrice = (text: string) => Number.parseFloat(text.replace(/[^0-9.]/g, ''));
 
@@ -20,45 +19,39 @@ const parseShipping = (text: string) => {
   return parsePrice(text);
 };
 
-dataTest.describe.serial('cart stateful flow @e2e @destructive', () => {
-  let context: BrowserContext;
-  let page: Page;
-  let login: LoginPage;
-  let home: HomePage;
-  let product: ProductPage;
-  let cart: CartPage;
-  let navbar: NavbarComponent;
+const loginAndSyncSession = async (api: APIRequestContext, page: Page) => {
+  await loginAsUser(api);
+  const storage = await api.storageState();
+  await page.context().addCookies(storage.cookies);
+};
 
+const seedCart = async (
+  api: APIRequestContext,
+  items: Array<{ id: number; quantity?: number }>
+) => {
+  await clearCart(api);
+  for (const item of items) {
+    await addToCart(api, item.id, item.quantity ?? 1);
+  }
+};
+
+dataTest.describe('cart @e2e @cart', () => {
   const firstProduct = seededProducts[0];
   const secondProduct = seededProducts[1];
 
-  dataTest.beforeAll(async ({ browser }) => {
-    context = await browser.newContext();
-    page = await context.newPage();
-
-    login = new LoginPage(page);
-    home = new HomePage(page);
-    product = new ProductPage(page);
-    cart = new CartPage(page);
-    navbar = new NavbarComponent(page);
-
-    await login.goto();
-    await login.login(users.user.username, users.user.password);
-
-    // เคลียร์ cart ให้สะอาดก่อนเริ่ม stateful flow
-    await cart.goto();
-    const existing = await cart.getItemCount();
-    if (existing > 0) {
-      await cart.clearCart();
-    }
-  });
-
-  dataTest.afterAll(async () => {
-    await context?.close();
+  dataTest.beforeEach(async ({ api, page }) => {
+    await loginAndSyncSession(api, page);
   });
 
   dataTest.describe('positive cases', () => {
-    dataTest('add first product to cart', async () => {
+    dataTest('add first product to cart @smoke @e2e @cart @destructive', async ({ api, page }) => {
+      await seedCart(api, []);
+
+      const home = new HomePage(page);
+      const product = new ProductPage(page);
+      const cart = new CartPage(page);
+      const navbar = new NavbarComponent(page);
+
       await home.goto();
       await home.clickProductById(firstProduct.id);
       await product.addToCart();
@@ -76,7 +69,14 @@ dataTest.describe.serial('cart stateful flow @e2e @destructive', () => {
       expect(await navbar.getCartCount()).toBe(1);
     });
 
-    dataTest('add second product and verify subtotal', async () => {
+    dataTest('add second product and verify subtotal @e2e @cart @regression @destructive', async ({ api, page }) => {
+      await seedCart(api, [{ id: firstProduct.id }]);
+
+      const home = new HomePage(page);
+      const product = new ProductPage(page);
+      const cart = new CartPage(page);
+      const navbar = new NavbarComponent(page);
+
       await home.goto();
       await home.clickProductById(secondProduct.id);
       await product.addToCart();
@@ -92,11 +92,15 @@ dataTest.describe.serial('cart stateful flow @e2e @destructive', () => {
       expect(subtotal).toBeCloseTo(expectedSubtotal, 2);
       expect(await navbar.getCartCount()).toBe(2);
 
-      const shippingText = await page.getByTestId(testIdCart.shipping).innerText();
+      const shippingText = await cart.getShippingText();
       expect(parseShipping(shippingText)).toBe(50);
     });
 
-    dataTest('increase quantity updates totals and enables free shipping', async () => {
+    dataTest('increase quantity updates totals and enables free shipping @e2e @cart @regression @destructive', async ({ api, page }) => {
+      await seedCart(api, [{ id: firstProduct.id }, { id: secondProduct.id }]);
+
+      const cart = new CartPage(page);
+
       await cart.goto();
       const row = new CartItemRowComponent(page, firstProduct.id);
       const beforeQty = await row.getQuantity();
@@ -113,22 +117,26 @@ dataTest.describe.serial('cart stateful flow @e2e @destructive', () => {
       const expectedSubtotal = firstProduct.price * afterQty + secondProduct.price;
       expect(subtotal).toBeCloseTo(expectedSubtotal, 2);
 
-      const shippingText = await page.getByTestId(testIdCart.shipping).innerText();
+      const shippingText = await cart.getShippingText();
       expect(shippingText.trim().toUpperCase()).toBe('FREE');
     });
 
-    dataTest('apply coupon reduces grand total', async () => {
+    dataTest('apply coupon reduces grand total @e2e @cart @regression @destructive', async ({ api, page }) => {
+      await seedCart(api, [{ id: firstProduct.id }, { id: secondProduct.id }]);
+
+      const cart = new CartPage(page);
+
       await cart.goto();
       const subtotal = parsePrice(await cart.getSubtotal());
 
       await cart.applyCoupon(coupons.robot99.code);
 
-      const discountText = await page.getByTestId(testIdCart.discount).innerText();
+      const discountText = await cart.getDiscountText();
       const discountValue = parsePrice(discountText);
       expect(discountValue).toBeGreaterThan(0);
       expect(discountValue).toBeCloseTo(subtotal * (coupons.robot99.discountPercent / 100), 1);
 
-      const shippingText = await page.getByTestId(testIdCart.shipping).innerText();
+      const shippingText = await cart.getShippingText();
       const shippingValue = parseShipping(shippingText);
       const grandTotal = parsePrice(await cart.getGrandTotal());
 
@@ -136,20 +144,30 @@ dataTest.describe.serial('cart stateful flow @e2e @destructive', () => {
       expect(grandTotal).toBeCloseTo(expectedTotal, 1);
     });
 
-    dataTest('remove coupon restores totals', async () => {
+    dataTest('remove coupon restores totals @e2e @cart @regression @destructive', async ({ api, page }) => {
+      await seedCart(api, [{ id: firstProduct.id }, { id: secondProduct.id }]);
+
+      const cart = new CartPage(page);
+
       await cart.goto();
+      await cart.applyCoupon(coupons.robot99.code);
       await cart.removeCoupon();
 
-      const discountVisible = await page.getByTestId(testIdCart.discount).isVisible().catch(() => false);
+      const discountVisible = await cart.isDiscountVisible();
       expect(discountVisible).toBe(false);
 
       const subtotal = parsePrice(await cart.getSubtotal());
-      const shippingValue = parseShipping(await page.getByTestId(testIdCart.shipping).innerText());
+      const shippingValue = parseShipping(await cart.getShippingText());
       const grandTotal = parsePrice(await cart.getGrandTotal());
       expect(grandTotal).toBeCloseTo(subtotal + shippingValue, 2);
     });
 
-    dataTest('remove second product updates cart', async () => {
+    dataTest('remove second product updates cart @e2e @cart @regression @destructive', async ({ api, page }) => {
+      await seedCart(api, [{ id: firstProduct.id }, { id: secondProduct.id }]);
+
+      const cart = new CartPage(page);
+      const navbar = new NavbarComponent(page);
+
       await cart.goto();
       await cart.removeItemById(secondProduct.id);
 
@@ -165,7 +183,11 @@ dataTest.describe.serial('cart stateful flow @e2e @destructive', () => {
   });
 
   dataTest.describe('negative cases', () => {
-    dataTest('expired coupon shows error', async () => {
+    dataTest('expired coupon shows error @e2e @cart @regression @destructive', async ({ api, page }) => {
+      await seedCart(api, [{ id: firstProduct.id }]);
+
+      const cart = new CartPage(page);
+
       await cart.goto();
       await cart.applyCoupon(coupons.expired50.code);
 
@@ -174,16 +196,13 @@ dataTest.describe.serial('cart stateful flow @e2e @destructive', () => {
       await expect(error).toContainText('Coupon has expired');
     });
 
-    dataTest('cannot decrease quantity below 1', async () => {
+    dataTest('cannot decrease quantity below 1 @e2e @cart @regression @destructive', async ({ api, page }) => {
+      await seedCart(api, [{ id: firstProduct.id }]);
+
+      const cart = new CartPage(page);
+
       await cart.goto();
       const row = new CartItemRowComponent(page, firstProduct.id);
-
-      // ลดให้เหลือ 1 ก่อน
-      let qty = await row.getQuantity();
-      while (qty > 1) {
-        await cart.decreaseQtyById(firstProduct.id);
-        qty = await row.getQuantity();
-      }
 
       await cart.decreaseQtyById(firstProduct.id);
       const after = await row.getQuantity();
@@ -191,7 +210,12 @@ dataTest.describe.serial('cart stateful flow @e2e @destructive', () => {
     });
   });
 
-  dataTest('clear cart at the end', async () => {
+  dataTest('clear cart empties cart @e2e @cart @regression @destructive', async ({ api, page }) => {
+    await seedCart(api, [{ id: firstProduct.id }]);
+
+    const cart = new CartPage(page);
+    const navbar = new NavbarComponent(page);
+
     await cart.goto();
     await cart.clearCart();
 

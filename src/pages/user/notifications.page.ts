@@ -1,6 +1,5 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from '../base.page';
-import { testIdNav } from '@selectors/testids';
 
 // POM สำหรับ Notifications (อยู่ใน navbar dropdown)
 export class NotificationsPage extends BasePage {
@@ -11,7 +10,7 @@ export class NotificationsPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.bellButton = this.getByTestId(testIdNav.bell);
+    this.bellButton = this.getByTestId('nav-bell');
     this.dropdown = this.page.locator('#notifDropdown');
     this.notifItems = this.page.locator('#notifItemsContainer .notif-item');
     this.markReadButton = this.page.locator('#markNotificationsRead');

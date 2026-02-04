@@ -1,7 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from './base.page';
 import { routes } from '@config/routes';
-import { testIdProduct } from '@selectors/testids';
 
 // POM สำหรับหน้า Home / Catalog
 export class HomePage extends BasePage {
@@ -96,7 +95,7 @@ export class HomePage extends BasePage {
 
   // คลิกสินค้าโดยใช้ id (ถ้ารู้ id แล้ว)
   async clickProductById(id: number | string): Promise<void> {
-    await this.getByTestId(testIdProduct.card(id)).click();
+    await this.getByTestId(`product-card-${id}`).click();
     await this.waitForNetworkIdle();
   }
 

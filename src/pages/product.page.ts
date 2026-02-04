@@ -1,6 +1,5 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from './base.page';
-import { testIdProduct } from '@selectors/testids';
 
 // POM สำหรับหน้า Product Detail
 export class ProductPage extends BasePage {
@@ -9,17 +8,17 @@ export class ProductPage extends BasePage {
   constructor(page: Page) {
     super(page);
     // ช่องจำนวนสินค้า
-    this.qtyInput = this.getByTestId(testIdProduct.qtyInput);
+    this.qtyInput = this.getByTestId('product-qty');
   }
 
   // อ่านชื่อสินค้า
   async getTitle(): Promise<string> {
-    return await this.getByTestId(testIdProduct.detailTitle).innerText();
+    return await this.getByTestId('product-title').innerText();
   }
 
   // อ่านราคาสินค้า
   async getPrice(): Promise<string> {
-    return await this.getByTestId(testIdProduct.detailPrice).innerText();
+    return await this.getByTestId('product-price').innerText();
   }
 
   // ตั้งค่าจำนวนสินค้า (ใช้ fill)
@@ -29,17 +28,17 @@ export class ProductPage extends BasePage {
 
   // เพิ่มจำนวน (+)
   async increaseQty(): Promise<void> {
-    await this.clickByTestId(testIdProduct.qtyIncrease);
+    await this.clickByTestId('product-qty-increase');
   }
 
   // ลดจำนวน (-)
   async decreaseQty(): Promise<void> {
-    await this.clickByTestId(testIdProduct.qtyDecrease);
+    await this.clickByTestId('product-qty-decrease');
   }
 
   // กดปุ่ม Add to Cart
   async addToCart(): Promise<void> {
-    await this.clickByTestId(testIdProduct.addToCart);
+    await this.clickByTestId('product-add-to-cart');
     // ใน UI จริงมี data-status loading/idle + body data-loading
     // รอให้หน้ากลับสู่สถานะ idle (ป้องกันคลิกซ้ำเร็ว)
     await this.page.waitForFunction(

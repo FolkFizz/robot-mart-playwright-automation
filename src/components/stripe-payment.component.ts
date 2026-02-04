@@ -1,5 +1,4 @@
 import { Page, Locator, expect } from '@playwright/test';
-import { testIdCheckout } from '@selectors/testids';
 
 // Component สำหรับส่วนชำระเงินในหน้า Checkout
 export class StripePaymentComponent {
@@ -11,10 +10,10 @@ export class StripePaymentComponent {
 
   constructor(page: Page) {
     this.page = page;
-    this.paymentElement = page.getByTestId(testIdCheckout.paymentElement);
-    this.paymentMessage = page.getByTestId(testIdCheckout.paymentMessage);
-    this.submitButton = page.getByTestId(testIdCheckout.submit);
-    this.mockNote = page.getByTestId(testIdCheckout.mockNote);
+    this.paymentElement = page.getByTestId('payment-element');
+    this.paymentMessage = page.getByTestId('payment-message');
+    this.submitButton = page.getByTestId('checkout-submit');
+    this.mockNote = page.getByTestId('mock-payment-note');
   }
 
   // เช็คว่าอยู่ในโหมด mock payment หรือไม่

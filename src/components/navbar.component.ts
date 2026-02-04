@@ -1,6 +1,4 @@
 import { Page, Locator } from '@playwright/test';
-import { testIdNav } from '@selectors/testids';
-import { roleNav } from '@selectors/roles';
 
 // Component สำหรับแถบเมนูด้านบน
 export class NavbarComponent {
@@ -14,17 +12,17 @@ export class NavbarComponent {
 
   constructor(page: Page) {
     this.page = page;
-    this.cartLink = page.getByTestId(testIdNav.cartLink);
-    this.cartCount = page.getByTestId(testIdNav.cartCount);
-    this.bellTrigger = page.getByTestId(testIdNav.bell);
-    this.accountMenu = page.getByTestId(testIdNav.accountMenu);
-    this.profileTrigger = page.getByTestId(testIdNav.profile);
-    this.logoutLink = page.getByTestId(testIdNav.logout);
+    this.cartLink = page.getByTestId('nav-cart-link');
+    this.cartCount = page.getByTestId('nav-cart-count');
+    this.bellTrigger = page.getByTestId('nav-bell');
+    this.accountMenu = page.getByTestId('nav-account-menu');
+    this.profileTrigger = page.getByTestId('nav-profile');
+    this.logoutLink = page.getByTestId('logout-link');
   }
 
   // ไปหน้า Store (หน้าแรก)
   async gotoStore(): Promise<void> {
-    await this.page.getByRole('link', { name: roleNav.storeLinkName }).click();
+    await this.page.getByRole('link', { name: 'Store' }).click();
   }
 
   // ไปหน้า Cart
@@ -75,19 +73,19 @@ export class NavbarComponent {
   // ไปหน้า QA Guide
   async gotoQaGuide(): Promise<void> {
     await this.openQaToolsMenu();
-    await this.page.getByRole('link', { name: roleNav.qaGuideName }).click();
+    await this.page.getByRole('link', { name: 'QA Guide' }).click();
   }
 
   // ไปหน้า API Docs (เปิดแท็บใหม่)
   async gotoApiDocs(): Promise<void> {
     await this.openQaToolsMenu();
-    await this.page.getByRole('link', { name: roleNav.apiDocsName }).click();
+    await this.page.getByRole('link', { name: 'API Docs' }).click();
   }
 
   // ไปหน้า Chaos Lab
   async gotoChaosLab(): Promise<void> {
     await this.openQaToolsMenu();
-    await this.page.getByRole('link', { name: roleNav.chaosLabName }).click();
+    await this.page.getByRole('link', { name: 'Chaos Lab' }).click();
   }
 
   // เช็คว่าล็อกอินอยู่หรือไม่จากเมนู account
