@@ -56,9 +56,14 @@ export const getCart = async (ctx: APIRequestContext) => {
 
 // ล้างตะกร้าทั้งหมด
 export const clearCart = async (ctx: APIRequestContext) => {
-  const res = await ctx.delete(routes.api.cart, {
+  let res = await ctx.delete(routes.api.cartReset, {
     headers: { Accept: 'application/json' }
   });
+  if (!res.ok()) {
+    res = await ctx.delete(routes.api.cart, {
+      headers: { Accept: 'application/json' }
+    });
+  }
   expect(res.ok()).toBeTruthy();
   return res;
 };

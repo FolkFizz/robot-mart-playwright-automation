@@ -1,4 +1,3 @@
-import type { APIRequestContext, Page } from '@playwright/test';
 import { test as dataTest, expect } from '@fixtures/data.fixture';
 
 import { CartPage } from '@pages/cart.page';
@@ -6,108 +5,12 @@ import { CheckoutPage } from '@pages/checkout.page';
 import { ProfilePage } from '@pages/user/profile.page';
 import { NavbarComponent } from '@components/navbar.component';
 
-import { loginAsUser } from '@api/auth.api';
-import { addToCart, clearCart } from '@api/cart.api';
 import { disableChaos } from '@fixtures/chaos';
+import { loginAndSyncSession, seedCart } from '@fixtures/test-setup';
 import { SHIPPING } from '@config/constants';
 import { seededProducts } from '@data/products';
 import { coupons } from '@data/coupons';
-
-const parsePrice = (text: string) => Number.parseFloat(text.replace(/[^0-9.]/g, ''));
-const parseShipping = (text: string) => (text.trim().toUpperCase() === 'FREE' ? 0 : parsePrice(text));
-
-const fillStripeCard = async (
-  page: Page,
-  card: { number: string; exp: string; cvc: string; postal?: string }
-) => {
-  const frame = page.frameLocator('iframe[name^="__privateStripeFrame"]:not([aria-hidden="true"])');
-
-  const numberInput = frame.locator('input[name="cardnumber"], input[name="number"]').first();
-  await numberInput.fill(card.number);
-
-  const expInput = frame.locator('input[name="exp-date"], input[name="expiry"]').first();
-  await expInput.fill(card.exp);
-
-  const cvcInput = frame.locator('input[name="cvc"]').first();
-  await cvcInput.fill(card.cvc);
-
-  const postal = frame.locator('input[name="postal"], input[name="postalCode"]');
-  if (await postal.count()) {
-    await postal.first().fill(card.postal ?? '10001');
-  }
-};
-
-const loginAndSyncSession = async (api: APIRequestContext, page: Page) => {
-  await loginAsUser(api);
-  const storage = await api.storageState();
-  await page.context().addCookies(storage.cookies);
-};
-
-const seedCart = async (
-  api: APIRequestContext,
-  items: Array<{ id: number; quantity?: number }>
-) => {
-  await clearCart(api);
-  for (const item of items) {
-    await addToCart(api, item.id, item.quantity ?? 1);
-  }
-};
-
-const gotoCheckoutWithItem = async (
-  api: APIRequestContext,
-  page: Page,
-  productId: number
-) => {
-  await seedCart(api, [{ id: productId }]);
-  const cart = new CartPage(page);
-  const checkout = new CheckoutPage(page);
-
-  await cart.goto();
-  await cart.proceedToCheckout();
-  await expect(page).toHaveURL(/\/order\/checkout/);
-  await checkout.waitForStripeReady();
-
-  return checkout;
-};
-
-const waitForPaymentResult = async (page: Page, checkout: CheckoutPage, timeoutMs = 30000) => {
-  const deadline = Date.now() + timeoutMs;
-  const message = checkout.getPaymentMessageLocator();
-  let sawLoading = false;
-
-  while (Date.now() < deadline) {
-    if (/\/order\/success\?order_id=/.test(page.url())) {
-      return { status: 'success' as const, sawLoading };
-    }
-
-    const hasMessage = (await message.count().catch(() => 0)) > 0;
-    if (hasMessage) {
-      const text = (await message.innerText().catch(() => '')).trim();
-      if (text.length > 0) {
-        return { status: 'error' as const, sawLoading, message: text };
-      }
-    }
-
-    const status = await checkout.getSubmitStatus().catch(() => 'idle');
-    if (status === 'loading') sawLoading = true;
-
-    await page.waitForTimeout(500);
-  }
-
-  return { status: 'timeout' as const, sawLoading };
-};
-
-const attemptStripePayment = async (page: Page, checkout: CheckoutPage) => {
-  await checkout.setName('Test User');
-  await checkout.setEmail('test.user@robotstore.com');
-
-  await checkout.waitForStripeReady();
-  await fillStripeCard(page, { number: '4242 4242 4242 4242', exp: '12/34', cvc: '123', postal: '10001' });
-  await expect(checkout.getSubmitButton()).toBeEnabled();
-  await checkout.clickSubmit();
-
-  return await waitForPaymentResult(page, checkout, 30000);
-};
+import { customer, validCard, declinedCard } from '@data/payment';
 
 dataTest.describe('checkout stripe @e2e @checkout', () => {
   const firstProduct = seededProducts[0];
@@ -124,34 +27,40 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
 
   dataTest.describe('positive cases', () => {
     dataTest('setup cart with 2 items @e2e @checkout @regression @destructive', async ({ api, page }) => {
+      // Arrange: seed cart via API
       await seedCart(api, [{ id: firstProduct.id }, { id: secondProduct.id }]);
 
       const cart = new CartPage(page);
 
+      // Act: open cart
       await cart.goto();
       const count = await cart.getItemCount();
       expect(count).toBe(2);
 
-      const subtotal = parsePrice(await cart.getSubtotal());
+      // Assert: subtotal matches seeded items
+      const subtotal = CheckoutPage.parsePrice(await cart.getSubtotal());
       const expected = firstProduct.price + secondProduct.price;
       expect(subtotal).toBeCloseTo(expected, 2);
     });
 
     dataTest('checkout page shows stripe ready and total matches cart @smoke @e2e @checkout @destructive', async ({ api, page }) => {
+      // Arrange: seed cart via API
       await seedCart(api, [{ id: firstProduct.id }, { id: secondProduct.id }]);
 
       const cart = new CartPage(page);
       const checkout = new CheckoutPage(page);
 
+      // Act: go to checkout
       await cart.goto();
-      const cartTotal = parsePrice(await cart.getGrandTotal());
+      const cartTotal = CheckoutPage.parsePrice(await cart.getGrandTotal());
 
       await cart.proceedToCheckout();
       await expect(page).toHaveURL(/\/order\/checkout/);
 
       await checkout.waitForStripeReady();
 
-      const checkoutTotal = parsePrice(await checkout.getTotal());
+      // Assert: totals + prefilled customer info
+      const checkoutTotal = CheckoutPage.parsePrice(await checkout.getTotal());
       expect(checkoutTotal).toBeCloseTo(cartTotal, 2);
 
       const nameValue = await checkout.getNameValue();
@@ -162,12 +71,21 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
 
     dataTest('complete stripe payment redirects to success and appears in profile @smoke @e2e @checkout @destructive', async ({ api, page }) => {
       dataTest.setTimeout(90_000);
-      const checkout = await gotoCheckoutWithItem(api, page, firstProduct.id);
+      // Arrange: seed cart via API
+      await seedCart(api, [{ id: firstProduct.id }]);
 
-      let result = await attemptStripePayment(page, checkout);
+      const cart = new CartPage(page);
+      const checkout = new CheckoutPage(page);
+
+      // Act: go to checkout
+      await cart.goto();
+      await cart.proceedToCheckout();
+      await expect(page).toHaveURL(/\/order\/checkout/);
+
+      let result = await checkout.submitStripePayment({ ...customer, card: validCard, timeoutMs: 30000 });
       if (result.status === 'timeout') {
         await page.reload({ waitUntil: 'domcontentloaded' });
-        result = await attemptStripePayment(page, checkout);
+        result = await checkout.submitStripePayment({ ...customer, card: validCard, timeoutMs: 30000 });
       }
 
       if (result.status === 'error') {
@@ -175,6 +93,7 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
       }
 
       if (result.status === 'success') {
+        // Assert: success page + order appears in profile
         await expect(page.getByTestId('order-success-message')).toBeVisible();
         const orderId = await page.getByTestId('order-id').innerText();
         const trimmed = orderId.trim();
@@ -193,54 +112,59 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
     });
 
     dataTest('apply WELCOME10 on low-value order updates totals @e2e @checkout @regression @destructive', async ({ api, page }) => {
+      // Arrange: seed cart with low total
       await seedCart(api, [{ id: firstProduct.id }]);
 
       const cart = new CartPage(page);
 
+      // Act: open cart + apply coupon
       await cart.goto();
-      const subtotal = parsePrice(await cart.getSubtotal());
+      const subtotal = CheckoutPage.parsePrice(await cart.getSubtotal());
       expect(subtotal).toBeLessThan(SHIPPING.freeThreshold);
 
-      const shippingBefore = parseShipping(await cart.getShippingText());
+      const shippingBefore = CheckoutPage.parseShipping(await cart.getShippingText());
       expect(shippingBefore).toBe(SHIPPING.fee);
 
       await cart.applyCoupon(coupons.welcome10.code);
 
-      const discountValue = parsePrice(await cart.getDiscountText());
+      const discountValue = CheckoutPage.parsePrice(await cart.getDiscountText());
       expect(discountValue).toBeCloseTo(subtotal * (coupons.welcome10.discountPercent / 100), 1);
 
-      const shippingAfter = parseShipping(await cart.getShippingText());
+      const shippingAfter = CheckoutPage.parseShipping(await cart.getShippingText());
       expect(shippingAfter).toBe(SHIPPING.fee);
 
-      const grandTotal = parsePrice(await cart.getGrandTotal());
+      const grandTotal = CheckoutPage.parsePrice(await cart.getGrandTotal());
       expect(grandTotal).toBeCloseTo(subtotal - discountValue + shippingAfter, 1);
     });
 
     dataTest('apply ROBOT99 on high-value order keeps free shipping @e2e @checkout @regression @destructive', async ({ api, page }) => {
+      // Arrange: seed cart with high total
       await seedCart(api, [{ id: thirdProduct.id, quantity: 2 }]);
 
       const cart = new CartPage(page);
 
+      // Act: open cart + apply coupon
       await cart.goto();
-      const subtotal = parsePrice(await cart.getSubtotal());
+      const subtotal = CheckoutPage.parsePrice(await cart.getSubtotal());
       expect(subtotal).toBeGreaterThanOrEqual(SHIPPING.freeThreshold);
 
-      const shippingBefore = parseShipping(await cart.getShippingText());
+      const shippingBefore = CheckoutPage.parseShipping(await cart.getShippingText());
       expect(shippingBefore).toBe(0);
 
       await cart.applyCoupon(coupons.robot99.code);
 
-      const discountValue = parsePrice(await cart.getDiscountText());
+      const discountValue = CheckoutPage.parsePrice(await cart.getDiscountText());
       expect(discountValue).toBeCloseTo(subtotal * (coupons.robot99.discountPercent / 100), 1);
 
-      const shippingAfter = parseShipping(await cart.getShippingText());
+      const shippingAfter = CheckoutPage.parseShipping(await cart.getShippingText());
       expect(shippingAfter).toBe(0);
 
-      const grandTotal = parsePrice(await cart.getGrandTotal());
+      const grandTotal = CheckoutPage.parsePrice(await cart.getGrandTotal());
       expect(grandTotal).toBeCloseTo(subtotal - discountValue + shippingAfter, 1);
     });
 
     dataTest('remove coupon restores totals @e2e @checkout @regression @destructive', async ({ api, page }) => {
+      // Arrange: seed cart + apply coupon
       await seedCart(api, [{ id: firstProduct.id }]);
 
       const cart = new CartPage(page);
@@ -252,13 +176,15 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
       const discountVisible = await cart.isDiscountVisible();
       expect(discountVisible).toBe(false);
 
-      const subtotal = parsePrice(await cart.getSubtotal());
-      const shippingValue = parseShipping(await cart.getShippingText());
-      const grandTotal = parsePrice(await cart.getGrandTotal());
+      // Assert: totals restored
+      const subtotal = CheckoutPage.parsePrice(await cart.getSubtotal());
+      const shippingValue = CheckoutPage.parseShipping(await cart.getShippingText());
+      const grandTotal = CheckoutPage.parsePrice(await cart.getGrandTotal());
       expect(grandTotal).toBeCloseTo(subtotal + shippingValue, 1);
     });
 
     dataTest('shipping recalculates when discount crosses threshold @e2e @checkout @regression @destructive', async ({ api, page }) => {
+      // Arrange: seed cart above free threshold
       await seedCart(api, [
         { id: firstProduct.id, quantity: 2 },
         { id: secondProduct.id, quantity: 1 }
@@ -267,50 +193,54 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
       const cart = new CartPage(page);
 
       await cart.goto();
-      const subtotal = parsePrice(await cart.getSubtotal());
+      const subtotal = CheckoutPage.parsePrice(await cart.getSubtotal());
       expect(subtotal).toBeGreaterThanOrEqual(SHIPPING.freeThreshold);
 
-      const shippingBefore = parseShipping(await cart.getShippingText());
+      const shippingBefore = CheckoutPage.parseShipping(await cart.getShippingText());
       expect(shippingBefore).toBe(0);
 
       await cart.applyCoupon(coupons.robot99.code);
 
-      const discountValue = parsePrice(await cart.getDiscountText());
+      // Assert: shipping recalculates after discount
+      const discountValue = CheckoutPage.parsePrice(await cart.getDiscountText());
       expect(subtotal - discountValue).toBeLessThan(SHIPPING.freeThreshold);
-      const shippingAfter = parseShipping(await cart.getShippingText());
-      const grandTotal = parsePrice(await cart.getGrandTotal());
+      const shippingAfter = CheckoutPage.parseShipping(await cart.getShippingText());
+      const grandTotal = CheckoutPage.parsePrice(await cart.getGrandTotal());
       expect(grandTotal).toBeCloseTo(subtotal - discountValue + shippingAfter, 1);
     });
   });
 
   dataTest.describe('negative cases', () => {
     dataTest('expired coupon is rejected and totals unchanged @e2e @checkout @regression @destructive', async ({ api, page }) => {
+      // Arrange: seed cart
       await seedCart(api, [{ id: firstProduct.id }]);
 
       const cart = new CartPage(page);
 
       await cart.goto();
-      const subtotal = parsePrice(await cart.getSubtotal());
-      const shippingBefore = parseShipping(await cart.getShippingText());
-      const totalBefore = parsePrice(await cart.getGrandTotal());
+      const subtotal = CheckoutPage.parsePrice(await cart.getSubtotal());
+      const shippingBefore = CheckoutPage.parseShipping(await cart.getShippingText());
+      const totalBefore = CheckoutPage.parsePrice(await cart.getGrandTotal());
 
       await cart.applyCoupon(coupons.expired50.code);
 
+      // Assert: coupon rejected, totals unchanged
       const removeVisible = await cart.isRemoveCouponVisible();
       expect(removeVisible).toBe(false);
 
       const discountVisible = await cart.isDiscountVisible();
       if (discountVisible) {
-        const discountValue = parsePrice(await cart.getDiscountText());
+        const discountValue = CheckoutPage.parsePrice(await cart.getDiscountText());
         expect(discountValue).toBe(0);
       }
 
-      const totalAfter = parsePrice(await cart.getGrandTotal());
+      const totalAfter = CheckoutPage.parsePrice(await cart.getGrandTotal());
       expect(totalAfter).toBeCloseTo(subtotal + shippingBefore, 1);
       expect(totalAfter).toBeCloseTo(totalBefore, 1);
     });
 
     dataTest('coupon input is hidden after applying (no re-apply) @e2e @checkout @regression @destructive', async ({ api, page }) => {
+      // Arrange: seed cart
       await seedCart(api, [{ id: firstProduct.id }]);
 
       const cart = new CartPage(page);
@@ -326,11 +256,21 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
     });
 
     dataTest('empty name prevents submit @e2e @checkout @regression @destructive', async ({ api, page }) => {
-      const checkout = await gotoCheckoutWithItem(api, page, firstProduct.id);
+      // Arrange: seed cart + open checkout
+      await seedCart(api, [{ id: firstProduct.id }]);
+      const cart = new CartPage(page);
+      const checkout = new CheckoutPage(page);
 
+      await cart.goto();
+      await cart.proceedToCheckout();
+      await expect(page).toHaveURL(/\/order\/checkout/);
+      await checkout.waitForStripeReady();
+
+      // Act: clear name
       await checkout.setName('');
-      await checkout.setEmail('test.user@robotstore.com');
+      await checkout.setEmail(customer.email);
 
+      // Assert: submit blocked by validation
       await checkout.clickSubmit();
       const nameInput = checkout.getNameInput();
       const isValid = await nameInput.evaluate((el) => (el as HTMLInputElement).checkValidity());
@@ -339,12 +279,27 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
     });
 
     dataTest('empty email prevents submit @e2e @checkout @regression @destructive', async ({ api, page }) => {
-      const checkout = await gotoCheckoutWithItem(api, page, firstProduct.id);
+      // Arrange: seed cart + open checkout
+      await seedCart(api, [{ id: firstProduct.id }]);
+      const cart = new CartPage(page);
+      const checkout = new CheckoutPage(page);
 
-      await checkout.setName('Test User');
+      await cart.goto();
+      await cart.proceedToCheckout();
+      await expect(page).toHaveURL(/\/order\/checkout/);
+      await checkout.waitForStripeReady();
+
+      // Act: clear email
+      await checkout.setName(customer.name);
       await checkout.setEmail('');
 
-      await checkout.clickSubmit();
+      // Assert: submit blocked by validation
+      const submit = checkout.getSubmitButton();
+      try {
+        await expect(submit).toBeDisabled({ timeout: 2000 });
+      } catch {
+        await submit.click({ timeout: 2000 });
+      }
       const emailInput = checkout.getEmailInput();
       const isValid = await emailInput.evaluate((el) => (el as HTMLInputElement).checkValidity());
       expect(isValid).toBe(false);
@@ -352,11 +307,21 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
     });
 
     dataTest('invalid email prevents submit @e2e @checkout @regression @destructive', async ({ api, page }) => {
-      const checkout = await gotoCheckoutWithItem(api, page, firstProduct.id);
+      // Arrange: seed cart + open checkout
+      await seedCart(api, [{ id: firstProduct.id }]);
+      const cart = new CartPage(page);
+      const checkout = new CheckoutPage(page);
 
-      await checkout.setName('Test User');
+      await cart.goto();
+      await cart.proceedToCheckout();
+      await expect(page).toHaveURL(/\/order\/checkout/);
+      await checkout.waitForStripeReady();
+
+      // Act: invalid email
+      await checkout.setName(customer.name);
       await checkout.setEmail('invalid-email');
 
+      // Assert: submit blocked by validation
       await checkout.clickSubmit();
       const emailInput = checkout.getEmailInput();
       const isValid = await emailInput.evaluate((el) => (el as HTMLInputElement).checkValidity());
@@ -365,38 +330,53 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
     });
 
     dataTest('stripe incomplete card blocks submit @e2e @checkout @regression @destructive', async ({ api, page }) => {
-      const checkout = await gotoCheckoutWithItem(api, page, firstProduct.id);
+      // Arrange: seed cart + open checkout
+      await seedCart(api, [{ id: firstProduct.id }]);
+      const cart = new CartPage(page);
+      const checkout = new CheckoutPage(page);
 
-      await checkout.setName('Test User');
-      await checkout.setEmail('test.user@robotstore.com');
+      await cart.goto();
+      await cart.proceedToCheckout();
+      await expect(page).toHaveURL(/\/order\/checkout/);
+      await checkout.waitForStripeReady();
 
-      const frame = page.frameLocator('iframe[name^="__privateStripeFrame"]:not([aria-hidden="true"])');
-      const numberInput = frame.locator('input[name="cardnumber"], input[name="number"]').first();
-      await numberInput.fill('4242 4242 4242 4242');
+      await checkout.setName(customer.name);
+      await checkout.setEmail(customer.email);
 
+      // Act: fill only card number (incomplete card)
+      await checkout.fillCardNumber('4242 4242 4242 4242');
+
+      // Assert: submit disabled or error shown
       const submit = checkout.getSubmitButton();
-      if (await submit.isEnabled()) {
-        await submit.click();
+      try {
+        await expect(submit).toBeDisabled({ timeout: 2000 });
+      } catch {
+        await submit.click({ timeout: 2000 });
         const message = checkout.getPaymentMessageLocator();
         await expect(message).toBeVisible();
-      } else {
-        await expect(submit).toBeDisabled();
       }
     });
 
     dataTest('declined card shows error message @e2e @checkout @regression @destructive', async ({ api, page }) => {
-      const checkout = await gotoCheckoutWithItem(api, page, firstProduct.id);
-      await checkout.setName('Test User');
-      await checkout.setEmail('test.user@robotstore.com');
+      // Arrange: seed cart + open checkout
+      await seedCart(api, [{ id: firstProduct.id }]);
+      const cart = new CartPage(page);
+      const checkout = new CheckoutPage(page);
 
-      await fillStripeCard(page, { number: '4000 0000 0000 0002', exp: '12/34', cvc: '123', postal: '10001' });
-      await expect(checkout.getSubmitButton()).toBeEnabled();
-      await checkout.clickSubmit();
+      await cart.goto();
+      await cart.proceedToCheckout();
+      await expect(page).toHaveURL(/\/order\/checkout/);
 
-      const result = await waitForPaymentResult(page, checkout, 20000);
+      const isMockPayment = await checkout.isMockPayment();
+      dataTest.skip(isMockPayment, 'Mock payment mode does not surface Stripe decline errors');
+
+      const result = await checkout.submitStripePayment({ ...customer, card: declinedCard, timeoutMs: 10000 });
+
       expect(result.status).not.toBe('success');
       if (result.status === 'error') {
         expect(result.message ?? '').toMatch(/declined/i);
+      } else {
+        await expect(page).toHaveURL(/\/order\/checkout/);
       }
     });
 

@@ -22,6 +22,14 @@ export class CheckoutPage extends BasePage {
     this.mockNote = this.getByTestId('mock-payment-note');
   }
 
+  static parsePrice(text: string): number {
+    return Number.parseFloat(text.replace(/[^0-9.]/g, ''));
+  }
+
+  static parseShipping(text: string): number {
+    return text.trim().toUpperCase() === 'FREE' ? 0 : CheckoutPage.parsePrice(text);
+  }
+
   // อ่านยอดรวม (total)
   async getTotal(): Promise<string> {
     return await this.totalLabel.innerText();
@@ -85,6 +93,30 @@ export class CheckoutPage extends BasePage {
     }
   }
 
+  async fillStripeCard(card: { number: string; exp: string; cvc: string; postal?: string }): Promise<void> {
+    const frame = this.page.frameLocator('iframe[name^="__privateStripeFrame"]:not([aria-hidden="true"])');
+
+    const numberInput = frame.locator('input[name="cardnumber"], input[name="number"]').first();
+    await numberInput.fill(card.number);
+
+    const expInput = frame.locator('input[name="exp-date"], input[name="expiry"]').first();
+    await expInput.fill(card.exp);
+
+    const cvcInput = frame.locator('input[name="cvc"]').first();
+    await cvcInput.fill(card.cvc);
+
+    const postal = frame.locator('input[name="postal"], input[name="postalCode"]');
+    if (await postal.count()) {
+      await postal.first().fill(card.postal ?? '10001');
+    }
+  }
+
+  async fillCardNumber(number: string): Promise<void> {
+    const frame = this.page.frameLocator('iframe[name^="__privateStripeFrame"]:not([aria-hidden="true"])');
+    const numberInput = frame.locator('input[name="cardnumber"], input[name="number"]').first();
+    await numberInput.fill(number);
+  }
+
   // กดจ่ายเงิน (ทั้ง mock และ stripe ใช้ปุ่มเดียวกัน)
   async submitPayment(): Promise<void> {
     await this.submitButton.click();
@@ -100,6 +132,44 @@ export class CheckoutPage extends BasePage {
 
   async getSubmitStatus(): Promise<string | null> {
     return await this.submitButton.getAttribute('data-status');
+  }
+
+  async waitForPaymentResult(timeoutMs = 30000): Promise<{ status: 'success' | 'error' | 'timeout'; sawLoading: boolean; message?: string }> {
+    const deadline = Date.now() + timeoutMs;
+    let sawLoading = false;
+
+    while (Date.now() < deadline) {
+      if (/\/order\/success\?order_id=/.test(this.page.url())) {
+        return { status: 'success', sawLoading };
+      }
+
+      const hasMessage = (await this.paymentMessage.count().catch(() => 0)) > 0;
+      if (hasMessage) {
+        const text = (await this.paymentMessage.innerText().catch(() => '')).trim();
+        if (text.length > 0) {
+          return { status: 'error', sawLoading, message: text };
+        }
+      }
+
+      const status = await this.getSubmitStatus().catch(() => 'idle');
+      if (status === 'loading') sawLoading = true;
+
+      await this.page.waitForTimeout(500);
+    }
+
+    return { status: 'timeout', sawLoading };
+  }
+
+  async submitStripePayment(options: { name: string; email: string; card: { number: string; exp: string; cvc: string; postal?: string }; timeoutMs?: number }): Promise<{ status: 'success' | 'error' | 'timeout'; sawLoading: boolean; message?: string }> {
+    await this.setName(options.name);
+    await this.setEmail(options.email);
+
+    await this.waitForStripeReady();
+    await this.fillStripeCard(options.card);
+    await expect(this.getSubmitButton()).toBeEnabled();
+    await this.clickSubmit();
+
+    return await this.waitForPaymentResult(options.timeoutMs ?? 30000);
   }
 
   // อ่านข้อความ error/payment message

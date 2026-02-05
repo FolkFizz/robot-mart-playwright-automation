@@ -1,4 +1,3 @@
-import type { APIRequestContext, Page } from '@playwright/test';
 import { test as dataTest, expect } from '@fixtures/data.fixture';
 
 import { HomePage } from '@pages/home.page';
@@ -7,8 +6,7 @@ import { CartPage } from '@pages/cart.page';
 import { NavbarComponent } from '@components/navbar.component';
 import { CartItemRowComponent } from '@components/cart-item-row.component';
 
-import { loginAsUser } from '@api/auth.api';
-import { addToCart, clearCart } from '@api/cart.api';
+import { loginAndSyncSession, seedCart } from '@fixtures/test-setup';
 import { seededProducts } from '@data/products';
 import { coupons } from '@data/coupons';
 
@@ -17,22 +15,6 @@ const parsePrice = (text: string) => Number.parseFloat(text.replace(/[^0-9.]/g, 
 const parseShipping = (text: string) => {
   if (text.trim().toUpperCase() === 'FREE') return 0;
   return parsePrice(text);
-};
-
-const loginAndSyncSession = async (api: APIRequestContext, page: Page) => {
-  await loginAsUser(api);
-  const storage = await api.storageState();
-  await page.context().addCookies(storage.cookies);
-};
-
-const seedCart = async (
-  api: APIRequestContext,
-  items: Array<{ id: number; quantity?: number }>
-) => {
-  await clearCart(api);
-  for (const item of items) {
-    await addToCart(api, item.id, item.quantity ?? 1);
-  }
 };
 
 dataTest.describe('cart @e2e @cart', () => {

@@ -5,11 +5,7 @@ import {env} from '@config/env';
 export const createApiContext = async(): Promise<APIRequestContext> => {
     return await request.newContext({
         // baseUrl ของ backend
-        baseURL: env.baseUrl,
-        // header พื้นฐาน (คุยด้วยภาษา JSON)
-        extraHTTPHeaders: {
-            'Content-Type': 'application/json'
-        }
+        baseURL: env.baseUrl
     });
 };
 

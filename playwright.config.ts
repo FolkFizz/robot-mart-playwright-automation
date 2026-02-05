@@ -10,7 +10,7 @@ export default defineConfig({
     testDir: './tests',
 
     // รันคู่ขนานได้ยกเว้นตอน CI เพื่อความนิ่ง
-    fullyParallel: true,
+    fullyParallel: false,
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 1 : 0,
     workers: process.env.CI ? 1 : undefined,
