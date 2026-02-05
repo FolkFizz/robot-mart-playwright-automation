@@ -16,3 +16,12 @@ export const declinedCard = {
   cvc: '123',
   postal: '10001'
 } as const;
+
+export const paymentInputs = {
+  empty: '',
+  invalidEmail: 'invalid-email'
+} as const;
+
+export const paymentMessages = {
+  declinedPattern: /declined/i
+} as const;

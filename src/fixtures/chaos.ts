@@ -1,6 +1,6 @@
 import { APIResponse } from '@playwright/test';
 import { createApiContext } from '@api/http';
-import { routes } from '@config/routes';
+import { routes } from '@config/constants';
 
 export type ChaosConfig = {
   dynamicIds?: boolean;

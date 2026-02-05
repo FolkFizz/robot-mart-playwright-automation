@@ -1,5 +1,5 @@
 import { APIRequestContext, expect } from '@playwright/test';
-import { routes } from '@config/routes';
+import { routes } from '@config/constants';
 
 type CartItemInput = { productId: number; quantity: number };
 

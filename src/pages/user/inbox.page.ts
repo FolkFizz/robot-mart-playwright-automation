@@ -1,14 +1,16 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from '../base.page';
-import { routes } from '@config/routes';
+import { routes } from '@config/constants';
 
 // POM สำหรับหน้า Inbox (Email Box)
 export class InboxPage extends BasePage {
   private readonly inboxItems: Locator;
+  private readonly emailBody: Locator;
 
   constructor(page: Page) {
     super(page);
     this.inboxItems = this.page.locator('.inbox-item');
+    this.emailBody = this.page.locator('.email-body');
   }
 
   // เปิดหน้า inbox ของ user
@@ -70,5 +72,19 @@ export class InboxPage extends BasePage {
   // จำนวนอีเมลทั้งหมดใน list
   async getEmailCount(): Promise<number> {
     return await this.inboxItems.count();
+  }
+
+  async waitForEmailBody(): Promise<void> {
+    await this.emailBody.waitFor({ state: 'visible' });
+  }
+
+  async getEmailBodyText(): Promise<string> {
+    await this.waitForEmailBody();
+    return await this.emailBody.innerText();
+  }
+
+  async getFirstEmailLinkHref(): Promise<string | null> {
+    await this.waitForEmailBody();
+    return await this.emailBody.locator('a').first().getAttribute('href');
   }
 }

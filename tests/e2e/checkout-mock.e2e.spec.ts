@@ -1,32 +1,32 @@
-import { test as dataTest, expect } from '@fixtures/data.fixture';
+import { test, expect, loginAndSyncSession, seedCart } from '@fixtures/base.fixture';
 
 import { CartPage } from '@pages/cart.page';
 import { CheckoutPage } from '@pages/checkout.page';
 import { ProfilePage } from '@pages/user/profile.page';
-import { NavbarComponent } from '@components/navbar.component';
 
 import { disableChaos } from '@fixtures/chaos';
-import { loginAndSyncSession, seedCart } from '@fixtures/test-setup';
 import { SHIPPING } from '@config/constants';
 import { seededProducts } from '@data/products';
 import { coupons } from '@data/coupons';
-import { customer, validCard, declinedCard } from '@data/payment';
+import { customer, validCard, declinedCard, paymentInputs, paymentMessages } from '@data/payment';
+import { uiMessages } from '@data/messages';
 
-dataTest.describe('checkout stripe @e2e @checkout', () => {
+test.describe('checkout stripe @e2e @checkout', () => {
+  test.use({ seedData: true });
   const firstProduct = seededProducts[0];
   const secondProduct = seededProducts[1];
   const thirdProduct = seededProducts[2];
 
-  dataTest.beforeAll(async () => {
+  test.beforeAll(async () => {
     await disableChaos();
   });
 
-  dataTest.beforeEach(async ({ api, page }) => {
+  test.beforeEach(async ({ api, page }) => {
     await loginAndSyncSession(api, page);
   });
 
-  dataTest.describe('positive cases', () => {
-    dataTest('setup cart with 2 items @e2e @checkout @regression @destructive', async ({ api, page }) => {
+  test.describe('positive cases', () => {
+    test('setup cart with 2 items @e2e @checkout @regression @destructive', async ({ api, page }) => {
       // Arrange: seed cart via API
       await seedCart(api, [{ id: firstProduct.id }, { id: secondProduct.id }]);
 
@@ -43,7 +43,7 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
       expect(subtotal).toBeCloseTo(expected, 2);
     });
 
-    dataTest('checkout page shows stripe ready and total matches cart @smoke @e2e @checkout @destructive', async ({ api, page }) => {
+    test('checkout page shows stripe ready and total matches cart @smoke @e2e @checkout @destructive', async ({ api, page }) => {
       // Arrange: seed cart via API
       await seedCart(api, [{ id: firstProduct.id }, { id: secondProduct.id }]);
 
@@ -69,8 +69,8 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
       expect(emailValue.length).toBeGreaterThan(0);
     });
 
-    dataTest('complete stripe payment redirects to success and appears in profile @smoke @e2e @checkout @destructive', async ({ api, page }) => {
-      dataTest.setTimeout(90_000);
+    test('complete stripe payment redirects to success and appears in profile @smoke @e2e @checkout @destructive', async ({ api, page }) => {
+      test.setTimeout(90_000);
       // Arrange: seed cart via API
       await seedCart(api, [{ id: firstProduct.id }]);
 
@@ -99,8 +99,7 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
         const trimmed = orderId.trim();
         expect(trimmed.length).toBeGreaterThan(5);
 
-        const navbar = new NavbarComponent(page);
-        expect(await navbar.getCartCount()).toBe(0);
+        expect(await checkout.getCartCount()).toBe(0);
 
         const profile = new ProfilePage(page);
         await profile.gotoTab('orders');
@@ -111,7 +110,7 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
       }
     });
 
-    dataTest('apply WELCOME10 on low-value order updates totals @e2e @checkout @regression @destructive', async ({ api, page }) => {
+    test('apply WELCOME10 on low-value order updates totals @e2e @checkout @regression @destructive', async ({ api, page }) => {
       // Arrange: seed cart with low total
       await seedCart(api, [{ id: firstProduct.id }]);
 
@@ -137,7 +136,7 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
       expect(grandTotal).toBeCloseTo(subtotal - discountValue + shippingAfter, 1);
     });
 
-    dataTest('apply ROBOT99 on high-value order keeps free shipping @e2e @checkout @regression @destructive', async ({ api, page }) => {
+    test('apply ROBOT99 on high-value order keeps free shipping @e2e @checkout @regression @destructive', async ({ api, page }) => {
       // Arrange: seed cart with high total
       await seedCart(api, [{ id: thirdProduct.id, quantity: 2 }]);
 
@@ -163,7 +162,7 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
       expect(grandTotal).toBeCloseTo(subtotal - discountValue + shippingAfter, 1);
     });
 
-    dataTest('remove coupon restores totals @e2e @checkout @regression @destructive', async ({ api, page }) => {
+    test('remove coupon restores totals @e2e @checkout @regression @destructive', async ({ api, page }) => {
       // Arrange: seed cart + apply coupon
       await seedCart(api, [{ id: firstProduct.id }]);
 
@@ -183,7 +182,7 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
       expect(grandTotal).toBeCloseTo(subtotal + shippingValue, 1);
     });
 
-    dataTest('shipping recalculates when discount crosses threshold @e2e @checkout @regression @destructive', async ({ api, page }) => {
+    test('shipping recalculates when discount crosses threshold @e2e @checkout @regression @destructive', async ({ api, page }) => {
       // Arrange: seed cart above free threshold
       await seedCart(api, [
         { id: firstProduct.id, quantity: 2 },
@@ -210,8 +209,8 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
     });
   });
 
-  dataTest.describe('negative cases', () => {
-    dataTest('expired coupon is rejected and totals unchanged @e2e @checkout @regression @destructive', async ({ api, page }) => {
+  test.describe('negative cases', () => {
+    test('expired coupon is rejected and totals unchanged @e2e @checkout @regression @destructive', async ({ api, page }) => {
       // Arrange: seed cart
       await seedCart(api, [{ id: firstProduct.id }]);
 
@@ -239,7 +238,7 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
       expect(totalAfter).toBeCloseTo(totalBefore, 1);
     });
 
-    dataTest('coupon input is hidden after applying (no re-apply) @e2e @checkout @regression @destructive', async ({ api, page }) => {
+    test('coupon input is hidden after applying (no re-apply) @e2e @checkout @regression @destructive', async ({ api, page }) => {
       // Arrange: seed cart
       await seedCart(api, [{ id: firstProduct.id }]);
 
@@ -255,7 +254,7 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
       expect(removeVisible).toBe(true);
     });
 
-    dataTest('empty name prevents submit @e2e @checkout @regression @destructive', async ({ api, page }) => {
+    test('empty name prevents submit @e2e @checkout @regression @destructive', async ({ api, page }) => {
       // Arrange: seed cart + open checkout
       await seedCart(api, [{ id: firstProduct.id }]);
       const cart = new CartPage(page);
@@ -267,7 +266,7 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
       await checkout.waitForStripeReady();
 
       // Act: clear name
-      await checkout.setName('');
+      await checkout.setName(paymentInputs.empty);
       await checkout.setEmail(customer.email);
 
       // Assert: submit blocked by validation
@@ -278,7 +277,7 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
       await expect(page).toHaveURL(/\/order\/checkout/);
     });
 
-    dataTest('empty email prevents submit @e2e @checkout @regression @destructive', async ({ api, page }) => {
+    test('empty email prevents submit @e2e @checkout @regression @destructive', async ({ api, page }) => {
       // Arrange: seed cart + open checkout
       await seedCart(api, [{ id: firstProduct.id }]);
       const cart = new CartPage(page);
@@ -291,7 +290,7 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
 
       // Act: clear email
       await checkout.setName(customer.name);
-      await checkout.setEmail('');
+      await checkout.setEmail(paymentInputs.empty);
 
       // Assert: submit blocked by validation
       const submit = checkout.getSubmitButton();
@@ -306,7 +305,7 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
       await expect(page).toHaveURL(/\/order\/checkout/);
     });
 
-    dataTest('invalid email prevents submit @e2e @checkout @regression @destructive', async ({ api, page }) => {
+    test('invalid email prevents submit @e2e @checkout @regression @destructive', async ({ api, page }) => {
       // Arrange: seed cart + open checkout
       await seedCart(api, [{ id: firstProduct.id }]);
       const cart = new CartPage(page);
@@ -319,7 +318,7 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
 
       // Act: invalid email
       await checkout.setName(customer.name);
-      await checkout.setEmail('invalid-email');
+      await checkout.setEmail(paymentInputs.invalidEmail);
 
       // Assert: submit blocked by validation
       await checkout.clickSubmit();
@@ -329,7 +328,7 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
       await expect(page).toHaveURL(/\/order\/checkout/);
     });
 
-    dataTest('stripe incomplete card blocks submit @e2e @checkout @regression @destructive', async ({ api, page }) => {
+    test('stripe incomplete card blocks submit @e2e @checkout @regression @destructive', async ({ api, page }) => {
       // Arrange: seed cart + open checkout
       await seedCart(api, [{ id: firstProduct.id }]);
       const cart = new CartPage(page);
@@ -357,7 +356,7 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
       }
     });
 
-    dataTest('declined card shows error message @e2e @checkout @regression @destructive', async ({ api, page }) => {
+    test('declined card shows error message @e2e @checkout @regression @destructive', async ({ api, page }) => {
       // Arrange: seed cart + open checkout
       await seedCart(api, [{ id: firstProduct.id }]);
       const cart = new CartPage(page);
@@ -368,24 +367,24 @@ dataTest.describe('checkout stripe @e2e @checkout', () => {
       await expect(page).toHaveURL(/\/order\/checkout/);
 
       const isMockPayment = await checkout.isMockPayment();
-      dataTest.skip(isMockPayment, 'Mock payment mode does not surface Stripe decline errors');
+      test.skip(isMockPayment, 'Mock payment mode does not surface Stripe decline errors');
 
       const result = await checkout.submitStripePayment({ ...customer, card: declinedCard, timeoutMs: 10000 });
 
       expect(result.status).not.toBe('success');
       if (result.status === 'error') {
-        expect(result.message ?? '').toMatch(/declined/i);
+        expect(result.message ?? '').toMatch(paymentMessages.declinedPattern);
       } else {
         await expect(page).toHaveURL(/\/order\/checkout/);
       }
     });
 
-    dataTest('checkout with empty cart redirects to cart @e2e @checkout @regression @destructive', async ({ api, page }) => {
+    test('checkout with empty cart redirects to cart @e2e @checkout @regression @destructive', async ({ api, page }) => {
       await seedCart(api, []);
 
       await page.goto('/order/checkout');
       await expect(page).toHaveURL(/\/cart/);
-      await expect(page.getByText('Your cart is empty.')).toBeVisible();
+      await expect(page.getByText(uiMessages.cartEmpty)).toBeVisible();
     });
   });
 });

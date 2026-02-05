@@ -1,60 +1,58 @@
-import {test as base, expect} from '@playwright/test';
-import {test as dataTest} from '@fixtures/data.fixture';
+import { test, expect } from '@fixtures/base.fixture';
 
 import { LoginPage } from '@pages/auth/login.page';
 import { RegisterPage } from '@pages/auth/register.page';
-import { NavbarComponent } from '@components/navbar.component';
 
 import { users } from '@data/users';
+import { authInputs, authErrors } from '@data/auth';
 import { randomUser, randomPasswordPair } from '@utils/random';
 
 
 
-base.describe('auth @e2e @safe', () => {
+test.describe('auth @e2e @safe', () => {
+    test.use({ seedData: true });
 
-    base.describe('positive cases', () => {
+    test.describe('positive cases', () => {
 
-        base('login success @smoke @e2e @safe', async({page}) => {
+        test('login success @smoke @e2e @safe', async({page}) => {
             const login = new LoginPage(page);
-            const navbar = new NavbarComponent(page);
 
             await login.goto();
             await login.login(users.user.username, users.user.password);
 
-            expect(await navbar.isLoggedIn()).toBe(true);
+            expect(await login.isLoggedIn()).toBe(true);
         });
 
-        base('logout success @e2e @safe', async({page}) => {
+        test('logout success @e2e @safe', async({page}) => {
             const login = new LoginPage(page);
-            const navbar = new NavbarComponent(page);
 
             await login.goto();
             await login.login(users.user.username, users.user.password);
-            await navbar.logout();
+            await login.logout();
             // after logout, the user should see the login link again
-            await expect(page.getByRole('link', {name: 'Log in'})).toBeVisible();
+            await expect(page.getByRole('link', {name: authInputs.loginLinkText})).toBeVisible();
         });
 
     });
 
-    base.describe('negative cases', () => {
+    test.describe('negative cases', () => {
 
-        base('login fail: wrong password @e2e @regression @safe', async({page}) => {
+        test('login fail: wrong password @e2e @regression @safe', async({page}) => {
             const login = new LoginPage(page);
             await login.goto();
 
             await login.fillUsername(users.user.username);
-            await login.fillPassword('wrong_password');
+            await login.fillPassword(authInputs.wrongPassword);
             await login.submit();
 
             await expect(page.locator('.error')).toBeVisible();
         });
 
-        base('login fail: wrong username @e2e @regression @safe', async({page}) => {
+        test('login fail: wrong username @e2e @regression @safe', async({page}) => {
             const login = new LoginPage(page);
             await login.goto();
 
-            await login.fillUsername('wrong_username');
+            await login.fillUsername(authInputs.wrongUsername);
             await login.fillPassword(users.user.password);
             await login.submit();
 
@@ -63,11 +61,12 @@ base.describe('auth @e2e @safe', () => {
     });
 });
 
-dataTest.describe('register @e2e @destructive (seeded)', () => {
+test.describe('register @e2e @destructive (seeded)', () => {
+    test.use({ seedData: true });
 
-    dataTest.describe('positive cases', () => {
+    test.describe('positive cases', () => {
         
-        dataTest('register success @e2e @regression @destructive', async({page}) => {
+        test('register success @e2e @regression @destructive', async({page}) => {
             const register = new RegisterPage(page);
             const login = new LoginPage(page);
             const user = randomUser('auto');
@@ -82,9 +81,9 @@ dataTest.describe('register @e2e @destructive (seeded)', () => {
 
     });
 
-    dataTest.describe('negative cases', () => {
+    test.describe('negative cases', () => {
 
-        dataTest('register fail: password mismatch @e2e @regression @destructive', async({page}) => {
+        test('register fail: password mismatch @e2e @regression @destructive', async({page}) => {
             const register = new RegisterPage(page);
             const user = randomUser('auto');
             const {password, confirmPassword} = randomPasswordPair(true);
@@ -97,21 +96,21 @@ dataTest.describe('register @e2e @destructive (seeded)', () => {
             await register.submit();
 
             await expect(page.locator('.error')).toBeVisible();
-            await expect(page.locator('.error')).toContainText('Passwords do not match');
+            await expect(page.locator('.error')).toContainText(authErrors.passwordMismatch);
         });
 
-        dataTest('register fail: duplicate username/email @e2e @regression @destructive', async({page}) => {
+        test('register fail: duplicate username/email @e2e @regression @destructive', async({page}) => {
             const register = new RegisterPage(page);
 
             await register.goto();
             await register.fillUsername(users.user.username);
-            await register.fillEmail('user@robotstore.com');
-            await register.fillPassword('user123');
-            await register.fillConfirmPassword('user123');
+            await register.fillEmail(authInputs.duplicateEmail);
+            await register.fillPassword(authInputs.duplicatePassword);
+            await register.fillConfirmPassword(authInputs.duplicatePassword);
             await register.submit();
 
             await expect(page.locator('.error')).toBeVisible();
-            await expect(page.locator('.error')).toContainText('Username or Email already exists');
+            await expect(page.locator('.error')).toContainText(authErrors.duplicateUser);
 
         });
     });

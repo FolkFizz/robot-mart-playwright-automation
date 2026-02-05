@@ -1,6 +1,7 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from './base.page';
-import { routes } from '@config/routes';
+import { routes } from '@config/constants';
+import { parseMoney } from '@utils/money';
 
 // POM สำหรับหน้า Cart
 export class CartPage extends BasePage {
@@ -37,6 +38,40 @@ export class CartPage extends BasePage {
     return await this.page.locator('tr[data-testid^="cart-item-"]').count();
   }
 
+  private cartItemRow(id: number | string): Locator {
+    return this.getByTestId(`cart-item-${id}`);
+  }
+
+  async isItemVisible(id: number | string): Promise<boolean> {
+    return await this.cartItemRow(id).isVisible().catch(() => false);
+  }
+
+  async getItemName(id: number | string): Promise<string> {
+    return await this.getByTestId(`cart-item-name-${id}`).innerText();
+  }
+
+  async getItemPriceText(id: number | string): Promise<string> {
+    return await this.getByTestId(`cart-item-price-${id}`).innerText();
+  }
+
+  async getItemPriceValue(id: number | string): Promise<number> {
+    return parseMoney(await this.getItemPriceText(id));
+  }
+
+  async getItemTotalText(id: number | string): Promise<string> {
+    return await this.getByTestId(`cart-item-total-${id}`).innerText();
+  }
+
+  async getItemTotalValue(id: number | string): Promise<number> {
+    return parseMoney(await this.getItemTotalText(id));
+  }
+
+  async getItemQuantity(id: number | string): Promise<number> {
+    const text = await this.getByTestId(`cart-qty-value-${id}`).innerText();
+    const value = Number.parseInt(text, 10);
+    return Number.isNaN(value) ? 0 : value;
+  }
+
   // อ่าน subtotal
   async getSubtotal(): Promise<string> {
     return await this.subtotalLabel.innerText();
@@ -47,14 +82,31 @@ export class CartPage extends BasePage {
     return await this.grandTotalLabel.innerText();
   }
 
+  async getSubtotalValue(): Promise<number> {
+    return parseMoney(await this.getSubtotal());
+  }
+
+  async getGrandTotalValue(): Promise<number> {
+    return parseMoney(await this.getGrandTotal());
+  }
+
   // อ่าน shipping
   async getShippingText(): Promise<string> {
     return await this.shippingLabel.innerText();
   }
 
+  async getShippingValue(): Promise<number> {
+    const text = await this.getShippingText();
+    return text.trim().toUpperCase() === 'FREE' ? 0 : parseMoney(text);
+  }
+
   // อ่าน discount
   async getDiscountText(): Promise<string> {
     return await this.discountLabel.innerText();
+  }
+
+  async getDiscountValue(): Promise<number> {
+    return parseMoney(await this.getDiscountText());
   }
 
   // ตรวจว่ามี discount แสดงหรือไม่

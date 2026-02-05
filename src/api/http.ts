@@ -1,5 +1,5 @@
 import { APIRequestContext, request } from "@playwright/test";
-import {env} from '@config/env';
+import { env } from '@config/constants';
 
 // สร้าง request context กลางไว้ใช้ซ้ำ (สามารถเก็บ Cookies/Session ไว้ได้อัตโนมัติ)
 export const createApiContext = async(): Promise<APIRequestContext> => {

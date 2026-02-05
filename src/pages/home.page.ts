@@ -1,6 +1,7 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from './base.page';
-import { routes } from '@config/routes';
+import { routes } from '@config/constants';
+import { parseMoney } from '@utils/money';
 
 // POM สำหรับหน้า Home / Catalog
 export class HomePage extends BasePage {
@@ -99,6 +100,43 @@ export class HomePage extends BasePage {
     await this.waitForNetworkIdle();
   }
 
+  private productCardRoot(id: number | string): Locator {
+    return this.getByTestId(`product-card-${id}`);
+  }
+
+  async waitForProductCardVisible(id: number | string): Promise<void> {
+    await this.productCardRoot(id).waitFor({ state: 'visible' });
+  }
+
+  async isProductCardVisible(id: number | string): Promise<boolean> {
+    return await this.productCardRoot(id).isVisible().catch(() => false);
+  }
+
+  async getProductCardTitle(id: number | string): Promise<string> {
+    return await this.getByTestId(`product-title-${id}`).innerText();
+  }
+
+  async getProductCardPriceText(id: number | string): Promise<string> {
+    return await this.getByTestId(`product-price-${id}`).innerText();
+  }
+
+  async getProductCardPriceValue(id: number | string): Promise<number> {
+    return parseMoney(await this.getProductCardPriceText(id));
+  }
+
+  async getProductCardCategory(id: number | string): Promise<string> {
+    return await this.productCardRoot(id).locator('.badge').innerText();
+  }
+
+  async getProductStockStatus(id: number | string): Promise<string> {
+    return await this.productCardRoot(id).locator('.stock-status').innerText();
+  }
+
+  async isProductOutOfStock(id: number | string): Promise<boolean> {
+    const text = (await this.getProductStockStatus(id)).toLowerCase();
+    return text.includes('out of stock');
+  }
+
   // เช็คว่ามีสินค้าในหน้าไหม
   async hasProducts(): Promise<boolean> {
     const count = await this.page.locator('[data-testid^="product-card-"]').count();
@@ -113,6 +151,11 @@ export class HomePage extends BasePage {
   // อ่านราคาสินค้าทั้งหมดที่แสดงอยู่
   async getVisibleProductPriceTexts(): Promise<string[]> {
     return await this.page.locator('[data-testid^="product-price-"]').allInnerTexts();
+  }
+
+  async getVisibleProductPriceValues(): Promise<number[]> {
+    const texts = await this.getVisibleProductPriceTexts();
+    return texts.map((text) => parseMoney(text));
   }
 
   // อ่านชื่อสินค้าทั้งหมดที่แสดงอยู่

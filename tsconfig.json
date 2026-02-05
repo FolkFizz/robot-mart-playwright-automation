@@ -17,7 +17,6 @@
       "@api/*": ["src/api/*"],
       "@fixtures/*": ["src/fixtures/*"],
       "@pages/*": ["src/pages/*"],
-      "@components/*": ["src/components/*"],
       "@data/*": ["src/data/*"],
       "@utils/*": ["src/utils/*"],
       "@app-types/*": ["src/types/*"]

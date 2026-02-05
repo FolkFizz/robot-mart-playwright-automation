@@ -1,5 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from '../base.page';
+import { routes } from '@config/constants';
 
 // POM สำหรับหน้า Admin Orders
 export class AdminOrdersPage extends BasePage {
@@ -12,7 +13,7 @@ export class AdminOrdersPage extends BasePage {
 
   // เปิดหน้า orders
   async goto(): Promise<void> {
-    await super.goto('/admin/orders');
+    await super.goto(routes.admin.orders);
   }
 
   // หาแถว order ตาม orderId

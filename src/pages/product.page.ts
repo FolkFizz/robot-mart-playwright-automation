@@ -1,5 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from './base.page';
+import { parseMoney } from '@utils/money';
 
 // POM สำหรับหน้า Product Detail
 export class ProductPage extends BasePage {
@@ -19,6 +20,10 @@ export class ProductPage extends BasePage {
   // อ่านราคาสินค้า
   async getPrice(): Promise<string> {
     return await this.getByTestId('product-price').innerText();
+  }
+
+  async getPriceValue(): Promise<number> {
+    return parseMoney(await this.getPrice());
   }
 
   // ตั้งค่าจำนวนสินค้า (ใช้ fill)

@@ -1,6 +1,5 @@
 import { APIRequestContext, expect } from "@playwright/test";
-import {env} from '@config/env';
-import { routes } from "@config/routes";
+import { env, routes } from '@config/constants';
 
 export const loginAsUser = async (ctx: APIRequestContext) => {
     const res = await ctx.post(routes.login, {

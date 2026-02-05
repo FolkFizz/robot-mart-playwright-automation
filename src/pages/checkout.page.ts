@@ -80,6 +80,7 @@ export class CheckoutPage extends BasePage {
 
   // รอ Stripe element พร้อม (ใช้ data-stripe-ready="true")
   async waitForStripeReady(): Promise<void> {
+    if (await this.isMockPayment()) return;
     await this.paymentElement.waitFor({ state: 'visible', timeout: 15000 });
     try {
       await expect(this.paymentElement).toHaveAttribute('data-stripe-ready', 'true', { timeout: 15000 });

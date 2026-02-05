@@ -1,6 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from '../base.page';
-import { routes } from '@config/routes';
+import { routes } from '@config/constants';
 
 // POM สำหรับหน้า Admin Inventory
 export class AdminInventoryPage extends BasePage {

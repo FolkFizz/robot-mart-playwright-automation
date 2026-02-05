@@ -1,5 +1,5 @@
 import { APIRequestContext, expect } from '@playwright/test';
-import { routes } from '@config/routes';
+import { routes } from '@config/constants';
 
 // เพิ่มสินค้าเข้าตะกร้า (JSON)
 export const addToCart = async (

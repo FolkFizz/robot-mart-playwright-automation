@@ -1,5 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from '../base.page';
+import { routes } from '@config/constants';
 
 // POM สำหรับหน้า File Claim (/claim)
 export class ClaimsPage extends BasePage {
@@ -16,9 +17,9 @@ export class ClaimsPage extends BasePage {
     this.submitButton = this.page.locator('button[type="submit"]');
   }
 
-  // เปิดหน้าเคลม (ไม่มีใน routes config จึงใช้ path ตรง)
+  // เปิดหน้าเคลม
   async goto(): Promise<void> {
-    await super.goto('/claim');
+    await super.goto(routes.claim);
   }
 
   // ส่งเคลม

@@ -1,6 +1,5 @@
 import { APIRequestContext, expect } from '@playwright/test';
-import { env } from '@config/env';
-import { routes } from '@config/routes';
+import { env, routes } from '@config/constants';
 
 // เรียก API รีเซ็ต stock แบบปลอดภัย (ต้องมี X-RESET-KEY)
 export const resetStockSafe = async (ctx: APIRequestContext) => {

@@ -1,18 +1,15 @@
-import { test as baseTest, expect } from '@playwright/test';
-import { test as dataTest } from '@fixtures/data.fixture';
+import { test, expect } from '@fixtures/base.fixture';
 
 import { HomePage } from '@pages/home.page';
 import { ProductPage } from '@pages/product.page';
-import { ProductCardComponent } from '@components/product-card.component';
 import { seededProducts } from '@data/products';
+import { catalogSearch, catalogCategories, catalogSort, catalogPrice } from '@data/catalog';
 
-const parsePrice = (text: string) => Number.parseFloat(text.replace(/[^0-9.]/g, ''));
+test.describe('catalog ui @e2e @safe', () => {
 
-baseTest.describe('catalog ui @e2e @safe', () => {
+  test.describe('positive cases', () => {
 
-  baseTest.describe('positive cases', () => {
-
-    baseTest('home shows main controls @smoke @e2e @safe', async ({ page }) => {
+    test('home shows main controls @smoke @e2e @safe', async ({ page }) => {
       const home = new HomePage(page);
       await home.goto();
 
@@ -21,156 +18,144 @@ baseTest.describe('catalog ui @e2e @safe', () => {
       await expect(home.getCategoryList()).toBeVisible();
     });
 
-    baseTest('search updates URL query @e2e @safe', async ({ page }) => {
+    test('search updates URL query @e2e @safe', async ({ page }) => {
       const home = new HomePage(page);
       await home.goto();
 
-      await home.search('helper');
-      await expect(page).toHaveURL(/q=helper/i);
+      await home.search(catalogSearch.term);
+      await expect(page).toHaveURL(new RegExp(`q=${catalogSearch.term}`, 'i'));
     });
 
-    baseTest('sort updates URL query @e2e @safe', async ({ page }) => {
+    test('sort updates URL query @e2e @safe', async ({ page }) => {
       const home = new HomePage(page);
       await home.goto();
 
-      await home.selectSort('price_desc');
-      await expect(page).toHaveURL(/sort=price_desc/i);
+      await home.selectSort(catalogSort.priceDesc);
+      await expect(page).toHaveURL(new RegExp(`sort=${catalogSort.priceDesc}`, 'i'));
     });
 
-    baseTest('category selection updates URL @e2e @safe', async ({ page }) => {
+    test('category selection updates URL @e2e @safe', async ({ page }) => {
       const home = new HomePage(page);
       await home.goto();
 
-      await home.selectCategory('automation');
-      await expect(page).toHaveURL(/category=automation/i);
+      await home.selectCategory(catalogCategories.automation);
+      await expect(page).toHaveURL(new RegExp(`category=${catalogCategories.automation}`, 'i'));
     });
 
-    baseTest('price filter updates URL @e2e @safe', async ({ page }) => {
+    test('price filter updates URL @e2e @safe', async ({ page }) => {
       const home = new HomePage(page);
       await home.goto();
 
-      await home.applyPriceFilter(100, 1000);
-      await expect(page).toHaveURL(/minPrice=100/i);
-      await expect(page).toHaveURL(/maxPrice=1000/i);
+      await home.applyPriceFilter(catalogPrice.min, catalogPrice.max);
+      await expect(page).toHaveURL(new RegExp(`minPrice=${catalogPrice.min}`, 'i'));
+      await expect(page).toHaveURL(new RegExp(`maxPrice=${catalogPrice.max}`, 'i'));
     });
   });
 
-  baseTest.describe('negative cases', () => {
+  test.describe('negative cases', () => {
 
-    baseTest('search with no results shows empty state @e2e @regression @safe', async ({ page }) => {
+    test('search with no results shows empty state @e2e @regression @safe', async ({ page }) => {
 
       const home = new HomePage(page);
       await home.goto();
 
-      await home.search('no_such_robot_zzzz');
+      await home.search(catalogSearch.noResults);
       await home.waitForEmptyState();
     });
 
-    baseTest('invalid category shows empty state @e2e @regression @safe', async ({ page }) => {
+    test('invalid category shows empty state @e2e @regression @safe', async ({ page }) => {
       const home = new HomePage(page);
-      await home.gotoWithQuery('category=unknown_category');
+      await home.gotoWithQuery(`category=${catalogCategories.unknown}`);
       await home.waitForEmptyState();
     });
   });
 });
 
-dataTest.describe('catalog seeded @e2e @destructive', () => {
+test.describe('catalog seeded @e2e @destructive', () => {
+  test.use({ seedData: true });
 
-  dataTest.describe('positive cases', () => {
+  test.describe('positive cases', () => {
 
-    dataTest('seeded products visible @smoke @e2e @destructive', async ({ page }) => {
+    test('seeded products visible @smoke @e2e @destructive', async ({ page }) => {
       const home = new HomePage(page);
       await home.goto();
 
       for (const product of seededProducts) {
-        const card = new ProductCardComponent(page, product.id);
-        await card.waitForVisible();
+        await home.waitForProductCardVisible(product.id);
       }
     });
 
-    dataTest('search is case-insensitive @e2e @destructive', async ({ page }) => {
+    test('search is case-insensitive @e2e @destructive', async ({ page }) => {
       const home = new HomePage(page);
       const target = seededProducts[1];
 
       await home.goto();
       await home.search(target.name.toUpperCase());
 
-      const card = new ProductCardComponent(page, target.id);
-      await card.waitForVisible();
-      const title = await card.getTitle();
+      await home.waitForProductCardVisible(target.id);
+      const title = await home.getProductCardTitle(target.id);
       expect(title).toContain(target.name);
     });
 
-    dataTest('search by partial term @e2e @destructive', async ({ page }) => {
+    test('search by partial term @e2e @destructive', async ({ page }) => {
       const home = new HomePage(page);
       const target = seededProducts[0];
 
       await home.goto();
-      await home.search('Rusty');
+      await home.search(catalogSearch.partial);
 
-      const card = new ProductCardComponent(page, target.id);
-      await card.waitForVisible();
+      await home.waitForProductCardVisible(target.id);
     });
 
-    dataTest('filter by category automation @e2e @destructive', async ({ page }) => {
+    test('filter by category automation @e2e @destructive', async ({ page }) => {
       const home = new HomePage(page);
       await home.goto();
-      await home.selectCategory('automation');
+      await home.selectCategory(catalogCategories.automation);
 
-      const automationCard1 = new ProductCardComponent(page, seededProducts[0].id);
-      const automationCard2 = new ProductCardComponent(page, seededProducts[1].id);
-      const highTechCard = new ProductCardComponent(page, seededProducts[2].id);
-
-      await automationCard1.waitForVisible();
-      await automationCard2.waitForVisible();
-      expect(await highTechCard.isVisible()).toBe(false);
+      await home.waitForProductCardVisible(seededProducts[0].id);
+      await home.waitForProductCardVisible(seededProducts[1].id);
+      expect(await home.isProductCardVisible(seededProducts[2].id)).toBe(false);
 
       const badgeText = await home.getFirstBadgeText();
-      expect(badgeText.toLowerCase()).toContain('automation');
+      expect(badgeText.toLowerCase()).toContain(catalogCategories.automation);
     });
 
-    dataTest('filter by price max 500 @e2e @destructive', async ({ page }) => {
+    test('filter by price max 500 @e2e @destructive', async ({ page }) => {
       const home = new HomePage(page);
       await home.goto();
 
-      await home.applyPriceFilter(0, 500);
-      const affordableCard1 = new ProductCardComponent(page, seededProducts[0].id);
-      const affordableCard2 = new ProductCardComponent(page, seededProducts[1].id);
-      const expensiveCard = new ProductCardComponent(page, seededProducts[2].id);
-
-      await affordableCard1.waitForVisible();
-      await affordableCard2.waitForVisible();
-      expect(await expensiveCard.isVisible()).toBe(false);
+      await home.applyPriceFilter(0, catalogPrice.maxAffordable);
+      await home.waitForProductCardVisible(seededProducts[0].id);
+      await home.waitForProductCardVisible(seededProducts[1].id);
+      expect(await home.isProductCardVisible(seededProducts[2].id)).toBe(false);
     });
 
-    dataTest('sort by price asc @e2e @destructive', async ({ page }) => {
+    test('sort by price asc @e2e @destructive', async ({ page }) => {
       const home = new HomePage(page);
       await home.goto();
-      await home.selectSort('price_asc');
+      await home.selectSort(catalogSort.priceAsc);
 
-      const prices = await home.getVisibleProductPriceTexts();
-      expect(prices.length).toBeGreaterThan(1);
-      const values = prices.map(parsePrice);
+      const values = await home.getVisibleProductPriceValues();
+      expect(values.length).toBeGreaterThan(1);
       const sorted = [...values].sort((a, b) => a - b);
       expect(values).toEqual(sorted);
     });
 
-    dataTest('sort by price desc @e2e @destructive', async ({ page }) => {
+    test('sort by price desc @e2e @destructive', async ({ page }) => {
       const home = new HomePage(page);
       await home.goto();
-      await home.selectSort('price_desc');
+      await home.selectSort(catalogSort.priceDesc);
 
-      const prices = await home.getVisibleProductPriceTexts();
-      expect(prices.length).toBeGreaterThan(1);
-      const values = prices.map(parsePrice);
+      const values = await home.getVisibleProductPriceValues();
+      expect(values.length).toBeGreaterThan(1);
       const sorted = [...values].sort((a, b) => b - a);
       expect(values).toEqual(sorted);
     });
 
-    dataTest('sort by name asc @e2e @destructive', async ({ page }) => {
+    test('sort by name asc @e2e @destructive', async ({ page }) => {
       const home = new HomePage(page);
       await home.goto();
-      await home.selectSort('name_asc');
+      await home.selectSort(catalogSort.nameAsc);
 
       const names = await home.getVisibleProductTitleTexts();
       expect(names.length).toBeGreaterThan(1);
@@ -179,7 +164,7 @@ dataTest.describe('catalog seeded @e2e @destructive', () => {
       expect(normalized).toEqual(sorted);
     });
 
-    dataTest('open product detail by id @e2e @destructive', async ({ page }) => {
+    test('open product detail by id @e2e @destructive', async ({ page }) => {
       const home = new HomePage(page);
       const product = new ProductPage(page);
       const target = seededProducts[0];
@@ -188,13 +173,13 @@ dataTest.describe('catalog seeded @e2e @destructive', () => {
       await home.clickProductById(target.id);
 
       const title = await product.getTitle();
-      const priceText = await product.getPrice();
+      const priceValue = await product.getPriceValue();
 
       expect(title).toContain(target.name);
-      expect(parsePrice(priceText)).toBeCloseTo(target.price, 2);
+      expect(priceValue).toBeCloseTo(target.price, 2);
     });
 
-    dataTest('open product detail by card click @e2e @destructive', async ({ page }) => {
+    test('open product detail by card click @e2e @destructive', async ({ page }) => {
       const home = new HomePage(page);
       const product = new ProductPage(page);
 
@@ -206,42 +191,41 @@ dataTest.describe('catalog seeded @e2e @destructive', () => {
       await expect(page).toHaveURL(/\/product\/\d+/);
     });
 
-    dataTest('product card component reads price @e2e @destructive', async ({ page }) => {
+    test('product card component reads price @e2e @destructive', async ({ page }) => {
       const home = new HomePage(page);
       const target = seededProducts[1];
 
       await home.goto();
-      const card = new ProductCardComponent(page, target.id);
-      const value = await card.getPriceValue();
+      const value = await home.getProductCardPriceValue(target.id);
       expect(value).toBeCloseTo(target.price, 2);
     });
   });
 
-  dataTest.describe('negative cases', () => {
+  test.describe('negative cases', () => {
     
-    dataTest('price range min > max shows empty state @e2e @regression @destructive', async ({ page }) => {
+    test('price range min > max shows empty state @e2e @regression @destructive', async ({ page }) => {
       const home = new HomePage(page);
       await home.goto();
 
-      await home.applyPriceFilter(2000, 100);
+      await home.applyPriceFilter(catalogPrice.invalidMin, catalogPrice.invalidMax);
       await home.waitForEmptyState();
     });
 
-    dataTest('search + category mismatch shows empty state @e2e @regression @destructive', async ({ page }) => {
+    test('search + category mismatch shows empty state @e2e @regression @destructive', async ({ page }) => {
       const home = new HomePage(page);
       await home.goto();
 
-      await home.selectCategory('high_tech');
-      await home.search('Rusty');
+      await home.selectCategory(catalogCategories.highTech);
+      await home.search(catalogSearch.partial);
 
       await home.waitForEmptyState();
     });
 
-    dataTest('search with special chars shows empty state @e2e @regression @destructive', async ({ page }) => {
+    test('search with special chars shows empty state @e2e @regression @destructive', async ({ page }) => {
       const home = new HomePage(page);
       await home.goto();
 
-      await home.search('@@@###');
+      await home.search(catalogSearch.specialChars);
       await home.waitForEmptyState();
     });
   });

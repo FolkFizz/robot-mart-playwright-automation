@@ -86,4 +86,89 @@ export class BasePage {
         const target = testId ? this.getByTestId(testId) : this.page.locator(selector);
         await target.first().waitFor({ state, timeout });
     }
+
+    private navCartLink(): Locator {
+        return this.getByTestId('nav-cart-link');
+    }
+
+    private navCartCount(): Locator {
+        return this.getByTestId('nav-cart-count');
+    }
+
+    private navBellTrigger(): Locator {
+        return this.getByTestId('nav-bell');
+    }
+
+    private navAccountMenu(): Locator {
+        return this.getByTestId('nav-account-menu');
+    }
+
+    private navProfileTrigger(): Locator {
+        return this.getByTestId('nav-profile');
+    }
+
+    private navLogoutLink(): Locator {
+        return this.getByTestId('logout-link');
+    }
+
+    async gotoStore(): Promise<void> {
+        await this.page.getByRole('link', { name: 'Store' }).click();
+    }
+
+    async gotoCart(): Promise<void> {
+        await this.navCartLink().click();
+    }
+
+    async getCartCount(): Promise<number> {
+        const visible = await this.navCartCount().isVisible().catch(() => false);
+        if (!visible) return 0;
+
+        const text = await this.navCartCount().innerText();
+        const value = Number.parseInt(text, 10);
+        return Number.isNaN(value) ? 0 : value;
+    }
+
+    async openNotifications(): Promise<void> {
+        await this.navBellTrigger().click();
+        await this.page.locator('#notifDropdown.show').waitFor({ state: 'visible' });
+    }
+
+    async markAllNotificationsRead(): Promise<void> {
+        await this.openNotifications();
+        await this.page.locator('#markNotificationsRead').click();
+    }
+
+    async openAccountMenu(): Promise<void> {
+        await this.navProfileTrigger().click();
+        await this.page.locator('#userDropdown.show').waitFor({ state: 'visible' });
+    }
+
+    async logout(): Promise<void> {
+        await this.openAccountMenu();
+        await this.navLogoutLink().click();
+    }
+
+    async openQaToolsMenu(): Promise<void> {
+        await this.page.locator('#devMenuContainer .dropdown-trigger').click();
+        await this.page.locator('#devDropdown.show').waitFor({ state: 'visible' });
+    }
+
+    async gotoQaGuide(): Promise<void> {
+        await this.openQaToolsMenu();
+        await this.page.getByRole('link', { name: 'QA Guide' }).click();
+    }
+
+    async gotoApiDocs(): Promise<void> {
+        await this.openQaToolsMenu();
+        await this.page.getByRole('link', { name: 'API Docs' }).click();
+    }
+
+    async gotoChaosLab(): Promise<void> {
+        await this.openQaToolsMenu();
+        await this.page.getByRole('link', { name: 'Chaos Lab' }).click();
+    }
+
+    async isLoggedIn(): Promise<boolean> {
+        return await this.navAccountMenu().isVisible().catch(() => false);
+    }
 }

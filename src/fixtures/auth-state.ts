@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { chromium, type Page } from 'playwright';
-import { env } from '@config/env';
+import { env } from '@config/constants';
 import { LoginPage } from '@pages/auth/login.page';
 
 const authDir = path.join(process.cwd(), 'playwright', '.auth');
