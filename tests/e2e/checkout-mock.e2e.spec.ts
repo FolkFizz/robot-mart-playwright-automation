@@ -4,11 +4,17 @@ import { CartPage } from '@pages/cart.page';
 import { CheckoutPage } from '@pages/checkout.page';
 import { ProfilePage } from '@pages/user/profile.page';
 
-import { disableChaos } from '@fixtures/chaos';
+import { disableChaos } from '@api/test-hooks.api';
 import { SHIPPING } from '@config/constants';
-import { seededProducts } from '@data/products';
-import { coupons } from '@data/coupons';
-import { customer, validCard, declinedCard, paymentInputs, paymentMessages } from '@data/payment';
+import { seededProducts } from '@data/catalog';
+import {
+  coupons,
+  customer,
+  validCard,
+  declinedCard,
+  paymentInputs,
+  paymentMessages
+} from '@data/checkout';
 import { uiMessages } from '@data/messages';
 
 test.describe('checkout stripe @e2e @checkout', () => {

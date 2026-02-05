@@ -18,9 +18,6 @@ npm run report:open
 ```
 
 ## Attachments
-Use helpers in `src/utils/allure.ts`:
-- `attachText`
-- `attachJson`
-- `attachScreenshot`
+Use Playwright's `testInfo.attach` or the `allure-playwright` API directly.
 
 > Note: If Allure CLI is not installed, report generation/open will not work.

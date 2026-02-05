@@ -1,5 +1,12 @@
 import { Page, expect } from '@playwright/test';
-import { a11yExcludeSelectors, a11yRules, a11yTags, allowedViolationIds } from './a11y-rules';
+
+export const a11yTags = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
+
+export const a11yExcludeSelectors = ['#chaos-widget', '.chaos-widget'];
+
+export const a11yRules: Record<string, { enabled: boolean }> = {};
+
+export const allowedViolationIds: string[] = [];
 
 export type AxeViolation = {
   id: string;
@@ -44,9 +51,9 @@ export const runA11y = async (page: Page, options: A11yRunOptions = {}): Promise
   try {
     const mod = await import('@axe-core/playwright');
     AxeBuilder = mod.AxeBuilder;
-  } catch (err) {
+  } catch {
     throw new Error(
-      'Missing dependency: @axe-core/playwright. กรุณาติดตั้งด้วย `npm i -D @axe-core/playwright` ก่อนรัน a11y tests.'
+      'Missing dependency: @axe-core/playwright. Install it first: `npm i -D @axe-core/playwright`'
     );
   }
 
@@ -90,7 +97,10 @@ export const formatViolations = (violations: AxeViolation[]) => {
     .join('\n');
 };
 
-export const expectNoA11yViolations = (results: AxeResults, allowedIds: string[] = allowedViolationIds) => {
+export const expectNoA11yViolations = (
+  results: AxeResults,
+  allowedIds: string[] = allowedViolationIds
+) => {
   const violations = filterViolations(results, allowedIds);
   expect(violations, formatViolations(violations)).toEqual([]);
 };

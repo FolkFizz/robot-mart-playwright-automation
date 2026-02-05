@@ -1,7 +1,7 @@
 import { test, loginAndSyncSession, seedCart } from '@fixtures/base.fixture';
 
 import { CartPage } from '@pages/cart.page';
-import { seededProducts } from '@data/products';
+import { seededProducts } from '@data/catalog';
 
 test.describe('cart a11y @a11y @cart', () => {
   test.use({ seedData: true });

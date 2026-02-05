@@ -3,7 +3,7 @@ import { test, expect } from '@fixtures/base.fixture';
 import { loginAsUser } from '@api/auth.api';
 import { addToCart, clearCart } from '@api/cart.api';
 import { createPaymentIntent, mockPay } from '@api/orders.api';
-import { seededProducts } from '@data/products';
+import { seededProducts } from '@data/catalog';
 
 test.describe('orders api @api @orders', () => {
   test.use({ seedData: true });

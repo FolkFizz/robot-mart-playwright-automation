@@ -5,8 +5,8 @@ import { ProductPage } from '@pages/product.page';
 import { CartPage } from '@pages/cart.page';
 
 import { SHIPPING } from '@config/constants';
-import { seededProducts } from '@data/products';
-import { coupons } from '@data/coupons';
+import { seededProducts } from '@data/catalog';
+import { coupons } from '@data/checkout';
 import { uiMessages } from '@data/messages';
 
 test.describe('cart @e2e @cart', () => {

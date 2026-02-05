@@ -1,7 +1,7 @@
 import { test, expect } from '@fixtures/base.fixture';
 
 import { ChaosPage } from '@pages/chaos.page';
-import { disableChaos, resetChaos } from '@fixtures/chaos';
+import { disableChaos, resetChaos } from '@api/test-hooks.api';
 import { chaosStatusText, chaosToggles } from '@data/chaos';
 
 test.describe('chaos lab @e2e @chaos', () => {

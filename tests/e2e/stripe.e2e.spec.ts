@@ -2,7 +2,7 @@ import { test, expect, loginAndSyncSession, seedCart } from '@fixtures/base.fixt
 
 import { CartPage } from '@pages/cart.page';
 import { CheckoutPage } from '@pages/checkout.page';
-import { seededProducts } from '@data/products';
+import { seededProducts } from '@data/catalog';
 
 test.describe('stripe ui @e2e @checkout', () => {
   test.use({ seedData: true });

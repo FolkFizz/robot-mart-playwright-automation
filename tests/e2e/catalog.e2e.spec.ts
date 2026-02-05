@@ -2,7 +2,7 @@ import { test, expect } from '@fixtures/base.fixture';
 
 import { HomePage } from '@pages/home.page';
 import { ProductPage } from '@pages/product.page';
-import { seededProducts } from '@data/products';
+import { seededProducts } from '@data/catalog';
 import { catalogSearch, catalogCategories, catalogSort, catalogPrice } from '@data/catalog';
 
 test.describe('catalog ui @e2e @safe', () => {

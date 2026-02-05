@@ -3,7 +3,7 @@ import { test, expect } from '@fixtures/base.fixture';
 import { ForgotPasswordPage } from '@pages/auth/forgot-password.page';
 import { InboxPage } from '@pages/user/inbox.page';
 import { authInputs } from '@data/auth';
-import { inboxSubjects } from '@data/inbox';
+import { inboxSubjects } from '@data/messages';
 import { routes } from '@config/constants';
 
 test.describe('forgot reset integration @integration @auth', () => {

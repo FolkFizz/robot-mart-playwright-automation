@@ -2,8 +2,8 @@ import { test, expect } from '@fixtures/base.fixture';
 
 import { loginAsUser } from '@api/auth.api';
 import { addToCart, applyCoupon, clearCart, getCart, removeCartItem, removeCoupon, updateCartItem } from '@api/cart.api';
-import { seededProducts } from '@data/products';
-import { coupons } from '@data/coupons';
+import { seededProducts } from '@data/catalog';
+import { coupons } from '@data/checkout';
 
 test.describe('cart api @api @cart', () => {
   test.use({ seedData: true });

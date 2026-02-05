@@ -3,7 +3,7 @@ import { createApiContext } from '@api/http';
 import { resetDb } from '@api/test-hooks.api';
 import { loginAsUser, loginAsAdmin } from '@api/auth.api';
 import { addToCart, clearCart } from '@api/cart.api';
-import { runA11y, expectNoA11yViolations } from '@utils/a11y-runner';
+import { runA11y, expectNoA11yViolations } from '@utils/a11y';
 
 type TestFixtures = {
   api: APIRequestContext;
