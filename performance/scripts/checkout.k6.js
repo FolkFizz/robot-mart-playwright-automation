@@ -1,5 +1,5 @@
 import http from 'k6/http';
-import { group, sleep } from 'k6';
+import { group, sleep, check } from 'k6';
 import { app } from '../lib/config.js';
 import { checks } from '../lib/checks.js';
 import { spike } from '../scenarios/spike.js';
@@ -54,7 +54,33 @@ export default function () {
             address: '123 Test St' 
         });
         const res = http.post(`${app.baseURL}/order/api/create`, payload, { headers: headers.json });
-        checks.isSuccess(res);
-        sleep(2);
+        
+        // Deep Validation: Check if we actually got an Order ID
+        const isSuccess = checks.isSuccess(res);
+        
+        if (isSuccess) {
+            try {
+                // Check Content-Type to see if we got JSON or HTML
+                const contentType = res.headers['Content-Type'] || '';
+                
+                if (contentType.includes('application/json')) {
+                    const body = res.json();
+                    check(res, { 
+                        'has valid orderId': (r) => body && body.orderId
+                    });
+                } else {
+                    // If HTML (e.g., redirected to dashboard), check for success elements
+                    // or just accept 2xx as success if we can't parse orderId from HTML easily
+                    const body = res.body; 
+                    check(res, {
+                        'is not error page': (r) => !r.body.includes('Error') && !r.body.includes('Failed')
+                    });
+                }
+            } catch (e) {
+                // Swallow JSON parse errors silently if it's not critical, 
+                // but definitely DON'T dump HTML to console
+                console.error('Checkout validation warning: Response was not valid JSON');
+            }
+        }
     });
 }
