@@ -11,7 +11,8 @@
     "test:api": "playwright test tests/api --grep \"@api\"",
     "test:a11y": "playwright test tests/a11y --grep \"@a11y\"",
     "report:allure": "allure generate allure-results -o allure-report --clean",
-    "report:open": "allure open allure-report"
+    "report:open": "allure open allure-report",
+    "test:perf:smoke": "node scripts/run-k6.js performance/scripts/smoke.k6.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
