@@ -13,12 +13,19 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
+      "@config": ["src/config"],
       "@config/*": ["src/config/*"],
+      "@api": ["src/api"],
       "@api/*": ["src/api/*"],
+      "@fixtures": ["src/fixtures"],
       "@fixtures/*": ["src/fixtures/*"],
+      "@pages": ["src/pages"],
       "@pages/*": ["src/pages/*"],
+      "@data": ["src/data"],
       "@data/*": ["src/data/*"],
+      "@utils": ["src/utils"],
       "@utils/*": ["src/utils/*"],
+      "@app-types": ["src/types"],
       "@app-types/*": ["src/types/*"]
     },
     "outDir": "dist"

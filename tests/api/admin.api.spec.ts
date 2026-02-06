@@ -1,7 +1,5 @@
-import { test, expect } from '@fixtures/base.fixture';
-
-import { loginAsAdmin } from '@api/auth.api';
-import { listAdminNotifications, resetStockSafe } from '@api/admin.api';
+import { test, expect } from '@fixtures';
+import { loginAsAdmin, listAdminNotifications, resetStockSafe } from '@api';
 
 test.describe('admin api @api @admin', () => {
   test.use({ seedData: true });

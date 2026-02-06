@@ -1,7 +1,6 @@
-import { test } from '@fixtures/base.fixture';
-
-import { routes } from '@config/constants';
-import { expectNoServerError, expectSecurityHeaders } from '@utils/security-checks';
+import { test } from '@fixtures';
+import { routes } from '@config';
+import { expectNoServerError, expectSecurityHeaders } from '@utils';
 
 test.describe('security headers @security @headers', () => {
   test('home includes baseline security headers @security @headers @smoke', async ({ api }) => {

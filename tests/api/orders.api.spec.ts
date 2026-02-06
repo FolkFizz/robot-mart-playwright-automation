@@ -1,9 +1,6 @@
-import { test, expect } from '@fixtures/base.fixture';
-
-import { loginAsUser } from '@api/auth.api';
-import { addToCart, clearCart } from '@api/cart.api';
-import { createPaymentIntent, mockPay } from '@api/orders.api';
-import { seededProducts } from '@data/catalog';
+import { test, expect } from '@fixtures';
+import { loginAsUser, addToCart, clearCart, createPaymentIntent, mockPay } from '@api';
+import { seededProducts } from '@data';
 
 test.describe('orders api @api @orders', () => {
   test.use({ seedData: true });

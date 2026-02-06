@@ -1,8 +1,5 @@
-import { test, expect, loginAndSyncSession } from '@fixtures/base.fixture';
-
-import { HomePage } from '@pages/home.page';
-import { NotificationsPage } from '@pages/user/notifications.page';
-import { routes } from '@config/constants';
+import { test, expect, loginAndSyncSession } from '@fixtures';
+import { routes } from '@config';
 
 test.describe('notifications integration @integration @notifications', () => {
   test.use({ seedData: true });
@@ -11,13 +8,11 @@ test.describe('notifications integration @integration @notifications', () => {
     await loginAndSyncSession(api, page);
   });
 
-  test('dropdown count aligns with api list @integration @notifications @regression', async ({ api, page }) => {
-    const home = new HomePage(page);
-    await home.goto();
+  test('dropdown count aligns with api list @integration @notifications @regression', async ({ api, homePage, notificationsPage }) => {
+    await homePage.goto();
 
-    const notifications = new NotificationsPage(page);
-    await notifications.open();
-    const uiCount = await notifications.getNotificationCount();
+    await notificationsPage.open();
+    const uiCount = await notificationsPage.getNotificationCount();
 
     const res = await api.get(routes.api.notifications);
     const body = await res.json();

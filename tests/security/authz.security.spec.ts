@@ -1,7 +1,6 @@
-import { test, expect } from '@fixtures/base.fixture';
-
-import { loginAsAdmin, loginAsUser } from '@api/auth.api';
-import { routes } from '@config/constants';
+import { test, expect } from '@fixtures';
+import { loginAsAdmin, loginAsUser } from '@api';
+import { routes } from '@config';
 
 test.describe('authz security @security @authz', () => {
   test.use({ seedData: true });

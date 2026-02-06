@@ -1,8 +1,5 @@
-import { test, expect, loginAndSyncSession, seedCart } from '@fixtures/base.fixture';
-
-import { CartPage } from '@pages/cart.page';
-import { CheckoutPage } from '@pages/checkout.page';
-import { seededProducts } from '@data/catalog';
+import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
+import { seededProducts } from '@data';
 
 test.describe('checkout integration @integration @checkout', () => {
   test.use({ seedData: true });
@@ -15,21 +12,18 @@ test.describe('checkout integration @integration @checkout', () => {
     await seedCart(api, [{ id: firstProduct.id }, { id: secondProduct.id }]);
   });
 
-  test('checkout total matches cart total @integration @checkout @regression', async ({ page }) => {
-    const cart = new CartPage(page);
-    const checkout = new CheckoutPage(page);
+  test('checkout total matches cart total @integration @checkout @regression', async ({ cartPage, checkoutPage }) => {
+    await cartPage.goto();
+    const cartTotal = await cartPage.getGrandTotalValue();
 
-    await cart.goto();
-    const cartTotal = await cart.getGrandTotalValue();
+    await cartPage.proceedToCheckout();
+    await checkoutPage.waitForDomReady();
 
-    await cart.proceedToCheckout();
-    await checkout.waitForDomReady();
-
-    if (!(await checkout.isMockPayment())) {
-      await checkout.waitForStripeReady();
+    if (!(await checkoutPage.isMockPayment())) {
+      await checkoutPage.waitForStripeReady();
     }
 
-    const checkoutTotal = CheckoutPage.parsePrice(await checkout.getTotal());
+    const checkoutTotal = checkoutPage.constructor.parsePrice(await checkoutPage.getTotal());
     expect(checkoutTotal).toBeCloseTo(cartTotal, 2);
   });
 });

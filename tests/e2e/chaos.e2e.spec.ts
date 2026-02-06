@@ -1,8 +1,6 @@
-import { test, expect } from '@fixtures/base.fixture';
-
-import { ChaosPage } from '@pages/chaos.page';
-import { disableChaos, resetChaos } from '@api/test-hooks.api';
-import { chaosStatusText, chaosToggles } from '@data/chaos';
+import { test, expect } from '@fixtures';
+import { disableChaos, resetChaos } from '@api';
+import { chaosStatusText, chaosToggles } from '@data';
 
 test.describe('chaos lab @e2e @chaos', () => {
   test.beforeAll(async () => {
@@ -13,17 +11,16 @@ test.describe('chaos lab @e2e @chaos', () => {
     await resetChaos();
   });
 
-  test('toggle layout shift activates chaos mode @e2e @chaos @regression', async ({ page }) => {
-    const chaos = new ChaosPage(page);
-    await chaos.goto();
+  test('toggle layout shift activates chaos mode @e2e @chaos @regression', async ({ page, chaosPage }) => {
+    await chaosPage.goto();
 
-    await chaos.setToggle(chaosToggles.layoutShift, true);
+    await chaosPage.setToggle(chaosToggles.layoutShift, true);
     await Promise.all([
       page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-      chaos.applyChanges()
+      chaosPage.applyChanges()
     ]);
 
-    const status = await chaos.getStatusText();
+    const status = await chaosPage.getStatusText();
     expect(status).toBe(chaosStatusText.active);
   });
 });
