@@ -59,8 +59,9 @@ import { seededProducts, coupons, uiMessages } from '@data';
  * =============================================================================
  */
 
+test.use({ seedData: true });
+
 test.describe('cart comprehensive @e2e @cart', () => {
-  test.use({ seedData: true });
   const firstProduct = seededProducts[0];   // Rusty-Bot 101: ฿299.99
   const secondProduct = seededProducts[1];  // Helper-X: ฿450.00
   const thirdProduct = seededProducts[2];   // Cortex-99: ฿2500.00

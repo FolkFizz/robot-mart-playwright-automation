@@ -35,8 +35,9 @@ import { seededProducts } from '@data';
  * =============================================================================
  */
 
+test.use({ seedData: true });
+
 test.describe('cart accessibility @a11y @cart', () => {
-  test.use({ seedData: true });
 
   test.beforeEach(async ({ api, page }) => {
     // Arrange: Login and seed cart with product

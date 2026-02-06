@@ -38,8 +38,9 @@ import { seededProducts } from '@data';
  * =============================================================================
  */
 
+test.use({ seedData: true });
+
 test.describe('stripe integration @e2e @checkout @stripe', () => {
-  test.use({ seedData: true });
 
   test.beforeEach(async ({ api, page }) => {
     // Arrange: Login and seed cart with product

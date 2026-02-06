@@ -130,8 +130,9 @@ test.describe('catalog ui @e2e @safe', () => {
   });
 });
 
+test.use({ seedData: true });
+
 test.describe('catalog with seeded data @e2e @destructive', () => {
-  test.use({ seedData: true });
 
   test.describe('positive cases - search and filter', () => {
 

@@ -35,8 +35,9 @@ import { CheckoutPage } from '@pages';
  * =============================================================================
  */
 
+test.use({ seedData: true });
+
 test.describe('checkout integration @integration @checkout', () => {
-  test.use({ seedData: true });
 
   const firstProduct = seededProducts[0];
   const secondProduct = seededProducts[1];

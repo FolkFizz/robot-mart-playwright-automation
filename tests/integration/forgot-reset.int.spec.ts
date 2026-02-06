@@ -36,8 +36,9 @@ import { routes } from '@config';
  * =============================================================================
  */
 
+test.use({ seedData: true });
+
 test.describe('password reset integration @integration @auth', () => {
-  test.use({ seedData: true });
 
   test.describe('positive cases', () => {
 

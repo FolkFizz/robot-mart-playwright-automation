@@ -38,8 +38,9 @@ import { authInputs, authErrors } from '@data';
  * =============================================================================
  */
 
+test.use({ seedData: true });
+
 test.describe('authentication api @api @auth', () => {
-  test.use({ seedData: true });
 
   test.describe('positive cases', () => {
 

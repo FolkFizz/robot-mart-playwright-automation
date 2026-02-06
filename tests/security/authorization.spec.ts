@@ -47,8 +47,9 @@ import { routes } from '@config';
  * =============================================================================
  */
 
+test.use({ seedData: true });
+
 test.describe('authorization security comprehensive @e2e @security @authz', () => {
-  test.use({ seedData: true });
 
   // ========================================================================
   // POSITIVE TEST CASES - Admin Access Rights

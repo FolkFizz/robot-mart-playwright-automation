@@ -34,8 +34,9 @@ import { routes } from '@config';
  * =============================================================================
  */
 
+test.use({ seedData: true });
+
 test.describe('notifications integration @integration @notifications', () => {
-  test.use({ seedData: true });
 
   test.beforeEach(async ({ api, page }) => {
     // Arrange: Login as user

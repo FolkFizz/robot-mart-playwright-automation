@@ -36,8 +36,9 @@ import { seededProducts } from '@data';
  * =============================================================================
  */
 
+test.use({ seedData: true });
+
 test.describe('checkout accessibility @a11y @checkout', () => {
-  test.use({ seedData: true });
 
   test.beforeEach(async ({ api, page }) => {
     // Arrange: Login and seed cart with product

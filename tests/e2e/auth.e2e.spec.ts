@@ -53,8 +53,9 @@ import { randomUser, randomPasswordPair } from '@utils';
  * =============================================================================
  */
 
+test.use({ seedData: true });
+
 test.describe('authentication comprehensive @e2e @auth', () => {
-  test.use({ seedData: true });
 
   // ========================================================================
   // POSITIVE TEST CASES - Login & Logout

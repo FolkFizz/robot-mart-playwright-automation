@@ -39,8 +39,9 @@ import { seededProducts, coupons } from '@data';
  * =============================================================================
  */
 
+test.use({ seedData: true });
+
 test.describe('cart api @api @cart', () => {
-  test.use({ seedData: true });
 
   test.describe('positive cases', () => {
 

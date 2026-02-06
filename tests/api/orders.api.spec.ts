@@ -37,8 +37,9 @@ import { seededProducts } from '@data';
  * =============================================================================
  */
 
+test.use({ seedData: true });
+
 test.describe('orders api @api @orders', () => {
-  test.use({ seedData: true });
 
   test.describe('positive cases', () => {
 

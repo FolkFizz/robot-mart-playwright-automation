@@ -35,8 +35,9 @@ import { loginAsAdmin, listAdminNotifications, resetStockSafe } from '@api';
  * =============================================================================
  */
 
+test.use({ seedData: true });
+
 test.describe('admin api @api @admin', () => {
-  test.use({ seedData: true });
 
   test.describe('positive cases', () => {
 
