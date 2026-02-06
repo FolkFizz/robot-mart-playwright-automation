@@ -26,6 +26,9 @@ Reference the custom runner script in `package.json`:
 ```bash
 # Run a quick Smoke Test (1 VU, 1 min) - Checks if system is alive
 npm run test:perf:smoke
+
+# Run Race Condition Test (20 VUs competing for same resource)
+npm run test:perf:race
 ```
 
 ## ⚙️ Configuration
@@ -40,8 +43,9 @@ To test against a specific environment, usually you just update your `.env` file
 
 ## 📊 Scenarios
 
-| Scenario   | Description               | Purpose                                   |
-| :--------- | :------------------------ | :---------------------------------------- |
-| **Smoke**  | 1 User, Short duration    | Verify system health before larger tests. |
-| **Load**   | (Planned) Gradual ramp-up | measure performance under expected usage. |
-| **Stress** | (Planned) High load       | Determine breaking point.                 |
+| Scenario       | Description                 | Purpose                                   |
+| :------------- | :-------------------------- | :---------------------------------------- |
+| **Smoke**      | 1 User, Short duration      | Verify system health before larger tests. |
+| **Concurrent** | 20 Users, Shared iterations | Test race conditions and data integrity.  |
+| **Load**       | (Planned) Gradual ramp-up   | Measure performance under expected usage. |
+| **Stress**     | (Planned) High load         | Determine breaking point.                 |

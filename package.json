@@ -15,7 +15,8 @@
     "test:perf:smoke": "node scripts/run-k6.js performance/scripts/smoke.k6.js",
     "test:perf:browse": "node scripts/run-k6.js performance/scripts/browse.k6.js",
     "test:perf:cart": "node scripts/run-k6.js performance/scripts/cart.k6.js",
-    "test:perf:checkout": "node scripts/run-k6.js performance/scripts/checkout.k6.js"
+    "test:perf:checkout": "node scripts/run-k6.js performance/scripts/checkout.k6.js",
+    "test:perf:race": "node scripts/run-k6.js performance/scripts/race-condition.k6.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
