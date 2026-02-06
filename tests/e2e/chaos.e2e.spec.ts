@@ -58,10 +58,8 @@ test.describe('chaos lab @e2e @chaos', () => {
 
       // Act: Enable layout shift chaos
       await chaosPage.setToggle(chaosToggles.layoutShift, true);
-      await Promise.all([
-        page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-        chaosPage.applyChanges()
-      ]);
+      await chaosPage.applyChanges();
+      await page.waitForLoadState('domcontentloaded');
 
       // Assert: Chaos mode is active
       const status = await chaosPage.getStatusText();
