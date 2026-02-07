@@ -94,14 +94,12 @@ test.describe('stripe integration @e2e @checkout @stripe', () => {
         test.skip();
       }
 
-      // Act: Wait for form
-      await checkoutPage.waitForDomReady();
+      // Act: Wait for Stripe to be ready
+      await checkoutPage.waitForStripeReady();
 
-      // Assert: Payment section exists
-      const paymentSection = page.locator('#payment-element, .StripeElement, [data-testid="payment-element"]').first();
-      await expect(paymentSection).toBeVisible({ timeout: 10000 }).catch(() => {
-        // Stripe may not be configured, which is acceptable
-      });
+      // Assert: Payment form is visible (Stripe loaded successfully)
+      const submitStatus = await checkoutPage.getSubmitStatus();
+      expect(submitStatus).not.toBeNull();
     });
   });
 

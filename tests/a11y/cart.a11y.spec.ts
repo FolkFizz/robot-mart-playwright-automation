@@ -77,8 +77,11 @@ test.describe('cart accessibility @a11y @cart', () => {
 
       // Act: Find remove button
       const removeButton = page.locator('button').filter({ hasText: /remove|delete/i }).first();
+      
+      // Assert: Button exists
+      await expect(removeButton).toBeVisible();
 
-      // Assert: Has accessible name
+      // Assert: Has accessible name (either aria-label or visible text)
       const ariaLabel = await removeButton.getAttribute('aria-label');
       const buttonText = await removeButton.innerText().catch(() => '');
       expect(ariaLabel || buttonText).toBeTruthy();

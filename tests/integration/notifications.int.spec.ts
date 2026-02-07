@@ -93,9 +93,10 @@ test.describe('notifications integration @integration @notifications', () => {
         const notification = body.notifications[0];
         expect(notification).toHaveProperty('id');
         expect(notification).toHaveProperty('message');
+      } else {
+        // If no notifications, at least verify response structure is correct
+        expect(body.notifications).toEqual([]);
       }
-      // Always passes if no notifications
-      expect(true).toBe(true);
     });
   });
 
