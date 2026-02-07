@@ -1,4 +1,4 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { disableChaos, resetChaos } from '@api';
 import { chaosStatusText, chaosToggles } from '@data';
 
@@ -15,19 +15,19 @@ import { chaosStatusText, chaosToggles } from '@data';
  * 
  * Test Cases Coverage:
  * --------------------
- * POSITIVE CASES (1 test):
- *   - CHAOS-P01: Toggle layout shift activates chaos mode
+ * POSITIVE CASES (3 tests):
+ *   - CHAOS-P01: toggle layout shift activates chaos mode
+ *   - CHAOS-P02: network delay chaos activates successfully
+ *   - CHAOS-P03: broken assets chaos blocks CSS/JS files
  * 
- * NEGATIVE CASES (4 tests):
- *   - CHAOS-N01: Network latency simulation (3G) slows responses
- *   - CHAOS-N02: Memory bloat simulation impacts performance
- *   - CHAOS-N03: API timeouts handled gracefully
- *   - CHAOS-N04: Database connection failures show error states
+ * NEGATIVE CASES (2 tests):
+ *   - CHAOS-N01: app handles random 500 errors gracefully
+ *   - CHAOS-N02: chaos disables properly after reset
  * 
  * EDGE CASES (3 tests):
- *   - CHAOS-E01: Extreme CPU throttling resilience
- *   - CHAOS-E02: Local storage corruption recovery
- *   - CHAOS-E03: Combined chaos modes (Network + Layout)
+ *   - CHAOS-E01: multiple chaos modes active simultaneously
+ *   - CHAOS-E02: extreme layout shift does not crash navigation
+ *   - CHAOS-E03: chaos does not affect control endpoints
  * 
  * Business Rules Tested:
  * ----------------------

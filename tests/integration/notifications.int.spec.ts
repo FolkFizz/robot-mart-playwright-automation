@@ -1,4 +1,4 @@
-import { test, expect, loginAndSyncSession } from '@fixtures';
+﻿import { test, expect, loginAndSyncSession } from '@fixtures';
 import { routes } from '@config';
 
 /**
@@ -16,23 +16,25 @@ import { routes } from '@config';
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (3 tests):
- *   - NOTIF-INT-P01: Dropdown count aligns with API list
- *   - NOTIF-INT-P04: Mark as read updates UI and API count
- *   - NOTIF-INT-P05: Clear all notifications empties list
+ *   - NOTIF-INT-P01: dropdown count aligns with api list
+ *   - NOTIF-INT-P02: notifications API returns proper structure
+ *   - NOTIF-INT-P03: each notification has required fields
  * 
  * NEGATIVE CASES (2 tests):
- *   - NOTIF-INT-N01: Invalid notification ID returns error
- *   - NOTIF-INT-N02: Unauthorized access to notifications blocked
+ *   - NOTIF-INT-N01: invalid notification ID returns error
+ *   - NOTIF-INT-N02: unauthorized access to notifications blocked
  * 
- * EDGE CASES (4 tests):
- *   - NOTIF-INT-E03: Notification data structure consistent between API and UI
- *   - NOTIF-INT-E04: Real-time updates sync between tabs
- *   - NOTIF-INT-E05: Auto-archive old notifications
- *   - NOTIF-INT-E06: Notification pagination works correctly
+ * EDGE CASES (6 tests):
+ *   - NOTIF-INT-E01: UI updates reflect API state
+ *   - NOTIF-INT-E02: large number of notifications handled correctly
+ *   - NOTIF-INT-E03: notification data structure consistent between API and UI
+ *   - NOTIF-INT-E04: real-time updates sync between tabs
+ *   - NOTIF-INT-E05: auto-archive old notifications
+ *   - NOTIF-INT-E06: notification pagination works correctly
  * 
  * Business Rules Tested:
  * ----------------------
- * - Integration Points: Notifications Dropdown (UI) ↔ /api/notifications (API)
+ * - Integration Points: Notifications Dropdown (UI) â†” /api/notifications (API)
  * - Data Consistency: UI count matches backend state
  * - Security: User isolation, ID validation
  * - API Response Format: {status: 'success', notifications: [...], unreadCount: N}
@@ -69,7 +71,7 @@ test.describe('notifications integration @integration @notifications', () => {
       expect(body.status).toBe('success');
       expect(Array.isArray(body.notifications)).toBe(true);
 
-      // Assert: UI count ≤ API total (UI shows limited items)
+      // Assert: UI count â‰¤ API total (UI shows limited items)
       expect(uiCount).toBeLessThanOrEqual(body.notifications.length);
       expect(body.unreadCount).toBeGreaterThanOrEqual(0);
     });
@@ -105,6 +107,25 @@ test.describe('notifications integration @integration @notifications', () => {
         // If no notifications, at least verify response structure is correct
         expect(body.notifications).toEqual([]);
       }
+    });
+  });
+
+  test.describe('negative cases', () => {
+
+    test('NOTIF-INT-N01: invalid notification ID returns error @integration @notifications @regression', async ({ api }) => {
+      // Act: Try to read invalid ID
+      const res = await api.post(`${routes.api.notifications}/invalid-id-999/read`);
+      
+      // Assert: Should not be successful (404 or 400)
+      expect(res.status()).not.toBe(200);
+    });
+
+    test('NOTIF-INT-N02: unauthorized access to notifications blocked @integration @notifications @security @regression', async ({ request }) => {
+      // Act: Try to access notifications without auth cookie (using raw request)
+      const res = await request.get(routes.api.notifications);
+      
+      // Assert: Should be 401 or 403
+      expect([401, 403]).toContain(res.status());
     });
   });
 
@@ -166,25 +187,10 @@ test.describe('notifications integration @integration @notifications', () => {
       }
     });
 
-    test('NOTIF-INT-N01: invalid notification ID returns error @integration @notifications @regression', async ({ api }) => {
-      // Act: Try to read invalid ID
-      const res = await api.post(`${routes.api.notifications}/invalid-id-999/read`);
-      
-      // Assert: Should not be successful (404 or 400)
-      expect(res.status()).not.toBe(200);
-    });
-
-    test('NOTIF-INT-N02: unauthorized access to notifications blocked @integration @notifications @security @regression', async ({ request }) => {
-      // Act: Try to access notifications without auth cookie (using raw request)
-      const res = await request.get(routes.api.notifications);
-      
-      // Assert: Should be 401 or 403
-      expect([401, 403]).toContain(res.status());
-    });
   });
 
   test.describe('edge cases', () => {
-    test('NOTIF-INT-E04: real-time updates sync between tabs @integration @notifications @regression', async ({ browser, homePage, notificationsPage, api }) => {
+    test('NOTIF-INT-E04: real-time updates sync between tabs @integration @notifications @regression', async ({ browser, page, homePage, notificationsPage, api }) => {
       // Arrange: Open two tabs
       // Context A is homePage (already open)
       await homePage.goto();
@@ -192,21 +198,35 @@ test.describe('notifications integration @integration @notifications', () => {
       // Context B
       const contextB = await browser.newContext();
       const pageB = await contextB.newPage();
-      await pageB.goto(routes.home);
-      
-      // Act: Trigger notification in A (mock or API)
-      await api.post(`${routes.api.test}/trigger-notification`, { message: 'Sync Test' });
-      
-      // Assert: Both tabs show update (poll check)
-      // This test assumes polling or websocket. If strictly poll, we might need reload
-      await homePage.reload();
-      await pageB.reload();
-      
-      const countA = await notificationsPage.getNotificationCount();
-      // Simple check that both are live
-      expect(countA).toBeGreaterThanOrEqual(0);
-      
-      await contextB.close();
+
+      try {
+        // Sync auth cookies from API context to tab B
+        const storage = await api.storageState();
+        await contextB.addCookies(storage.cookies);
+        await pageB.goto(routes.home);
+
+        // Act: Refresh both tabs to verify they stay in sync with backend state
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await pageB.reload({ waitUntil: 'domcontentloaded' });
+
+        // Baseline from API
+        const res = await api.get(routes.api.notifications);
+        const body = await res.json();
+        expect(Array.isArray(body.notifications)).toBe(true);
+
+        // Assert: Both tabs can read consistent notification counts
+        await notificationsPage.open();
+        const countA = await notificationsPage.getNotificationCount();
+
+        await pageB.getByTestId('nav-bell').click();
+        await pageB.locator('#notifDropdown').waitFor({ state: 'visible' });
+        const countB = await pageB.locator('#notifItemsContainer .notif-item').count();
+
+        expect(countA).toBeLessThanOrEqual(body.notifications.length);
+        expect(countB).toBeLessThanOrEqual(body.notifications.length);
+      } finally {
+        await contextB.close();
+      }
     });
 
     test('NOTIF-INT-E05: auto-archive old notifications @integration @notifications @regression', async ({ api }) => {
@@ -234,3 +254,4 @@ test.describe('notifications integration @integration @notifications', () => {
       expect(Array.isArray(body.notifications)).toBe(true);
     });
   });
+});

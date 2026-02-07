@@ -1,4 +1,4 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { resetStockSafe, listAdminNotifications, loginAsAdmin, loginAsUser } from '@api';
 import { routes } from '@config';
 
@@ -15,15 +15,20 @@ import { routes } from '@config';
  * 
  * Test Cases Coverage:
  * --------------------
- * POSITIVE CASES (2 tests):
- *   - ADMIN-API-P01: Reset stock safely via API
- *   - ADMIN-API-P02: Admin notifications list returns data
+ * POSITIVE CASES (4 tests):
+ *   - ADMIN-API-P01: reset stock safely via API
+ *   - ADMIN-API-P02: admin notifications list returns data
+ *   - ADMIN-API-P03: admin can retrieve current stock levels
+ *   - ADMIN-API-P04: stock reset returns confirmation
  * 
- * NEGATIVE CASES (0 tests):
- *   - (Future: Non-admin access to admin endpoints, invalid stock values)
+ * NEGATIVE CASES (3 tests):
+ *   - ADMIN-API-N01: regular user cannot access admin endpoints
+ *   - ADMIN-API-N02: unauthenticated access to admin API rejected
+ *   - ADMIN-API-N03: invalid stock values rejected by reset API
  * 
- * EDGE CASES (0 tests):
- *   - (Future: Concurrent stock updates, notification pagination)
+ * EDGE CASES (2 tests):
+ *   - ADMIN-API-E01: admin notifications pagination handles large dataset
+ *   - ADMIN-API-E02: concurrent stock resets handled gracefully
  * 
  * Business Rules Tested:
  * ----------------------

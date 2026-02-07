@@ -1,4 +1,4 @@
-import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
+﻿import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { SHIPPING } from '@config';
 import { seededProducts, coupons, uiMessages } from '@data';
 
@@ -19,39 +19,38 @@ import { seededProducts, coupons, uiMessages } from '@data';
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (9 tests):
- *   - CART-P01: Add first product to empty cart
- *   - CART-P02: Add second product, verify subtotal
- *   - CART-P03: Increase quantity updates totals and enables free shipping
- *   - CART-P04: Apply valid coupon reduces grand total
- *   - CART-P05: Remove coupon restores original totals
- *   - CART-P06: Remove product from cart updates totals
- *   - CART-P07: Clear cart empties all items
- *   - CART-P08: Decrease quantity stops at minimum 1
- *   - COUP-P02: Coupon code case-insensitive (uppercase/lowercase)
+ *   - CART-P01: add first product to empty cart
+ *   - CART-P02: add second product and verify subtotal calculation
+ *   - CART-P03: increase quantity updates totals and enables free shipping
+ *   - CART-P04: apply valid coupon reduces grand total
+ *   - CART-P05: remove coupon restores original totals
+ *   - CART-P06: remove product from cart updates totals
+ *   - CART-P07: clear cart empties all items
+ *   - CART-P08: cannot decrease quantity below 1
+ *   - COUP-P02: coupon code is case-insensitive
  * 
- * NEGATIVE CASES (8 tests):
- *   - CART-N01: Cannot add quantity exceeding stock limit (400 error)
- *   - CART-N02: Admin cannot add items to cart via API (403 Forbidden)
- *   - CART-N02-UI: Admin redirected when attempting to shop via UI
- *   - CART-N03: Add non-existent product returns 404
- *   - CART-N04: Cannot update quantity to 0 (minimum is 1)
- *   - CART-N05: Cannot update cart item beyond stock
- *   - CART-N07: Update cart when empty returns error
- *   - COUP-N01: Invalid coupon code shows error message
- *   - COUP-N02: Expired coupon rejected with proper error
+ * NEGATIVE CASES (9 tests):
+ *   - CART-N01: cannot add quantity exceeding stock limit
+ *   - CART-N02: admin cannot add items to cart via API (security)
+ *   - CART-N02-UI: admin redirected when attempting to shop via UI
+ *   - CART-N03: add non-existent product returns 404
+ *   - CART-N04: cannot update quantity to 0 (minimum is 1)
+ *   - CART-N05: cannot update cart item beyond available stock
+ *   - CART-N07: update cart when empty returns error
+ *   - COUP-N01: invalid coupon code shows error
+ *   - COUP-N02: expired coupon rejected with error
  * 
- * EDGE CASES (6 tests):
- *   - CART-E01: Add at exact stock limit succeeds, adding 1 more fails
- *   - CART-E02: Stock boundary validation
- *   - COUP-E01: Coupon code with leading/trailing whitespace trimmed
- *   - COUP-E05: Coupon auto-cleared when cart is cleared
- *   - COUP-N04: Empty coupon code rejected
+ * EDGE CASES (4 tests):
+ *   - CART-E01: add at exact stock limit succeeds, adding one more fails
+ *   - COUP-E01: coupon code with whitespace is trimmed
+ *   - COUP-E05: coupon cleared when cart is cleared
+ *   - COUP-N04: empty coupon code rejected
  * 
  * Business Rules Tested:
  * ----------------------
  * - Stock Validation: Cannot add/update beyond available stock
  * - Admin Restriction: Admin role CANNOT perform shopping operations (Security)
- * - Shipping Threshold: FREE shipping when subtotal ≥ ฿1000, else ฿50 fee
+ * - Shipping Threshold: FREE shipping when subtotal â‰¥ à¸¿1000, else à¸¿50 fee
  * - Coupon Calculation: Discount applied to subtotal BEFORE shipping
  * - Cart Formula: Grand Total = (Subtotal - Discount) + Shipping
  * - Case Sensitivity: Coupon codes are case-insensitive (converted to uppercase)
@@ -62,9 +61,9 @@ import { seededProducts, coupons, uiMessages } from '@data';
 test.use({ seedData: true });
 
 test.describe('cart comprehensive @e2e @cart', () => {
-  const firstProduct = seededProducts[0];   // Rusty-Bot 101: ฿299.99
-  const secondProduct = seededProducts[1];  // Helper-X: ฿450.00
-  const thirdProduct = seededProducts[2];   // Cortex-99: ฿2500.00
+  const firstProduct = seededProducts[0];   // Rusty-Bot 101: à¸¿299.99
+  const secondProduct = seededProducts[1];  // Helper-X: à¸¿450.00
+  const thirdProduct = seededProducts[2];   // Cortex-99: à¸¿2500.00
 
   test.beforeEach(async ({ api, page }) => {
     await loginAndSyncSession(api, page);
@@ -117,13 +116,13 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(subtotal).toBeCloseTo(expectedSubtotal, 2);
       expect(await cartPage.getCartCount()).toBe(2);
 
-      // Verify shipping fee (below ฿1000 threshold)
+      // Verify shipping fee (below à¸¿1000 threshold)
       const shippingValue = await cartPage.getShippingValue();
       expect(shippingValue).toBe(SHIPPING.fee);
     });
 
     test('CART-P03: increase quantity updates totals and enables free shipping @e2e @cart @regression @destructive', async ({ api, cartPage }) => {
-      // Arrange: Cart with 2 items (total is below ฿1000 initially)
+      // Arrange: Cart with 2 items (total is below à¸¿1000 initially)
       await seedCart(api, [{ id: firstProduct.id }, { id: secondProduct.id }]);
 
       await cartPage.goto();
@@ -144,7 +143,7 @@ test.describe('cart comprehensive @e2e @cart', () => {
       const expectedSubtotal = firstProduct.price * afterQty + secondProduct.price;
       expect(subtotal).toBeCloseTo(expectedSubtotal, 2);
 
-      // Verify free shipping (should be over ฿1000 now)
+      // Verify free shipping (should be over à¸¿1000 now)
       const shippingValue = await cartPage.getShippingValue();
       expect(shippingValue).toBe(0);
     });

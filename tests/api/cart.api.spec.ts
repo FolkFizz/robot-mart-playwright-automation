@@ -1,4 +1,4 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { loginAsUser, loginAsAdmin, addToCart, applyCoupon, clearCart, getCart, removeCartItem, removeCoupon, updateCartItem } from '@api';
 import { seededProducts, coupons } from '@data';
 
@@ -17,14 +17,17 @@ import { seededProducts, coupons } from '@data';
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (2 tests):
- *   - CART-API-P01: Add, update, remove cart item flow
- *   - CART-API-P02: Apply and remove coupon successfully
+ *   - CART-API-P01: add, update, remove cart item
+ *   - CART-API-P02: apply and remove coupon
  * 
- * NEGATIVE CASES (0 tests):
- *   - (Future: Invalid product ID, quantity validation, stock limits)
+ * NEGATIVE CASES (3 tests):
+ *   - CART-API-N01: add invalid product ID returns error
+ *   - CART-API-N02: quantity exceeds stock limit fails gracefully
+ *   - CART-API-N03: negative quantity rejected
  * 
- * EDGE CASES (0 tests):
- *   - (Future: Concurrent updates, expired sessions, admin restrictions)
+ * EDGE CASES (2 tests):
+ *   - CART-API-E01: admin user cannot add to cart
+ *   - CART-API-E02: adding same product multiple times merges quantities
  * 
  * Business Rules Tested:
  * ----------------------

@@ -1,4 +1,4 @@
-import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
+﻿import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { seededProducts } from '@data';
 
 /**
@@ -8,29 +8,29 @@ import { seededProducts } from '@data';
  * 
  * Test Scenarios:
  * ---------------
- * 1. Order Creation → Stock Deduction
+ * 1. Order Creation â†’ Stock Deduction
  * 2. Stock Accuracy vs Order Quantity
  * 3. Concurrent Order Handling (Race Conditions)
- * 4. Failed Order → Stock Restoration
+ * 4. Failed Order â†’ Stock Restoration
  * 
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (3 tests):
- *   - ORD-INV-INT-P01: Stock decreases after successful order
- *   - ORD-INV-INT-P02: Stock reduction matches order quantity
- *   - ORD-INV-INT-P03: Order created only when stock available
+ *   - ORD-INV-INT-P01: stock decreases after successful order
+ *   - ORD-INV-INT-P02: stock reduction matches order quantity
+ *   - ORD-INV-INT-P03: order only created when stock available
  * 
  * NEGATIVE CASES (2 tests):
- *   - ORD-INV-INT-N01: Insufficient stock prevents order creation
- *   - ORD-INV-INT-N02: Zero stock blocks checkout
+ *   - ORD-INV-INT-N01: insufficient stock prevents order creation
+ *   - ORD-INV-INT-N02: zero stock blocks checkout
  * 
  * EDGE CASES (2 tests):
- *   - ORD-INV-INT-E01: Concurrent orders don't oversell stock
- *   - ORD-INV-INT-E02: Stock validates against current inventory
+ *   - ORD-INV-INT-E01: concurrent orders validate stock correctly
+ *   - ORD-INV-INT-E02: stock validates against current inventory at checkout
  * 
  * Business Rules Tested:
  * ----------------------
- * - Integration Point: Order Service ↔ Inventory Service
+ * - Integration Point: Order Service â†” Inventory Service
  * - Stock Atomicity: Deduction happens atomically with order creation
  * - Race Condition Prevention: Concurrent orders can't oversell
  * - Data Consistency: Order quantity = Stock deduction amount

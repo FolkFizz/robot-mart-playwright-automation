@@ -1,4 +1,4 @@
-import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
+﻿import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { seededProducts } from '@data';
 import { CheckoutPage } from '@pages';
 import { clearCart } from '@api';
@@ -17,22 +17,24 @@ import { clearCart } from '@api';
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (2 tests):
- *   - CHK-INT-P01: Checkout total matches cart total exactly
- *   - CHK-INT-P04: Tax calculation consistent between cart and checkout
+ *   - CHK-INT-P01: checkout total matches cart total
+ *   - CHK-INT-P04: tax calculation consistent between cart and checkout
  * 
- * NEGATIVE CASES (1 test):
- *   - CHK-INT-N03: Modified cart during checkout blocks order or updates total
+ * NEGATIVE CASES (3 tests):
+ *   - CHK-INT-N01: coupon discount properly reflected in checkout
+ *   - CHK-INT-N02: checkout validates cart is not empty
+ *   - CHK-INT-N03: modified cart during checkout blocks order or updates total
  * 
  * EDGE CASES (5 tests):
- *   - CHK-INT-E01: Shipping cost calculation matches between cart and checkout
- *   - CHK-INT-E02: Checkout total includes all cart items correctly
- *   - CHK-INT-E03: Multi-item order total accuracy
- *   - CHK-INT-E04: Coupon discount persists through checkout
- *   - CHK-INT-E05: Session timeout redirects to login/cart
+ *   - CHK-INT-E01: shipping cost calculation matches between cart and checkout
+ *   - CHK-INT-E02: checkout total includes all cart items correctly
+ *   - CHK-INT-E03: multi-item order total accuracy
+ *   - CHK-INT-E04: coupon discount persists through checkout
+ *   - CHK-INT-E05: session timeout redirects to login/cart
  * 
  * Business Rules Tested:
  * ----------------------
- * - Integration Point: Cart page → Checkout page
+ * - Integration Point: Cart page â†’ Checkout page
  * - Financials: Totals = Subtotal + Tax + Shipping - Discount
  * - State Management: Cart content changes must propagate
  * - Data Consistency: Grand total (subtotal - discount + shipping) preserved

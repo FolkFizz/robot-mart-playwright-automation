@@ -1,4 +1,4 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { users, authInputs, authErrors, inboxSubjects } from '@data';
 import { routes } from '@config';
 import { randomUser, randomPasswordPair } from '@utils';
@@ -12,34 +12,33 @@ import { randomUser, randomPasswordPair } from '@utils';
  * ---------------
  * 1. Login & Logout Operations
  * 2. User Registration & Validation
- * 3. Password Reset Flow (Request → Email → Reset)
+ * 3. Password Reset Flow (Request â†’ Email â†’ Reset)
  * 4. Token Security & Expiry Handling
- * 5. Cart Merge on Login (Session → Database)
+ * 5. Cart Merge on Login (Session â†’ Database)
  * 6. Email Notification System
  * 
  * Test Cases Coverage:
  * --------------------
- * POSITIVE CASES (6 tests):
- *   - AUTH-P01: Login with valid user credentials succeeds
- *   - AUTH-P02: Logout successfully clears session
- *   - AUTH-P03: Register new user with unique credentials
- *   - AUTH-P05: Request password reset sends email with link
- *   - AUTH-P06: Reset password with valid token succeeds
- *   - AUTH-E04: Guest cart merges with DB cart on login
+ * POSITIVE CASES (5 tests):
+ *   - AUTH-P01: login with valid credentials succeeds
+ *   - AUTH-P02: logout clears session successfully
+ *   - AUTH-P03: register new user with unique credentials
+ *   - AUTH-P05: request reset with valid email sends link
+ *   - AUTH-P06: reset password with valid token succeeds
  * 
- * NEGATIVE CASES (9 tests):
- *   - AUTH-N01: Login with invalid username fails
- *   - AUTH-N02: Login with wrong password fails
- *   - AUTH-N03: Register with duplicate username/email rejected
- *   - AUTH-N04: Register with mismatched passwords fails
- *   - AUTH-N06: Reset request with non-existent email (generic message for security)
- *   - AUTH-N07: Reset with expired token fails
- *   - AUTH-N08: Reset with invalid token redirects to login
- *   - AUTH-N09: Password mismatch during reset shows error
+ * NEGATIVE CASES (8 tests):
+ *   - AUTH-N02: login with wrong password fails
+ *   - AUTH-N01: login with invalid username fails
+ *   - AUTH-N04: register with password mismatch fails
+ *   - AUTH-N03: register with duplicate username or email fails
+ *   - AUTH-N06: reset request with non-existent email shows generic message
+ *   - AUTH-N07: reset with expired token fails
+ *   - AUTH-N08: reset with invalid token redirects to login
+ *   - AUTH-N09: password mismatch during reset shows error
  * 
  * EDGE CASES (2 tests):
- *   - AUTH-E05: Token cannot be reused after successful reset (security)
- *   - AUTH-E04: Guest session cart merges with authenticated user's DB cart
+ *   - AUTH-E05: token cannot be reused after successful reset (security)
+ *   - AUTH-E04: guest cart merges with DB cart on login
  * 
  * Business Rules Tested:
  * ----------------------

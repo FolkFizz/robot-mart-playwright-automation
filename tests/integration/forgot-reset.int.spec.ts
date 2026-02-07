@@ -1,4 +1,4 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { authInputs, inboxSubjects } from '@data';
 import { routes } from '@config';
 
@@ -9,28 +9,33 @@ import { routes } from '@config';
  * 
  * Test Scenarios:
  * ---------------
- * 1. Forgot Password Flow (UI → Email → Reset Link)
+ * 1. Forgot Password Flow (UI â†’ Email â†’ Reset Link)
  * 2. Token Validation (Format, Expiry, Reuse)
  * 3. Security & Personalization
  * 
  * Test Cases Coverage:
  * --------------------
- * POSITIVE CASES (1 test):
- *   - RESET-INT-P01: Forgot password sends reset link to demo inbox
+ * POSITIVE CASES (3 tests):
+ *   - RESET-INT-P01: forgot password sends reset link to demo inbox
+ *   - RESET-INT-P02: reset email has correct subject line
+ *   - RESET-INT-P03: reset link is valid URL format
  * 
  * NEGATIVE CASES (2 tests):
- *   - RESET-INT-N03: Expired reset token rejected by verification endpoint
- *   - RESET-INT-N04: Used reset token cannot be reused
+ *   - RESET-INT-N01: non-existent email shows success for security
+ *   - RESET-INT-N02: invalid email format rejected
  * 
- * EDGE CASES (4 tests):
- *   - RESET-INT-E02: Reset link contains valid token format
- *   - RESET-INT-E03: Reset link from different browser/context works
- *   - RESET-INT-E04: Password reset email contains user name personalizations
- *   - RESET-INT-E05: Reset token query param validation
+ * EDGE CASES (7 tests):
+ *   - RESET-INT-E01: multiple reset requests for same email
+ *   - RESET-INT-N03: expired reset token rejected by verification endpoint
+ *   - RESET-INT-N04: used reset token cannot be reused
+ *   - RESET-INT-E02: reset link contains valid token format
+ *   - RESET-INT-E03: reset link from different browser/context works
+ *   - RESET-INT-E04: password reset email contains user name personalizations
+ *   - RESET-INT-E05: reset token query param validation
  * 
  * Business Rules Tested:
  * ----------------------
- * - Integration Points: Forgot Password Page → Email Service → Demo Inbox
+ * - Integration Points: Forgot Password Page â†’ Email Service â†’ Demo Inbox
  * - Security: One-time use tokens, expiry windows, secure link generation
  * - Reset Link Format: /auth/reset-password/{token}
  * - Email Subject: Matches expected subject from inboxSubjects
@@ -145,19 +150,29 @@ test.describe('password reset integration @integration @auth', () => {
       expect(count).toBeGreaterThan(0);
     });
 
-    test('RESET-INT-N03: expired reset token rejected by verification endpoint @integration @auth @security @regression', async ({ api }) => {
-      // Arrange: Create an expired token (or simulate one)
-      // Since we can't easily age a token, we test with an invalid/old format token
-      const expiredToken = 'expired-token-simulation-12345';
-      
-      // Act: Try to verify/use token
-      // Note: Assuming API endpoint for verification exists or using UI
-      const res = await api.post(`${routes.api.auth}/reset-password`, {
-        data: { token: expiredToken, password: 'newPassword123' }
+    test('RESET-INT-N03: expired reset token rejected by verification endpoint @integration @auth @security @regression', async ({ api, page }) => {
+      // Arrange: Create expired token via test hook
+      const expiredTokenRes = await api.post('/api/test/create-expired-reset-token', {
+        data: { email: authInputs.duplicateEmail }
       });
-      
-      // Assert: Should be rejected
-      expect(res.status()).not.toBe(200);
+
+      // Skip when environment does not expose test hook
+      if (expiredTokenRes.status() !== 200) {
+        test.skip();
+      }
+
+      const { token } = await expiredTokenRes.json();
+      expect(token).toBeTruthy();
+
+      // Act: Try to use expired token in reset page
+      await page.goto(`/auth/reset-password/${token}`);
+
+      // Assert: Expired token should not allow a valid reset flow
+      await page.waitForURL(/\/(login|auth\/reset-password|reset-password)/, { timeout: 5000 });
+      const body = (await page.locator('body').innerText()).toLowerCase();
+      const redirectedToLogin = page.url().includes('/login');
+      const hasTokenError = body.includes('expired') || body.includes('invalid') || body.includes('error');
+      expect(redirectedToLogin || hasTokenError).toBe(true);
     });
 
     test('RESET-INT-N04: used reset token cannot be reused @integration @auth @security @regression', async ({ forgotPasswordPage, inboxPage }) => {
@@ -230,7 +245,7 @@ test.describe('password reset integration @integration @auth', () => {
       // Act
       await inboxPage.gotoDemo();
       await inboxPage.openEmailBySubject(inboxSubjects.resetPassword);
-      const body = await inboxPage.getEmailBody();
+      const body = await inboxPage.getEmailBodyText();
       
       // Assert: Personalized greeting
       expect(body).toMatch(/Hello|Hi|Dear/);

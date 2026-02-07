@@ -1,4 +1,4 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { routes } from '@config';
 import { expectNoServerError, expectSecurityHeaders } from '@utils';
 
@@ -16,10 +16,10 @@ import { expectNoServerError, expectSecurityHeaders } from '@utils';
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (6 tests):
- *   - SEC-HDR-P01: Home page includes baseline security headers
- *   - SEC-HDR-P02: Products API includes baseline security headers
- *   - SEC-HDR-P03: Cart page includes baseline security headers
- *   - SEC-HDR-P04: Checkout page includes baseline security headers
+ *   - SEC-HDR-P01: home includes baseline security headers
+ *   - SEC-HDR-P02: products api includes baseline security headers
+ *   - SEC-HDR-P03: cart page includes security headers
+ *   - SEC-HDR-P04: checkout page includes security headers
  *   - SEC-HDR-P05: CSP header includes safe source directives
  *   - SEC-HDR-P06: CORS headers properly configured for API
  * 
@@ -29,7 +29,7 @@ import { expectNoServerError, expectSecurityHeaders } from '@utils';
  *   - SEC-HDR-N03: Referrer-Policy limits information leakage
  * 
  * EDGE CASES (3 tests):
- *   - SEC-HDR-E01: Static resources (JS/CSS) have correct cache/security headers
+ *   - SEC-HDR-E01: static resources include cache control headers
  *   - SEC-HDR-E02: HSTS header includes appropriate directives
  *   - SEC-HDR-E03: Permissions-Policy restricts dangerous features
  * 

@@ -1,4 +1,4 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { loginAsAdmin, loginAsUser } from '@api';
 import { routes } from '@config';
 import { authInputs, authErrors } from '@data';
@@ -18,14 +18,15 @@ import { authInputs, authErrors } from '@data';
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (2 tests):
- *   - AUTH-API-P01: User login returns session cookie
- *   - AUTH-API-P02: Admin login returns session cookie
+ *   - AUTH-API-P01: user login returns session cookie
+ *   - AUTH-API-P02: admin login returns session cookie
  * 
  * NEGATIVE CASES (1 test):
- *   - AUTH-API-N01: Invalid credentials return error response
+ *   - AUTH-API-N01: invalid credentials return error
  * 
- * EDGE CASES (0 tests):
- *   - (Future: Token expiry, concurrent sessions, logout)
+ * EDGE CASES (2 tests):
+ *   - AUTH-API-E01: session expires after timeout
+ *   - AUTH-API-E02: logout clears session cookie
  * 
  * Business Rules Tested:
  * ----------------------

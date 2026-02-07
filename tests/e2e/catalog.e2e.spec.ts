@@ -1,4 +1,4 @@
-import {test, expect } from '@fixtures';
+﻿import {test, expect } from '@fixtures';
 import { seededProducts, catalogSearch, catalogCategories, catalogSort, catalogPrice } from '@data';
 
 /**
@@ -19,31 +19,30 @@ import { seededProducts, catalogSearch, catalogCategories, catalogSort, catalogP
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (15 tests):
- *   - CAT-P01: Home shows main controls (search, sort, category)
- *   - CAT-P02: Search updates URL query parameter
- *   - CAT-P03: Sort updates URL query
- *   - CAT-P04: Category selection updates URL
- *   - CAT-P05: Price filter updates URL with min/max
- *   - CAT-P06: Seeded products visible on home
- *   - CAT-P07: Search is case-insensitive
- *   - CAT-P08: Search by partial term matches products
- *   - CAT-P09: Filter by category automation shows relevant products
- *   - CAT-P10: Filter by price max shows affordable products
- *   - CAT-P11: Sort by price ascending works correctly
- *   - CAT-P12: Sort by price descending works correctly
- *   - CAT-P13: Sort by name ascending alphabetically
- *   - CAT-P14: Open product detail by clicking card
- *   - CAT-P15: Product card displays correct price
+ *   - CAT-P01: home shows main controls
+ *   - CAT-P02: search updates URL query
+ *   - CAT-P03: sort updates URL query
+ *   - CAT-P04: category selection updates URL
+ *   - CAT-P05: price filter updates URL
+ *   - CAT-P06: seeded products visible
+ *   - CAT-P07: search is case-insensitive
+ *   - CAT-P08: search by partial term
+ *   - CAT-P09: filter by category automation
+ *   - CAT-P10: filter by price max 500
+ *   - CAT-P11: sort by price asc
+ *   - CAT-P12: sort by price desc
+ *   - CAT-P13: sort by name asc
+ *   - CAT-P14: open product detail by clicking card
+ *   - CAT-P15: product card displays correct price
  * 
  * NEGATIVE CASES (5 tests):
- *   - CAT-N01: Search with no results shows empty state
- *   - CAT-N02: Invalid category shows empty state
- *   - CAT-N03: Price range min > max shows empty state
- *   - CAT-N04: Search + category mismatch shows empty state
- *   - CAT-N05: Search with special characters handles gracefully
+ *   - CAT-N01: search with no results shows empty state
+ *   - CAT-N02: invalid category shows empty state
+ *   - CAT-N03: price range min > max shows empty state
+ *   - CAT-N04: search + category mismatch shows empty state
+ *   - CAT-N05: search with special chars shows empty state
  * 
  * EDGE CASES (0 tests):
- *   - (Covered in positive/negative cases)
  * 
  * Business Rules Tested:
  * ----------------------
@@ -185,7 +184,7 @@ test.describe('catalog with seeded data @e2e @destructive', () => {
     });
 
     test('CAT-P10: filter by price max 500 @e2e @destructive', async ({ homePage }) => {
-      // Act: Apply price filter (max ฿500)
+      // Act: Apply price filter (max à¸¿500)
       await homePage.goto();
       await homePage.applyPriceFilter(0, catalogPrice.maxAffordable);
 

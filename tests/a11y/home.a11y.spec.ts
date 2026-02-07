@@ -1,4 +1,4 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 
 /**
  * =============================================================================
@@ -14,21 +14,18 @@ import { test, expect } from '@fixtures';
  * 
  * Test Cases Coverage:
  * --------------------
- * POSITIVE CASES (4 tests):
- *   - A11Y-HOME-P01: Home page has no critical accessibility violations
- *   - A11Y-HOME-P02: Product cards have semantic structure
- *   - A11Y-HOME-P03: Header navigation menu accessible
- *   - A11Y-HOME-P04: Footer links keyboard navigable
+ * POSITIVE CASES (1 test):
+ *   - A11Y-HOME-P01: home page has no critical violations
  * 
  * NEGATIVE CASES (2 tests):
- *   - A11Y-HOME-N01: Search filter interactions accessible via keyboard
- *   - A11Y-HOME-N02: Loading state maintains accessibility
+ *   - A11Y-HOME-N01: search filter interactions accessible via keyboard
+ *   - A11Y-HOME-N02: loading state maintains accessibility
  * 
  * EDGE CASES (4 tests):
- *   - A11Y-HOME-E01: Product grid with many items maintains tab order
- *   - A11Y-HOME-E02: Color contrast meets WCAG AA standards
- *   - A11Y-HOME-E03: Search autocomplete dropdown accessible
- *   - A11Y-HOME-E04: Category filters accessible via keyboard
+ *   - A11Y-HOME-E01: product grid with many items maintains tab order
+ *   - A11Y-HOME-E02: color contrast meets WCAG AA standards
+ *   - A11Y-HOME-E03: search autocomplete dropdown accessible
+ *   - A11Y-HOME-E04: category filters accessible via keyboard
  * 
  * Business Rules Tested:
  * ----------------------

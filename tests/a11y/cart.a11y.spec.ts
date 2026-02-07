@@ -1,4 +1,4 @@
-import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
+﻿import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { seededProducts } from '@data';
 
 /**
@@ -16,22 +16,22 @@ import { seededProducts } from '@data';
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (6 tests):
- *   - A11Y-CART-P01: Cart page with items has no critical violations
- *   - A11Y-CART-P02: Quantity controls are keyboard navigable
- *   - A11Y-CART-P03: Remove buttons have accessible labels
- *   - A11Y-CART-P04: Cart total announced to screen readers
- *   - A11Y-CART-P05: Coupon input field accessible with proper labels
- *   - A11Y-CART-P06: Proceed to checkout button keyboard accessible
+ *   - A11Y-CART-P01: cart page has no critical violations
+ *   - A11Y-CART-P02: cart item quantity controls accessible via keyboard
+ *   - A11Y-CART-P03: remove item button has proper ARIA label
+ *   - A11Y-CART-P04: cart total announced to screen readers
+ *   - A11Y-CART-P05: coupon input field accessible with proper labels
+ *   - A11Y-CART-P06: proceed to checkout button keyboard accessible
  * 
  * NEGATIVE CASES (3 tests):
- *   - A11Y-CART-N01: Empty cart state maintains accessibility
- *   - A11Y-CART-N02: Stock limit warning announced to screen readers
- *   - A11Y-CART-N03: Invalid coupon error accessible
+ *   - A11Y-CART-N01: empty cart state maintains accessibility
+ *   - A11Y-CART-N02: stock limit warning announced to screen readers
+ *   - A11Y-CART-N03: invalid coupon error accessible
  * 
  * EDGE CASES (3 tests):
- *   - A11Y-CART-E01: Cart with many items (scrollable) maintains accessibility
- *   - A11Y-CART-E02: Long product names do not break screen reader announcements
- *   - A11Y-CART-E03: Cart loading state maintains accessibility
+ *   - A11Y-CART-E01: cart with 10+ items remains accessible
+ *   - A11Y-CART-E03: cart loading state maintains accessibility
+ *   - A11Y-CART-E02: long product names do not break screen reader announcements
  * 
  * Business Rules Tested:
  * ----------------------

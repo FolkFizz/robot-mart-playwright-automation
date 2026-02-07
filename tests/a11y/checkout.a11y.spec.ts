@@ -1,4 +1,4 @@
-import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
+﻿import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { seededProducts } from '@data';
 
 /**
@@ -17,24 +17,20 @@ import { seededProducts } from '@data';
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (6 tests):
- *   - A11Y-CHK-P01: Checkout page with Stripe/mock has no critical violations
- *   - A11Y-CHK-P02: Address fields have proper autocomplete attributes
- *   - A11Y-CHK-P03: Payment method selection accessible
- *   - A11Y-CHK-P04: Order summary section screen reader friendly
- *   - A11Y-CHK-P05: Focus management on page load
- *   - A11Y-CHK-P06: Skip link functionality
+ *   - A11Y-CHK-P01: checkout page has no critical violations
+ *   - A11Y-CHK-P02: address fields have proper autocomplete attributes
+ *   - A11Y-CHK-P03: payment method selection accessible
+ *   - A11Y-CHK-P04: order summary section screen reader friendly
+ *   - A11Y-CHK-P05: focus management on page load
+ *   - A11Y-CHK-P06: skip link functionality
  * 
- * NEGATIVE CASES (4 tests):
- *   - A11Y-CHK-N01: Form validation errors announced to screen readers
- *   - A11Y-CHK-N02: Empty required fields show accessible error messages
- *   - A11Y-CHK-N03: Payment declined error accessible
- *   - A11Y-CHK-N04: Network timeout error announced
+ * NEGATIVE CASES (2 tests):
+ *   - A11Y-CHK-N01: form validation errors announced to screen readers
+ *   - A11Y-CHK-N02: empty required fields show accessible error messages
  * 
- * EDGE CASES (4 tests):
- *   - A11Y-CHK-E01: Payment loading states remain accessible
- *   - A11Y-CHK-E02: Stripe payment element iframe accessibility
- *   - A11Y-CHK-E03: Address autocomplete dropdown accessible
- *   - A11Y-CHK-E04: Multiple validation errors announced correctly
+ * EDGE CASES (2 tests):
+ *   - A11Y-CHK-E01: payment loading states remain accessible
+ *   - A11Y-CHK-E02: stripe payment element iframe accessibility
  * 
  * Business Rules Tested:
  * ----------------------

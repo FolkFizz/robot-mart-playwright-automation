@@ -1,4 +1,4 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { routes } from '@config';
 
 /**
@@ -18,21 +18,21 @@ import { routes } from '@config';
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (2 tests):
- *   - AUTHZ-P01: Admin can access admin dashboard
- *   - AUTHZ-P02: Admin can access admin notifications API
+ *   - AUTHZ-P01: admin can access admin dashboard
+ *   - AUTHZ-P02: admin can access admin notifications API
  * 
- * NEGATIVE CASES (8 tests):
- *   - AUTHZ-N01: Anonymous redirect from notifications API (302)
- *   - AUTHZ-N01-UI: Anonymous redirect from profile page
- *   - AUTHZ-N01-ORDERS: Anonymous redirect from order history
- *   - AUTHZ-N02: Regular user forbidden on admin notifications API (403)
- *   - AUTHZ-N02-UI: Regular user forbidden on admin dashboard
- *   - AUTHZ-N03: Admin blocked from viewing cart
- *   - AUTHZ-N03-CHECKOUT: Admin blocked from checkout
- *   - ORD-N02: Invoice with invalid order ID returns 404
+ * NEGATIVE CASES (7 tests):
+ *   - AUTHZ-N01: anonymous redirect from notifications API
+ *   - AUTHZ-N01-UI: anonymous redirect from profile page
+ *   - AUTHZ-N01-ORDERS: anonymous redirect from order history
+ *   - AUTHZ-N02: regular user forbidden on admin notifications API
+ *   - AUTHZ-N02-UI: regular user forbidden on admin dashboard
+ *   - AUTHZ-N03: admin blocked from viewing cart
+ *   - AUTHZ-N03-CHECKOUT: admin blocked from checkout
  * 
- * EDGE CASES (2 tests):
- *   - ORD-N01: User cannot view another user's order invoice (403)
+ * EDGE CASES (3 tests):
+ *   - ORD-N01: user cannot view another user order invoice
+ *   - ORD-N02: invoice with invalid order ID returns 404
  *   - AUTHZ-E01: API endpoints honor authentication tokens
  * 
  * Business Rules Tested:

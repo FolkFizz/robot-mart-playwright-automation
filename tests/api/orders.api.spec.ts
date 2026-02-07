@@ -1,4 +1,4 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { loginAsUser, addToCart, clearCart, createPaymentIntent, mockPay } from '@api';
 import { seededProducts } from '@data';
 
@@ -16,14 +16,16 @@ import { seededProducts } from '@data';
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (2 tests):
- *   - ORD-API-P01: Create payment intent responds with client secret
- *   - ORD-API-P02: Mock pay returns order ID when enabled
+ *   - ORD-API-P01: create payment intent responds
+ *   - ORD-API-P02: mock pay returns order ID when enabled
  * 
- * NEGATIVE CASES (0 tests):
- *   - (Future: Empty cart checkout, insufficient stock, invalid cart)
+ * NEGATIVE CASES (3 tests):
+ *   - ORD-API-N01: empty cart checkout fails
+ *   - ORD-API-N02: insufficient stock prevents order creation
+ *   - ORD-API-N03: invalid cart items rejected at checkout
  * 
- * EDGE CASES (0 tests):
- *   - (Future: Payment provider unavailable, concurrent checkouts)
+ * EDGE CASES (1 test):
+ *   - ORD-API-E01: concurrent checkouts with limited stock
  * 
  * Business Rules Tested:
  * ----------------------

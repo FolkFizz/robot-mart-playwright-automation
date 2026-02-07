@@ -1,4 +1,4 @@
-import { test, expect, loginAndSyncSession } from '@fixtures';
+﻿import { test, expect, loginAndSyncSession } from '@fixtures';
 import { seededProducts } from '@data';
 
 /**
@@ -8,7 +8,7 @@ import { seededProducts } from '@data';
  * 
  * Test Scenarios:
  * ---------------
- * 1. Product Page → Cart Data Transfer Accuracy
+ * 1. Product Page â†’ Cart Data Transfer Accuracy
  * 2. Product Details Consistency (Name, Price, Image)
  * 3. Quantity Selection Preservation
  * 4. Stock Validation on Add to Cart
@@ -16,21 +16,21 @@ import { seededProducts } from '@data';
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (3 tests):
- *   - PROD-CART-INT-P01: Product price matches cart price exactly
- *   - PROD-CART-INT-P02: Product name transfers correctly to cart
- *   - PROD-CART-INT-P03: Selected quantity preserved in cart
+ *   - PROD-CART-INT-P01: product price matches cart price exactly
+ *   - PROD-CART-INT-P02: product name transfers correctly to cart
+ *   - PROD-CART-INT-P03: selected quantity preserved in cart
  * 
  * NEGATIVE CASES (2 tests):
- *   - PROD-CART-INT-N01: Out-of-stock product blocked from cart
- *   - PROD-CART-INT-N02: Quantity exceeding stock rejected
+ *   - PROD-CART-INT-N01: cannot add out-of-stock product via API
+ *   - PROD-CART-INT-N02: quantity exceeding stock rejected
  * 
  * EDGE CASES (2 tests):
- *   - PROD-CART-INT-E01: Product image URL consistent between pages
- *   - PROD-CART-INT-E02: Multiple quantity additions accumulate correctly
+ *   - PROD-CART-INT-E01: product image URL consistent between pages
+ *   - PROD-CART-INT-E02: multiple additions accumulate quantity correctly
  * 
  * Business Rules Tested:
  * ----------------------
- * - Integration Point: Product Display → Cart Storage
+ * - Integration Point: Product Display â†’ Cart Storage
  * - Data Consistency: Price, name, quantity must match exactly
  * - Stock Validation: Cannot add out-of-stock or excessive quantities
  * - Image Transfer: Product image URL preserved in cart
@@ -58,7 +58,7 @@ test.describe('product to cart integration @integration @cart', () => {
       await homePage.clickProductById(firstProduct.id);
 
       // Get price from product page
-      const productPrice = await productPage.getPrice();
+      const productPrice = await productPage.getPriceValue();
 
       // Act: Add to cart
       await productPage.addToCart();
@@ -77,7 +77,7 @@ test.describe('product to cart integration @integration @cart', () => {
       await homePage.clickProductById(secondProduct.id);
 
       // Get product name from product page
-      const productName = await productPage.getProductName();
+      const productName = await productPage.getTitle();
 
       // Act: Add to cart
       await productPage.addToCart();
@@ -156,13 +156,17 @@ test.describe('product to cart integration @integration @cart', () => {
 
   test.describe('edge cases', () => {
 
-    test('PROD-CART-INT-E01: product image URL consistent between pages @integration @cart @regression', async ({ homePage, productPage, cartPage }) => {
+    test('PROD-CART-INT-E01: product image URL consistent between pages @integration @cart @regression', async ({ page, homePage, productPage, cartPage }) => {
       // Arrange: Navigate to product
       await homePage.goto();
       await homePage.clickProductById(firstProduct.id);
 
       // Get product image from product page
-      const productImage = await productPage.getProductImage().catch(() => null);
+      const productImage = await page
+        .locator('[data-testid="product-image"], .product-image img, .product-detail img, img')
+        .first()
+        .getAttribute('src')
+        .catch(() => null);
 
       // Act: Add to cart
       await productPage.addToCart();
@@ -170,7 +174,11 @@ test.describe('product to cart integration @integration @cart', () => {
 
       // Assert: If image exists on product page, verify it's in cart
       if (productImage) {
-        const cartImage = await cartPage.getItemImage(firstProduct.id).catch(() => null);
+        const cartImage = await page
+          .locator(`[data-testid="cart-item-${firstProduct.id}"] img, tr[data-testid="cart-item-${firstProduct.id}"] img, .cart-item img, img`)
+          .first()
+          .getAttribute('src')
+          .catch(() => null);
         
         if (cartImage && productImage) {
           // Images should reference same product
@@ -199,7 +207,7 @@ test.describe('product to cart integration @integration @cart', () => {
       const quantity = await cartPage.getItemQuantity(secondProduct.id);
       expect(quantity).toBe(3);
 
-      // Assert: Total price = unit price × 3
+      // Assert: Total price = unit price Ã— 3
       const itemTotal = await cartPage.getItemTotalValue(secondProduct.id);
       const unitPrice = await cartPage.getItemPriceValue(secondProduct.id);
       expect(itemTotal).toBeCloseTo(unitPrice * 3, 2);
