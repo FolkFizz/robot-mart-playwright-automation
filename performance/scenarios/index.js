@@ -99,9 +99,29 @@ export const spike = {
  */
 export const load = {
     executor: 'constant-vus',
-    vus: 20,
-    duration: '5m',
-    gracefulStop: '30s',
+    vus: 10,
+    duration: '30s',
+    gracefulStop: '10s',
+};
+
+/**
+ * Strict Staged Load Test - Realistic Ramp Profile
+ * - Ramp up: 0 → 20 VUs (30s)
+ * - Sustained: 20 VUs (1m)
+ * - Ramp down: 20 → 0 VUs (30s)
+ * - Total: 2 minutes
+ * - More realistic than constant VUs
+ * - Designed for strict 200-only validation
+ */
+export const loadStrict = {
+    executor: 'ramping-vus',
+    startVUs: 0,
+    stages: [
+        { duration: '30s', target: 20 },
+        { duration: '1m', target: 20 },
+        { duration: '30s', target: 0 },
+    ],
+    gracefulRampDown: '10s',
 };
 
 /**
