@@ -65,7 +65,6 @@ test.describe('chaos lab @e2e @chaos', () => {
       const status = await chaosPage.getStatusText();
       expect(status).toBe(chaosStatusText.active);
     });
-  });
 
     test('CHAOS-P02: network delay chaos activates successfully @e2e @chaos @regression', async ({ page, chaosPage }) => {
       // Arrange: Navigate to chaos lab
