@@ -1,5 +1,6 @@
 import { test, expect } from '@fixtures';
-import { loginAsAdmin, loginAsUser, listAdminNotifications, resetStockSafe } from '@api';
+import { resetStockSafe, listAdminNotifications, loginAsAdmin, loginAsUser } from '@api';
+import { routes } from '@config';
 
 /**
  * =============================================================================
@@ -60,6 +61,32 @@ test.describe('admin api @api @admin', () => {
       // Assert: Successful response with notifications array
       expect(body.status).toBe('success');
       expect(Array.isArray(body.notifications)).toBe(true);
+    });
+
+    test('ADMIN-API-P03: admin can retrieve current stock levels @api @admin @regression', async ({ api }) => {
+      // Arrange: Login as admin
+      await loginAsAdmin(api);
+
+      // Act: Get products with stock info
+      const res = await api.get(routes.api.products);
+      const body = await res.json();
+
+      // Assert: Products include stock data
+      expect(body.status).toBe('success');
+      expect(Array.isArray(body.products)).toBe(true);
+      if (body.products.length > 0) {
+        expect(body.products[0]).toHaveProperty('stock');
+      }
+    });
+
+    test('ADMIN-API-P04: stock reset returns confirmation @api @admin @smoke', async ({ api }) => {
+      // Act: Reset stock and check response
+      const res = await resetStockSafe(api);
+      const body = await res.json();
+
+      // Assert: Confirmation message received
+      expect(body.status).toBe('success');
+      expect(body.message).toBeTruthy();
     });
   });
 

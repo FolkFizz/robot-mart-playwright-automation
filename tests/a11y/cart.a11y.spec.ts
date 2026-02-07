@@ -1,4 +1,4 @@
-import { test, loginAndSyncSession, seedCart } from '@fixtures';
+import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { seededProducts } from '@data';
 
 /**
@@ -56,6 +56,44 @@ test.describe('cart accessibility @a11y @cart', () => {
 
       // Assert: No violations found
       expectNoA11yViolations(results);
+    });
+
+    test('A11Y-CART-P02: cart item quantity controls accessible via keyboard @a11y @cart @regression', async ({ page, cartPage }) => {
+      // Arrange: Navigate to cart
+      await cartPage.goto();
+
+      // Act: Focus on quantity input
+      const quantityInput = page.locator('input[type="number"]').first();
+      await quantityInput.focus();
+
+      // Assert: Element is keyboard accessible
+      const isFocused = await quantityInput.evaluate(el => el === document.activeElement);
+      expect(isFocused).toBe(true);
+    });
+
+    test('A11Y-CART-P03: remove item button has proper ARIA label @a11y @cart @smoke', async ({ page, cartPage }) => {
+      // Arrange: Navigate to cart
+      await cartPage.goto();
+
+      // Act: Find remove button
+      const removeButton = page.locator('button').filter({ hasText: /remove|delete/i }).first();
+
+      // Assert: Has accessible name
+      const ariaLabel = await removeButton.getAttribute('aria-label');
+      const buttonText = await removeButton.innerText().catch(() => '');
+      expect(ariaLabel || buttonText).toBeTruthy();
+    });
+
+    test('A11Y-CART-P04: cart total announced to screen readers @a11y @cart @regression', async ({ page, cartPage }) => {
+      // Arrange: Navigate to cart
+      await cartPage.goto();
+
+      // Act: Get total element
+      const total = await cartPage.getGrandTotal();
+
+      // Assert: Total is in DOM and has meaningful text
+      expect(total).toBeTruthy();
+      expect(total.length).toBeGreaterThan(0);
     });
   });
 

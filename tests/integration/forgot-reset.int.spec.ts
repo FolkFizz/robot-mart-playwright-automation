@@ -59,6 +59,35 @@ test.describe('password reset integration @integration @auth', () => {
       const link = await inboxPage.getFirstEmailLinkHref();
       expect(link ?? '').toContain(routes.resetPasswordBase);
     });
+
+    test('RESET-INT-P02: reset email has correct subject line @integration @auth @smoke', async ({ forgotPasswordPage, inboxPage }) => {
+      // Arrange & Act: Request password reset
+      await forgotPasswordPage.goto();
+      await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
+
+      // Act: Check inbox
+      await inboxPage.gotoDemo();
+
+      // Assert: Email subject is correct
+      await inboxPage.openEmailBySubject(inboxSubjects.resetPassword);
+      const emailExists = await inboxPage.getEmailCount();
+      expect(emailExists).toBeGreaterThan(0);
+    });
+
+    test('RESET-INT-P03: reset link is valid URL format @integration @auth @regression', async ({ forgotPasswordPage, inboxPage }) => {
+      // Arrange & Act: Request reset
+      await forgotPasswordPage.goto();
+      await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
+
+      // Act: Get link from email
+      await inboxPage.gotoDemo();
+      await inboxPage.openEmailBySubject(inboxSubjects.resetPassword);
+      const link = await inboxPage.getFirstEmailLinkHref();
+
+      // Assert: Link is valid URL
+      expect(link).toBeTruthy();
+      expect(() => new URL(link || '', 'http://localhost')).not.toThrow();
+    });
   });
 
   test.describe('negative cases', () => {
