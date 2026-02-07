@@ -2,8 +2,8 @@ import http from 'k6/http';
 import { group, sleep } from 'k6';
 import { app } from '../lib/config.js';
 import { checks } from '../lib/checks.js';
-import { ramping } from '../scenarios/ramping.js';
-import { browseThresholds } from '../thresholds/browse.thresholds.js';
+import { ramping } from '../scenarios/index.js';
+import { browseThresholds } from '../thresholds/index.js';
 
 /**
  * =============================================================================

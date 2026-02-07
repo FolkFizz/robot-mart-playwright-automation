@@ -3,8 +3,8 @@ import { check, group, sleep } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 import { app } from '../lib/config.js';
 import { headers } from '../lib/http.js';
-import { concurrent } from '../scenarios/concurrent.js';
-import { raceThresholds } from '../thresholds/race.thresholds.js';
+import { concurrent } from '../scenarios/index.js';
+import { raceThresholds } from '../thresholds/index.js';
 
 /**
  * =============================================================================

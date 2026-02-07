@@ -1,9 +1,9 @@
 import http from 'k6/http';
 import { sleep } from 'k6';
 import { app } from '../lib/config.js';
-import { smoke } from '../scenarios/smoke.js';
+import { smoke } from '../scenarios/index.js';
 import { checks } from '../lib/checks.js';
-import { smokeThresholds } from '../thresholds/smoke.thresholds.js';
+import { smokeThresholds } from '../thresholds/index.js';
 
 /**
  * =============================================================================

@@ -2,8 +2,8 @@ import http from 'k6/http';
 import { group, sleep, check } from 'k6';
 import { app } from '../lib/config.js';
 import { checks } from '../lib/checks.js';
-import { spike } from '../scenarios/spike.js';
-import { checkoutThresholds } from '../thresholds/checkout.thresholds.js';
+import { spike } from '../scenarios/index.js';
+import { checkoutThresholds } from '../thresholds/index.js';
 import { headers } from '../lib/http.js';
 
 /**
