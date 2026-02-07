@@ -41,11 +41,57 @@ The configuration logic is in `lib/config.js`. It intelligently selects the targ
 
 To test against a specific environment, usually you just update your `.env` file or pass variables to the runner.
 
-## 📊 Scenarios
+## 📊 Test Types
 
-| Scenario       | Description                 | Purpose                                   |
-| :------------- | :-------------------------- | :---------------------------------------- |
-| **Smoke**      | 1 User, Short duration      | Verify system health before larger tests. |
-| **Concurrent** | 20 Users, Shared iterations | Test race conditions and data integrity.  |
-| **Load**       | (Planned) Gradual ramp-up   | Measure performance under expected usage. |
-| **Stress**     | (Planned) High load         | Determine breaking point.                 |
+We provide comprehensive performance testing across 4 main categories:
+
+### 1️⃣ Load Testing (Normal Conditions)
+
+| Script             | Scenario | Description                         | Duration |
+| :----------------- | :------- | :---------------------------------- | :------- |
+| **smoke.k6.js**    | smoke    | Health check (1 VU)                 | 60s      |
+| **browse.k6.js**   | ramping  | Browse products under gradual load  | 2m       |
+| **cart.k6.js**     | ramping  | Cart operations under gradual load  | 2m       |
+| **checkout.k6.js** | spike    | Checkout under traffic spike        | 1.5m     |
+| **load.k6.js**     | load     | Full E2E journey (20 VUs sustained) | 5m       |
+
+### 2️⃣ Stress Testing (Breaking Point)
+
+| Script           | Scenario | Description                    | Duration |
+| :--------------- | :------- | :----------------------------- | :------- |
+| **stress.k6.js** | stress   | Find system limits (0→150 VUs) | 9m       |
+
+### 3️⃣ Spike & Soak Testing (Resilience)
+
+| Script                   | Scenario   | Description                                | Duration |
+| :----------------------- | :--------- | :----------------------------------------- | :------- |
+| **race-condition.k6.js** | concurrent | Test race conditions (20 VUs simultaneous) | 30s      |
+| **soak.k6.js**           | soak       | Long-duration stability (10 VUs)           | 30m      |
+
+### 4️⃣ Scalability & Capacity
+
+| Script               | Scenario   | Description                   | Duration |
+| :------------------- | :--------- | :---------------------------- | :------- |
+| **breakpoint.k6.js** | breakpoint | Max throughput (10→300 req/s) | 4m       |
+
+## 🏃‍♂️ Quick Start
+
+```bash
+# 1. Health check (always run first)
+npm run test:perf:smoke
+
+# 2. Load testing (normal conditions)
+npm run test:perf:load
+
+# 3. Stress testing (find limits)
+npm run test:perf:stress
+
+# 4. Soak testing (long-duration, 30min)
+npm run test:perf:soak
+
+# 5. Breakpoint testing (max capacity)
+npm run test:perf:breakpoint
+
+# 6. Race condition testing
+npm run test:perf:race
+```

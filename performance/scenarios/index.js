@@ -89,3 +89,72 @@ export const spike = {
     ],
     gracefulRampDown: '30s',
 };
+
+/**
+ * Load Test - Realistic Sustained Traffic
+ * - 20 VUs constant
+ * - 5 minutes duration
+ * - Simulates expected production load
+ * - Tests system behavior under normal sustained usage
+ */
+export const load = {
+    executor: 'constant-vus',
+    vus: 20,
+    duration: '5m',
+    gracefulStop: '30s',
+};
+
+/**
+ * Stress Test - Finding the Breaking Point
+ * - Gradually increases load from 0 to 150 VUs
+ * - 4 stages over 9 minutes
+ * - Identifies system limits and degradation points
+ * - Helps determine when performance degrades and system fails
+ */
+export const stress = {
+    executor: 'ramping-vus',
+    startVUs: 0,
+    stages: [
+        { duration: '2m', target: 50 },   // Ramp to moderate load
+        { duration: '3m', target: 100 },  // Push to high load
+        { duration: '2m', target: 150 },  // Beyond expected capacity
+        { duration: '2m', target: 0 },    // Recovery
+    ],
+    gracefulRampDown: '30s',
+};
+
+/**
+ * Soak Test - Long-Duration Stability
+ * - 10 VUs constant
+ * - 30 minutes duration (extend to 1h+ for production)
+ * - Tests for memory leaks, connection pool issues, degradation over time
+ * - Verifies system remains stable under sustained moderate load
+ */
+export const soak = {
+    executor: 'constant-vus',
+    vus: 10,
+    duration: '30m', // Can be increased to 1h or more for thorough testing
+    gracefulStop: '30s',
+};
+
+/**
+ * Breakpoint Test - Maximum Throughput Discovery
+ * - Arrival-rate based (requests per second)
+ * - Gradually increases from 10 to 300 req/s
+ * - Discovers maximum sustainable throughput
+ * - Helps with capacity planning and infrastructure sizing
+ */
+export const breakpoint = {
+    executor: 'ramping-arrival-rate',
+    startRate: 10,
+    timeUnit: '1s',
+    preAllocatedVUs: 50,
+    maxVUs: 200,
+    stages: [
+        { duration: '1m', target: 50 },   // 50 req/s
+        { duration: '1m', target: 100 },  // 100 req/s
+        { duration: '1m', target: 200 },  // 200 req/s
+        { duration: '1m', target: 300 },  // 300 req/s - likely to break
+    ],
+    gracefulRampDown: '30s',
+};

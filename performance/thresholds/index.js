@@ -64,3 +64,47 @@ export const raceThresholds = {
     http_req_duration: ['p(95)<5000'],  // Allow up to 5s (DB locks may cause delays)
     http_req_failed: ['rate<0.95'],     // Most requests will "fail" (400 out of stock) - that's expected!
 };
+
+/**
+ * Load Test Thresholds
+ * - 95th percentile response time < 1000ms
+ * - Error rate < 5% (acceptable under normal load)
+ * - Tests system under expected production traffic
+ */
+export const loadThresholds = {
+    http_req_duration: ['p(95)<1000', 'p(99)<2000'],
+    http_req_failed: ['rate<0.05'],  // 5% error tolerance
+};
+
+/**
+ * Stress Test Thresholds
+ * - 95th percentile response time < 3000ms (more lenient)
+ * - Error rate < 10% (expected to see failures near breaking point)
+ * - Goal is to find limits, not maintain perfect performance
+ */
+export const stressThresholds = {
+    http_req_duration: ['p(95)<3000', 'p(99)<5000'],
+    http_req_failed: ['rate<0.10'],  // 10% error tolerance - we expect degradation
+};
+
+/**
+ * Soak Test Thresholds
+ * - 95th percentile response time < 1500ms
+ * - Error rate < 2%
+ * - Watch for degradation over time (memory leaks, connection issues)
+ */
+export const soakThresholds = {
+    http_req_duration: ['p(95)<1500', 'p(99)<3000'],
+    http_req_failed: ['rate<0.02'],  // Low error tolerance - system should be stable
+};
+
+/**
+ * Breakpoint Test Thresholds
+ * - No strict pass/fail criteria
+ * - Allow up to 50% failure to find true breaking point
+ * - Focus is on measurement, not enforcement
+ */
+export const breakpointThresholds = {
+    http_req_failed: ['rate<0.50'],  // Allow up to 50% failure - we're finding limits
+    // Intentionally no response time threshold - we want to see degradation
+};
