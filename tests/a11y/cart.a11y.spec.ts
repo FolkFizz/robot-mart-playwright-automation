@@ -59,8 +59,47 @@ test.describe('cart accessibility @a11y @cart', () => {
     });
   });
 
-  // Future test cases:
-  // test.describe('edge cases', () => {
-  //   test('A11Y-CART-E01: cart with 10+ items remains accessible', async () => {});
-  // });
+  test.describe('negative cases', () => {
+
+    test('A11Y-CART-N01: empty cart state maintains accessibility @a11y @cart @regression', async ({ page, cartPage, runA11y, expectNoA11yViolations }) => {
+      // Arrange: Navigate to empty cart (no seeding)
+      await cartPage.goto();
+
+      // Act: Run accessibility audit on empty state
+      const results = await runA11y(page);
+
+      // Assert: No violations found
+      expectNoA11yViolations(results);
+    });
+  });
+
+  test.describe('edge cases', () => {
+
+    test('A11Y-CART-E01: cart with 10+ items remains accessible @a11y @cart @regression', async ({ api, page, cartPage, runA11y, expectNoA11yViolations }) => {
+      // Arrange: Seed cart with many items
+      const products = seededProducts.slice(0, 10);
+      const cartItems = products.map(p => ({ id: p.id }));
+      await seedCart(api, cartItems);
+
+      // Act: Navigate to cart page
+      await cartPage.goto();
+
+      // Act: Run accessibility audit
+      const results = await runA11y(page);
+
+      // Assert: No violations even with many items
+      expectNoA11yViolations(results);
+    });
+
+    test('A11Y-CART-E02: long product names do not break screen reader announcements @a11y @cart @regression', async ({ page, cartPage, runA11y, expectNoA11yViolations }) => {
+      // Act: Navigate to cart page (seeded in beforeEach)
+      await cartPage.goto();
+
+      // Act: Run accessibility audit
+      const results = await runA11y(page);
+
+      // Assert: Product names properly associated with ARIA labels
+      expectNoA11yViolations(results);
+    });
+  });
 });

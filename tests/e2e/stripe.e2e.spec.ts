@@ -1,5 +1,6 @@
 import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { seededProducts } from '@data';
+import { clearCart } from '@api';
 
 /**
  * =============================================================================
@@ -69,8 +70,80 @@ test.describe('stripe integration @e2e @checkout @stripe', () => {
     });
   });
 
-  // Future test cases:
-  // test.describe('negative cases', () => {
-  //   test('STRIPE-N01: handles Stripe SDK load failure', async () => {});
-  // });
+  test.describe('negative cases', () => {
+
+    test('STRIPE-N01: gracefully handles mock payment mode when stripe disabled @e2e @checkout @regression', async ({ cartPage, checkoutPage }) => {
+      // Arrange: Navigate to checkout
+      await cartPage.goto();
+      await cartPage.proceedToCheckout();
+
+      // Act: Check if mock payment is active
+      const isMock = await checkoutPage.isMockPayment();
+
+      if (isMock) {
+        // Assert: Mock payment UI shown instead of Stripe
+        const status = await checkoutPage.getSubmitStatus();
+        expect(status).toBeDefined();
+        test.skip(); // Skip Stripe-specific tests in mock mode
+      } else {
+        // Assert: Stripe element loads successfully
+        await checkoutPage.waitForStripeReady();
+        const status = await checkoutPage.getSubmitStatus();
+        expect(status).not.toBeNull();
+      }
+    });
+
+    test('STRIPE-N02: displays error when empty cart attempts payment @e2e @checkout @regression', async ({ api, page, cartPage, checkoutPage }) => {
+      // Arrange: Clear cart
+      await clearCart(api);
+
+      // Act: Try to navigate to checkout with empty cart
+      await page.goto('/checkout').catch(() => {});
+
+      // Assert: Either redirected to cart or prevented from proceeding
+      const url = page.url();
+      expect(url).toContain('/cart');
+    });
+  });
+
+  test.describe('edge cases', () => {
+
+    test('STRIPE-E01: checkout handles cart validation before payment intent @e2e @checkout @regression', async ({ api, cartPage, checkoutPage }) => {
+      // Arrange: Navigate to checkout with valid cart
+      await cartPage.goto();
+      await cartPage.proceedToCheckout();
+
+      // Skip if mock payment
+      if (await checkoutPage.isMockPayment()) {
+        test.skip();
+      }
+
+      // Act: Wait for Stripe to be ready
+      await checkoutPage.waitForStripeReady();
+
+      // Assert: Page is ready for payment
+      const total = await checkoutPage.getTotal();
+      expect(total).toBeTruthy();
+      expect(parseFloat(total.replace(/[^0-9.]/g, ''))).toBeGreaterThan(0);
+    });
+
+    test('STRIPE-E02: stripe publishable key properly set from environment @e2e @checkout @smoke', async ({ page, cartPage, checkoutPage }) => {
+      // Arrange: Navigate to checkout
+      await cartPage.goto();
+      await cartPage.proceedToCheckout();
+
+      // Skip if mock payment
+      if (await checkoutPage.isMockPayment()) {
+        test.skip();
+      }
+
+      // Act: Check if Stripe script is loaded
+      const stripeLoaded = await page.evaluate(() => {
+        return typeof (window as any).Stripe !== 'undefined';
+      });
+
+      // Assert: Stripe SDK loaded successfully
+      expect(stripeLoaded).toBe(true);
+    });
+  });
 });

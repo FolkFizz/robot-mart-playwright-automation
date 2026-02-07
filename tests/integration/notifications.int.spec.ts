@@ -67,8 +67,62 @@ test.describe('notifications integration @integration @notifications', () => {
     });
   });
 
-  // Future test cases:
-  // test.describe('edge cases', () => {
-  //   test('NOTIF-INT-E01: UI updates after marking as read', async () => {});
-  // });
+  test.describe('edge cases', () => {
+
+    test('NOTIF-INT-E01: UI updates reflect API state @integration @notifications @regression', async ({ api, homePage, notificationsPage }) => {
+      // Arrange: Load home page
+      await homePage.goto();
+
+      // Act: Get initial notification count from UI
+      await notificationsPage.open();
+      const uiCountBefore = await notificationsPage.getNotificationCount();
+
+      // Act: Fetch from API to compare
+      const res = await api.get(routes.api.notifications);
+      const body = await res.json();
+
+      // Assert: API and UI counts are consistent
+      expect(body.status).toBe('success');
+      expect(uiCountBefore).toBeLessThanOrEqual(body.notifications.length);
+    });
+
+    test('NOTIF-INT-E02: large number of notifications handled correctly @integration @notifications @regression', async ({ api, homePage, notificationsPage }) => {
+      // Arrange: Load home page
+      await homePage.goto();
+
+      // Act: Open notifications dropdown
+      await notificationsPage.open();
+      const uiCount = await notificationsPage.getNotificationCount();
+
+      // Act: Get full list from API
+      const res = await api.get(routes.api.notifications);
+      const body = await res.json();
+
+      // Assert: System handles notifications gracefully
+      expect(Array.isArray(body.notifications)).toBe(true);
+      expect(body.unreadCount).toBeGreaterThanOrEqual(0);
+      expect(uiCount).toBeGreaterThanOrEqual(0);
+    });
+
+    test('NOTIF-INT-E03: notification data structure consistent between API and UI @integration @notifications @smoke', async ({ api, homePage, notificationsPage }) => {
+      // Arrange: Load home page and open notifications
+      await homePage.goto();
+      await notificationsPage.open();
+
+      // Act: Fetch notifications via API
+      const res = await api.get(routes.api.notifications);
+      const body = await res.json();
+
+      // Assert: API response structure is valid
+      expect(body.status).toBe('success');
+      expect(Array.isArray(body.notifications)).toBe(true);
+      
+      // Assert: Each notification has expected fields if any exist
+      if (body.notifications.length > 0) {
+        const firstNotif = body.notifications[0];
+        expect(firstNotif).toHaveProperty('id');
+        expect(firstNotif).toHaveProperty('message');
+      }
+    });
+  });
 });

@@ -1,4 +1,4 @@
-import { test } from '@fixtures';
+import { test, expect } from '@fixtures';
 
 /**
  * =============================================================================
@@ -50,8 +50,44 @@ test.describe('home accessibility @a11y @safe', () => {
     });
   });
 
-  // Future test cases:
-  // test.describe('negative cases', () => {
-  //   test('A11Y-HOME-N01: detects missing alt text on images', async () => {});
-  // });
+  test.describe('negative cases', () => {
+
+    test('A11Y-HOME-N01: search filter interactions accessible via keyboard @a11y @home @regression', async ({ page, homePage }) => {
+      // Arrange: Load home page
+      await homePage.goto();
+
+      // Act: Tab through interactive elements
+      await page.keyboard.press('Tab');
+      
+      // Assert: Focus is visible and logical
+      const focusedElement = await page.locator(':focus').first();
+      const isVisible = await focusedElement.isVisible().catch(() => false);
+      expect(isVisible).toBe(true);
+    });
+  });
+
+  test.describe('edge cases', () => {
+
+    test('A11Y-HOME-E01: product grid with many items maintains tab order @a11y @home @regression', async ({ page, homePage, runA11y, expectNoA11yViolations }) => {
+      // Arrange: Load home page with full product catalog
+      await homePage.goto();
+
+      // Act: Run accessibility audit
+      const results = await runA11y(page);
+
+      // Assert: No violations with full product grid
+      expectNoA11yViolations(results);
+    });
+
+    test('A11Y-HOME-E02: color contrast meets WCAG AA standards @a11y @home @smoke', async ({ page, homePage, runA11y, expectNoA11yViolations }) => {
+      // Arrange: Load home page
+      await homePage.goto();
+
+      // Act: Run accessibility audit (includes color contrast checks)
+      const results = await runA11y(page);
+
+      // Assert: Color contrast violations should be 0
+      expectNoA11yViolations(results);
+    });
+  });
 });

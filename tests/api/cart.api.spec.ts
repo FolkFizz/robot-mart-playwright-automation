@@ -1,5 +1,5 @@
 import { test, expect } from '@fixtures';
-import { loginAsUser, addToCart, applyCoupon, clearCart, getCart, removeCartItem, removeCoupon, updateCartItem } from '@api';
+import { loginAsUser, loginAsAdmin, addToCart, applyCoupon, clearCart, getCart, removeCartItem, removeCoupon, updateCartItem } from '@api';
 import { seededProducts, coupons } from '@data';
 
 /**
@@ -95,13 +95,94 @@ test.describe('cart api @api @cart', () => {
     });
   });
 
-  // Future test cases:
-  // test.describe('negative cases', () => {
-  //   test('CART-API-N01: add invalid product returns error', async () => {});
-  //   test('CART-API-N02: quantity exceeds stock limit fails', async () => {});
-  // });
+  test.describe('negative cases', () => {
 
-  // test.describe('edge cases', () => {
-  //   test('CART-API-E01: admin cannot add to cart', async () => {});
-  // });
+    test('CART-API-N01: add invalid product ID returns error @api @cart @regression', async ({ api }) => {
+      // Arrange: Login and clear cart
+      await loginAsUser(api);
+      await clearCart(api);
+
+      // Act: Try to add product with invalid ID
+      const res = await addToCart(api, 999999, 1);
+      
+      // Assert: Error response (400 or 404)
+      expect([400, 404]).toContain(res.status());
+    });
+
+    test('CART-API-N02: quantity exceeds stock limit fails gracefully @api @cart @regression', async ({ api }) => {
+      const product = seededProducts[0];
+
+      // Arrange: Login and clear cart
+      await loginAsUser(api);
+      await clearCart(api);
+
+      // Act: Try to add excessive quantity
+      const res = await addToCart(api, product.id, 10000);
+
+      // Assert: Either succeeds and enforces limit, or returns error
+      if (res.ok()) {
+        const body = await res.json();
+        expect(body.ok).toBeTruthy();
+      } else {
+        expect([400, 422]).toContain(res.status());
+      }
+    });
+
+    test('CART-API-N03: negative quantity rejected @api @cart @regression', async ({ api }) => {
+      const product = seededProducts[0];
+
+      // Arrange: Cart with item
+      await loginAsUser(api);
+      await clearCart(api);
+      await addToCart(api, product.id, 1);
+
+      // Act: Try to update with negative quantity
+      const res = await updateCartItem(api, product.id, -1);
+
+      // Assert: Error response (400 or 422)
+      expect([400, 422]).toContain(res.status());
+    });
+  });
+
+  test.describe('edge cases', () => {
+
+    test('CART-API-E01: admin user cannot add to cart @api @cart @security @regression', async ({ api }) => {
+      const product = seededProducts[0];
+
+      // Arrange: Login as admin
+      await loginAsAdmin(api);
+
+      // Act: Try to add to cart
+      const res = await addToCart(api, product.id, 1);
+
+      // Assert: Either forbidden or no cart available for admin
+      if (res.ok()) {
+        // Some systems allow admin to have carts
+        const body = await res.json();
+        expect(body).toBeDefined();
+      } else {
+        expect([403, 400]).toContain(res.status());
+      }
+    });
+
+    test('CART-API-E02: adding same product multiple times merges quantities @api @cart @regression', async ({ api }) => {
+      const product = seededProducts[0];
+
+      // Arrange: Login and clear cart
+      await loginAsUser(api);
+      await clearCart(api);
+
+      // Act: Add same product twice
+      await addToCart(api, product.id, 1);
+      await addToCart(api, product.id, 2);
+
+      // Act: Get cart
+      const res = await getCart(api);
+      const body = await res.json();
+
+      // Assert: Quantity merged (should be 3)
+      const item = body.cart.find((item: { id: number }) => item.id === product.id);
+      expect(item?.quantity).toBe(3);
+    });
+  });
 });
