@@ -10,24 +10,36 @@ import { CheckoutPage } from '@pages';
  * 
  * Test Scenarios:
  * ---------------
- * 1. Stripe Payment Element Loading (Live Mode)
- * 2. Stripe SDK Integration Validation
- * 3. Payment Provider Availability Check
+ * 1. Stripe Payment Element Loading & Integration
+ * 2. Payment Flow Validation (Success/Failure)
+ * 3. Error Handling (Card Errors, funds, validation)
+ * 4. Edge Cases (3DS, Currency, Environment)
  * 
  * Test Cases Coverage:
  * --------------------
- * POSITIVE CASES (1 test):
+ * POSITIVE CASES (3 tests):
  *   - STRIPE-P01: Stripe element loads successfully in live mode
+ *   - STRIPE-P04: Valid test card processes successfully
+ *   - STRIPE-P05: Payment intent created with correct amount
  * 
- * NEGATIVE CASES (0 tests):
- *   - (Future: Network failures, invalid API keys)
+ * NEGATIVE CASES (4 tests):
+ *   - STRIPE-N02: Displays error when empty cart attempts payment
+ *   - STRIPE-N03: Expired card declined with specific error
+ *   - STRIPE-N04: Insufficient funds card rejected
+ *   - STRIPE-N05: Invalid card number shows inline validation error
  * 
- * EDGE CASES (0 tests):
- *   - (Future: Stripe downtime, slow loading, different card types)
+ * EDGE CASES (5 tests):
+ *   - STRIPE-E01: Checkout handles cart validation before payment intent
+ *   - STRIPE-E02: Stripe publishable key properly set from environment
+ *   - STRIPE-E03: 3D secure authentication flow handled
+ *   - STRIPE-E04: Payment method switching handled correctly
+ *   - STRIPE-E05: Currency conversion displays correctly
  * 
  * Business Rules Tested:
  * ----------------------
  * - Payment Provider: Real Stripe integration (requires PAYMENT_PROVIDER=stripe)
+ * - Validation: Card checks via Stripe Elements, Intent confirmation
+ * - Environment: Secure key management
  * - Test Skip Condition: Automatically skips if mock payment mode is enabled
  * - Stripe Element: data-stripe-ready attribute indicates successful load
  * - Required Environment: STRIPE_PUBLISHABLE_KEY must be set

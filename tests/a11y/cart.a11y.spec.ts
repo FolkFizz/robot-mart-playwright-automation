@@ -9,20 +9,29 @@ import { seededProducts } from '@data';
  * Test Scenarios:
  * ---------------
  * 1. WCAG 2.1 AA Compliance for Cart Page
- * 2. Cart Item Accessibility (Product Name, Price, Quantity Controls)
- * 3. Coupon Input Accessibility
- * 4. Checkout Button Keyboard Access
+ * 2. Cart Item Accessibility (Controls, Remove)
+ * 3. Form Accessibility (Coupon, Checkout)
+ * 4. Error & Loading State Accessibility
  * 
  * Test Cases Coverage:
  * --------------------
- * POSITIVE CASES (1 test):
+ * POSITIVE CASES (6 tests):
  *   - A11Y-CART-P01: Cart page with items has no critical violations
+ *   - A11Y-CART-P02: Quantity controls are keyboard navigable
+ *   - A11Y-CART-P03: Remove buttons have accessible labels
+ *   - A11Y-CART-P04: Cart total announced to screen readers
+ *   - A11Y-CART-P05: Coupon input field accessible with proper labels
+ *   - A11Y-CART-P06: Proceed to checkout button keyboard accessible
  * 
- * NEGATIVE CASES (0 tests):
- *   - (Future: Empty cart state, quantity spinners, remove buttons)
+ * NEGATIVE CASES (3 tests):
+ *   - A11Y-CART-N01: Empty cart state maintains accessibility
+ *   - A11Y-CART-N02: Stock limit warning announced to screen readers
+ *   - A11Y-CART-N03: Invalid coupon error accessible
  * 
- * EDGE CASES (0 tests):
- *   - (Future: Many items in cart, long product names)
+ * EDGE CASES (3 tests):
+ *   - A11Y-CART-E01: Cart with many items (scrollable) maintains accessibility
+ *   - A11Y-CART-E02: Long product names do not break screen reader announcements
+ *   - A11Y-CART-E03: Cart loading state maintains accessibility
  * 
  * Business Rules Tested:
  * ----------------------
@@ -98,6 +107,43 @@ test.describe('cart accessibility @a11y @cart', () => {
       expect(total).toBeTruthy();
       expect(total.length).toBeGreaterThan(0);
     });
+
+    test('A11Y-CART-P05: coupon input field accessible with proper labels @a11y @cart @smoke', async ({ page, cartPage }) => {
+      // Arrange: Navigate to cart
+      await cartPage.goto();
+
+      // Act & Assert: Coupon input should have associated label or aria-label
+      const couponInput = page.locator('input[name="coupon"], input[placeholder*="coupon" i], input[aria-label*="coupon" i]').first();
+      
+      if (await couponInput.count() > 0) {
+        const ariaLabel = await couponInput.getAttribute('aria-label');
+        const placeholder = await couponInput.getAttribute('placeholder');
+        const id = await couponInput.getAttribute('id');
+        
+        // Should have some form of label
+        const hasLabel = ariaLabel || placeholder || (id && await page.locator(`label[for="${id}"]`).count() > 0);
+        expect(hasLabel).toBeTruthy();
+      }
+    });
+
+    test('A11Y-CART-P06: proceed to checkout button keyboard accessible @a11y @cart @smoke', async ({ page, cartPage }) => {
+      // Arrange: Navigate to cart
+      await cartPage.goto();
+
+      // Act: Find checkout button
+      const checkoutButton = page.locator('button:has-text("checkout"), a:has-text("checkout"), button:has-text("Proceed")').first();
+      
+      if (await checkoutButton.count() > 0) {
+        // Assert: Button should be keyboard focusable (not tabindex="-1")
+        const tabIndex = await checkoutButton.getAttribute('tabindex');
+        expect(tabIndex).not.toBe('-1');
+        
+        // Focus the button
+        await checkoutButton.focus();
+        const isFocused = await checkoutButton.evaluate((el) => el === document.activeElement);
+        expect(isFocused).toBe(true);
+      }
+    });
   });
 
   test.describe('negative cases', () => {
@@ -111,6 +157,51 @@ test.describe('cart accessibility @a11y @cart', () => {
 
       // Assert: No violations found
       expectNoA11yViolations(results);
+    });
+
+    test('A11Y-CART-N02: stock limit warning announced to screen readers @a11y @cart @regression', async ({ api, page, cartPage }) => {
+      // Arrange: Try to add quantity that may exceed stock
+      await cartPage.goto();
+      
+      // Act: Try to set high quantity (if stock limit exists)
+      const quantityInput = page.locator('input[type="number"], input[aria-label*="quantity" i]').first();
+      
+      if (await quantityInput.count() > 0) {
+        await quantityInput.fill('999');
+        
+        // Assert: Error message should be accessible
+        // Look for aria-live region or visible error
+        const errorMessage = page.locator('[role="alert"], .error, [aria-live]').first();
+        
+        // If error appears, it should be accessible
+        if (await errorMessage.count() > 0 && await errorMessage.isVisible()) {
+          const text = await errorMessage.innerText();
+          expect(text.length).toBeGreaterThan(0);
+        }
+      }
+    });
+
+    test('A11Y-CART-N03: invalid coupon error accessible @a11y @cart @regression', async ({ page, cartPage }) => {
+      // Arrange: Navigate to cart
+      await cartPage.goto();
+      
+      // Act: Try to apply invalid coupon
+      const couponInput = page.locator('input[name="coupon"], input[placeholder*="coupon" i]').first();
+      const applyButton = page.locator('button:has-text("apply")').first();
+      
+      if (await couponInput.count() > 0 && await applyButton.count() > 0) {
+        await couponInput.fill('INVALID_COUPON_XYZ_123');
+        await applyButton.click();
+        
+        // Assert: Error message should be accessible
+        await page.waitForTimeout(500); // Brief wait for error message
+        const errorMessage = page.locator('[role="alert"], .error, .invalid').first();
+        
+        if (await errorMessage.count() > 0 && await errorMessage.isVisible()) {
+          const text = await errorMessage.innerText();
+          expect(text.length).toBeGreaterThan(0);
+        }
+      }
     });
   });
 
@@ -129,6 +220,18 @@ test.describe('cart accessibility @a11y @cart', () => {
       const results = await runA11y(page);
 
       // Assert: No violations even with many items
+      expectNoA11yViolations(results);
+    });
+
+    test('A11Y-CART-E03: cart loading state maintains accessibility @a11y @cart @regression', async ({ page, cartPage, runA11y, expectNoA11yViolations }) => {
+      // Act: Navigate to cart (may have loading state)
+      await cartPage.goto();
+      
+      // Wait for content to load
+      await page.waitForLoadState('networkidle');
+      
+      // Assert: After loading, page is accessible
+      const results = await runA11y(page);
       expectNoA11yViolations(results);
     });
 

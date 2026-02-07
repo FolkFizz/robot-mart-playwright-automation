@@ -9,25 +9,31 @@ import { chaosStatusText, chaosToggles } from '@data';
  * 
  * Test Scenarios:
  * ---------------
- * 1. Chaos Mode Activation (Layout Shift, Memory Leaks, Network Delays)
- * 2. Chaos Configuration via UI
- * 3. Application Behavior Under Chaos Conditions
+ * 1. Chaos Mode Activation (Layout Shift, Memory, Network)
+ * 2. System Resilience (Timeouts, DB Failures, Storage Corruption)
+ * 3. User Experience under degradations (3G, CPU throttling)
  * 
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (1 test):
  *   - CHAOS-P01: Toggle layout shift activates chaos mode
  * 
- * NEGATIVE CASES (0 tests):
- *   - (Future: Test app resilience under chaos)
+ * NEGATIVE CASES (4 tests):
+ *   - CHAOS-N01: Network latency simulation (3G) slows responses
+ *   - CHAOS-N02: Memory bloat simulation impacts performance
+ *   - CHAOS-N03: API timeouts handled gracefully
+ *   - CHAOS-N04: Database connection failures show error states
  * 
- * EDGE CASES (0 tests):
- *   - (Future: Extreme chaos scenarios)
+ * EDGE CASES (3 tests):
+ *   - CHAOS-E01: Extreme CPU throttling resilience
+ *   - CHAOS-E02: Local storage corruption recovery
+ *   - CHAOS-E03: Combined chaos modes (Network + Layout)
  * 
  * Business Rules Tested:
  * ----------------------
  * - Chaos Lab: Dedicated page for QA to enable/disable chaos scenarios
- * - Chaos Toggles: Layout shift, memory leaks, network delays, error injection
+ * - Resilience: App should not crash white-screen under stress
+ * - Feedback: Users should be informed of errors/delays
  * - Status Display: Active vs Inactive chaos mode indication
  * - Reset Mechanism: Chaos state can be reset via API
  * 
