@@ -25,6 +25,7 @@
     "test:perf:breakpoint": "node scripts/run-k6.js performance/scripts/breakpoint.k6.js"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.1",
     "@playwright/test": "^1.57.0",
     "@types/node": "^20.11.30",
     "@types/pg": "^8.16.0",

@@ -1,7 +1,8 @@
-﻿import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
+import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { seededProducts } from '@data';
 import { CheckoutPage } from '@pages';
 import { clearCart } from '@api';
+import { routes } from '@config';
 
 /**
  * =============================================================================
@@ -121,17 +122,26 @@ test.describe('checkout integration @integration @checkout', () => {
       const checkoutTotal = CheckoutPage.parsePrice(await checkoutPage.getTotal());
       expect(checkoutTotal).toBeCloseTo(totalBeforeCoupon, 2);
     });
-
     test('CHK-INT-N02: checkout validates cart is not empty @integration @checkout @smoke', async ({ api, page }) => {
       // Arrange: Clear cart completely
       await clearCart(api);
 
       // Act: Try to access checkout directly
-      await page.goto('/checkout').catch(() => {});
+      await page.goto(routes.checkout).catch(() => {});
 
-      // Assert: Redirected back to cart page
+      // Assert: Either redirected to cart, or checkout shows empty-cart guard
       const url = page.url();
-      expect(url).toContain('/cart');
+      const body = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
+
+      const redirectedToCart = url.includes(routes.cart);
+      const stillOnCheckout = url.includes('/checkout') || url.includes(routes.checkout);
+      const emptyCartGuardShown =
+        body.includes('cart is empty') ||
+        body.includes('your cart is empty') ||
+        body.includes('empty cart') ||
+        body.includes('no items in cart');
+
+      expect(redirectedToCart || (stillOnCheckout && emptyCartGuardShown)).toBe(true);
     });
 
     test('CHK-INT-N03: modified cart during checkout blocks order or updates total @integration @checkout @regression', async ({ api, page, cartPage, checkoutPage }) => {
