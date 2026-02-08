@@ -1,5 +1,6 @@
 ﻿import { test, expect } from '@fixtures';
 import { loginAsUser, loginAsAdmin, addToCart, applyCoupon, clearCart, getCart, removeCartItem, removeCoupon, updateCartItem } from '@api';
+import { routes } from '@config';
 import { seededProducts, coupons } from '@data';
 
 /**
@@ -33,10 +34,11 @@ import { seededProducts, coupons } from '@data';
  * ----------------------
  * - Cart Storage: Database for authenticated users, session for guests
  * - API Endpoints: /api/cart/* (add, update, remove, get, apply-coupon)
- * - Add Response: JSON {ok: true, cart: [...]}
- * - Update Quantity: PATCH /api/cart/update with productId & quantity
+ * - Add Response: JSON {ok: true, cart: [...]} 
+ * - Update Quantity: POST /api/cart/update with productId & quantity
  * - Remove Item: Removes specific product from cart
  * - Coupon Application: Validates code, applies discount to cart total
+ * - Admin Restriction: Admin users cannot add items to cart
  * - Cart Structure: Array of {id, name, price, quantity, image}
  * 
  * =============================================================================
@@ -106,10 +108,17 @@ test.describe('cart api @api @cart', () => {
       await clearCart(api);
 
       // Act: Try to add product with invalid ID
-      const res = await addToCart(api, 999999, 1);
-      
-      // Assert: Error response (400 or 404)
-      expect([400, 404]).toContain(res.status());
+      const res = await api.post(routes.api.cartAdd, {
+        data: { productId: 999999, quantity: 1 },
+        headers: { Accept: 'application/json' },
+        maxRedirects: 0
+      });
+      const body = await res.json();
+
+      // Assert: Product not found
+      expect(res.status()).toBe(404);
+      expect(body.status).toBe('error');
+      expect(body.message).toContain('Product not found');
     });
 
     test('CART-API-N02: quantity exceeds stock limit fails gracefully @api @cart @regression', async ({ api }) => {
@@ -120,15 +129,17 @@ test.describe('cart api @api @cart', () => {
       await clearCart(api);
 
       // Act: Try to add excessive quantity
-      const res = await addToCart(api, product.id, 10000);
+      const res = await api.post(routes.api.cartAdd, {
+        data: { productId: product.id, quantity: 10000 },
+        headers: { Accept: 'application/json' },
+        maxRedirects: 0
+      });
+      const body = await res.json();
 
-      // Assert: Either succeeds and enforces limit, or returns error
-      if (res.ok()) {
-        const body = await res.json();
-        expect(body.ok).toBeTruthy();
-      } else {
-        expect([400, 422]).toContain(res.status());
-      }
+      // Assert: Exceeding stock is rejected
+      expect(res.status()).toBe(400);
+      expect(body.status).toBe('error');
+      expect(body.message.toLowerCase()).toContain('stock');
     });
 
     test('CART-API-N03: negative quantity rejected @api @cart @regression', async ({ api }) => {
@@ -140,10 +151,17 @@ test.describe('cart api @api @cart', () => {
       await addToCart(api, product.id, 1);
 
       // Act: Try to update with negative quantity
-      const res = await updateCartItem(api, product.id, -1);
+      const res = await api.post(routes.api.cartUpdate, {
+        data: { productId: product.id, quantity: -1 },
+        headers: { Accept: 'application/json' },
+        maxRedirects: 0
+      });
+      const body = await res.json();
 
-      // Assert: Error response (400 or 422)
-      expect([400, 422]).toContain(res.status());
+      // Assert: Error response
+      expect(res.status()).toBe(400);
+      expect(body.status).toBe('error');
+      expect(body.message).toContain('at least 1');
     });
   });
 
@@ -156,16 +174,17 @@ test.describe('cart api @api @cart', () => {
       await loginAsAdmin(api);
 
       // Act: Try to add to cart
-      const res = await addToCart(api, product.id, 1);
+      const res = await api.post(routes.api.cartAdd, {
+        data: { productId: product.id, quantity: 1 },
+        headers: { Accept: 'application/json' },
+        maxRedirects: 0
+      });
+      const body = await res.json();
 
-      // Assert: Either forbidden or no cart available for admin
-      if (res.ok()) {
-        // Some systems allow admin to have carts
-        const body = await res.json();
-        expect(body).toBeDefined();
-      } else {
-        expect([403, 400]).toContain(res.status());
-      }
+      // Assert: Admin shopping is blocked
+      expect(res.status()).toBe(403);
+      expect(body.status).toBe('error');
+      expect(body.message).toContain('Admin cannot shop');
     });
 
     test('CART-API-E02: adding same product multiple times merges quantities @api @cart @regression', async ({ api }) => {
