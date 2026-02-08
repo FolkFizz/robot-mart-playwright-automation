@@ -1,189 +1,158 @@
-﻿import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
+import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
+import { disableChaos, clearCart } from '@api';
 import { seededProducts } from '@data';
-import { clearCart } from '@api';
 import { CheckoutPage } from '@pages';
 
 /**
  * =============================================================================
- * STRIPE INTEGRATION TESTS - Live Mode
+ * STRIPE CHECKOUT INTEGRATION TESTS
  * =============================================================================
- * 
+ *
  * Test Scenarios:
  * ---------------
- * 1. Stripe Payment Element Loading & Integration
- * 2. Payment Flow Validation (Success/Failure)
- * 3. Error Handling (Card Errors, funds, validation)
- * 4. Edge Cases (3DS, Currency, Environment)
- * 
+ * 1. Checkout + payment element bootstrapping
+ * 2. Cart-to-checkout amount consistency
+ * 3. Stripe SDK readiness and form controls
+ * 4. Empty-cart and provider-mode fallback behavior
+ *
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (3 tests):
- *   - STRIPE-P01: stripe element loads in live mode
- *   - STRIPE-P02: checkout displays cart total correctly
- *   - STRIPE-P03: payment form renders all required fields
- * 
+ *   - STRIPE-P01: checkout is reachable and payment section is initialized
+ *   - STRIPE-P02: checkout total matches cart grand total
+ *   - STRIPE-P03: Stripe SDK and payment frame load in stripe mode
+ *
  * NEGATIVE CASES (2 tests):
- *   - STRIPE-N01: gracefully handles mock payment mode when stripe disabled
- *   - STRIPE-N02: displays error when empty cart attempts payment
- * 
+ *   - STRIPE-N01: mock mode shows mock-payment note instead of Stripe
+ *   - STRIPE-N02: empty cart blocks real payment entry on checkout
+ *
  * EDGE CASES (2 tests):
- *   - STRIPE-E01: checkout handles cart validation before payment intent
- *   - STRIPE-E02: stripe publishable key properly set from environment
- * 
+ *   - STRIPE-E01: checkout total remains stable after page reload
+ *   - STRIPE-E02: submit button status exists in both stripe and mock modes
+ *
  * Business Rules Tested:
  * ----------------------
- * - Payment Provider: Real Stripe integration (requires PAYMENT_PROVIDER=stripe)
- * - Validation: Card checks via Stripe Elements, Intent confirmation
- * - Environment: Secure key management
- * - Test Skip Condition: Automatically skips if mock payment mode is enabled
- * - Stripe Element: data-stripe-ready attribute indicates successful load
- * - Required Environment: STRIPE_PUBLISHABLE_KEY must be set
- * - Live Mode: Tests against actual Stripe test environment
- * - No Charges: Uses Stripe test mode keys (no real transactions)
- * 
- * Note: This test requires live Stripe connection and will skip in mock mode.
- * For full payment flow testing, see checkout.e2e.spec.ts (uses mock payment).
- * 
+ * - Checkout is served at /order/checkout (/order/place redirects there)
+ * - Cart grand total must equal checkout displayed total
+ * - Stripe-specific assertions run only when provider is not mock
+ * - Empty cart must not render active payment entry fields
+ * - UI should stay stable across reloads and provider modes
+ *
  * =============================================================================
  */
 
+const gotoCheckoutFromCart = async (page: any, cartPage: any) => {
+  await cartPage.goto();
+  await page.getByTestId('cart-checkout').click();
+  await expect(page).toHaveURL(/\/order\/(checkout|place)/);
+};
+
 test.use({ seedData: true });
 
-test.describe('stripe integration @e2e @checkout @stripe', () => {
+test.describe('stripe checkout integration @e2e @checkout @stripe', () => {
+  test.beforeAll(async () => {
+    await disableChaos();
+  });
 
   test.beforeEach(async ({ api, page }) => {
-    // Arrange: Login and seed cart with product
     await loginAndSyncSession(api, page);
     await seedCart(api, [{ id: seededProducts[0].id }]);
   });
 
   test.describe('positive cases', () => {
+    test('STRIPE-P01: checkout is reachable and payment section is initialized @e2e @checkout @smoke', async ({ page, cartPage, checkoutPage }) => {
+      await gotoCheckoutFromCart(page, cartPage);
 
-    test('STRIPE-P01: stripe element loads in live mode @e2e @checkout @smoke', async ({ cartPage, checkoutPage }) => {
-      // Arrange: Navigate to checkout
-      await cartPage.goto();
-      await cartPage.proceedToCheckout();
-
-      // Check payment mode - skip if mock
+      await expect(page.getByTestId('checkout-submit')).toBeVisible();
       if (await checkoutPage.isMockPayment()) {
-        test.skip();
+        await expect(page.getByTestId('mock-payment-note')).toBeVisible();
+      } else {
+        await checkoutPage.waitForStripeReady();
       }
-
-      // Act: Wait for Stripe element to load
-      await checkoutPage.waitForStripeReady();
-
-      // Assert: Submit button is in valid state
-      const status = await checkoutPage.getSubmitStatus();
-      expect(status).not.toBeNull();
     });
 
-    test('STRIPE-P02: checkout displays cart total correctly @e2e @checkout @regression', async ({ cartPage, checkoutPage }) => {
-      // Arrange: Navigate to checkout
+    test('STRIPE-P02: checkout total matches cart grand total @e2e @checkout @regression', async ({ page, cartPage, checkoutPage }) => {
       await cartPage.goto();
       const cartTotal = await cartPage.getGrandTotalValue();
-      
-      await cartPage.proceedToCheckout();
 
-      // Act: Get checkout total
+      await page.getByTestId('cart-checkout').click();
+      await expect(page).toHaveURL(/\/order\/(checkout|place)/);
+
       const checkoutTotal = CheckoutPage.parsePrice(await checkoutPage.getTotal());
-
-      // Assert: Totals match
       expect(checkoutTotal).toBeCloseTo(cartTotal, 2);
     });
 
-    test('STRIPE-P03: payment form renders all required fields @e2e @checkout @smoke', async ({ page, cartPage, checkoutPage }) => {
-      // Arrange: Navigate to checkout
-      await cartPage.goto();
-      await cartPage.proceedToCheckout();
+    test('STRIPE-P03: Stripe SDK and payment frame load in stripe mode @e2e @checkout @smoke', async ({ page, cartPage, checkoutPage }) => {
+      await gotoCheckoutFromCart(page, cartPage);
 
-      // Skip if mock payment
       if (await checkoutPage.isMockPayment()) {
         test.skip();
       }
 
-      // Act: Wait for Stripe to be ready
       await checkoutPage.waitForStripeReady();
 
-      // Assert: Payment form is visible (Stripe loaded successfully)
-      const submitStatus = await checkoutPage.getSubmitStatus();
-      expect(submitStatus).not.toBeNull();
+      const stripeLoaded = await page.evaluate(() => typeof (window as { Stripe?: unknown }).Stripe !== 'undefined');
+      expect(stripeLoaded).toBe(true);
+
+      const frameCount = await page.locator('iframe[name^="__privateStripeFrame"]').count();
+      expect(frameCount).toBeGreaterThan(0);
     });
   });
 
   test.describe('negative cases', () => {
+    test('STRIPE-N01: mock mode shows mock-payment note instead of Stripe @e2e @checkout @regression', async ({ page, cartPage, checkoutPage }) => {
+      await gotoCheckoutFromCart(page, cartPage);
 
-    test('STRIPE-N01: gracefully handles mock payment mode when stripe disabled @e2e @checkout @regression', async ({ cartPage, checkoutPage }) => {
-      // Arrange: Navigate to checkout
-      await cartPage.goto();
-      await cartPage.proceedToCheckout();
-
-      // Act: Check if mock payment is active
       const isMock = await checkoutPage.isMockPayment();
-
       if (isMock) {
-        // Assert: Mock payment UI shown instead of Stripe
-        const status = await checkoutPage.getSubmitStatus();
-        expect(status).toBeDefined();
-        test.skip(); // Skip Stripe-specific tests in mock mode
+        await expect(page.getByTestId('mock-payment-note')).toBeVisible();
+        await expect(page.getByTestId('payment-element')).toHaveCount(0);
       } else {
-        // Assert: Stripe element loads successfully
         await checkoutPage.waitForStripeReady();
-        const status = await checkoutPage.getSubmitStatus();
-        expect(status).not.toBeNull();
+        await expect(page.getByTestId('payment-element')).toBeVisible();
       }
     });
 
-    test('STRIPE-N02: displays error when empty cart attempts payment @e2e @checkout @regression', async ({ api, page, cartPage, checkoutPage }) => {
-      // Arrange: Clear cart
+    test('STRIPE-N02: empty cart blocks real payment entry on checkout @e2e @checkout @regression @destructive', async ({ api, page }) => {
       await clearCart(api);
+      await page.goto('/order/checkout');
 
-      // Act: Try to navigate to checkout with empty cart
-      await page.goto('/checkout').catch(() => {});
+      const bodyText = (await page.locator('body').innerText()).toLowerCase();
+      const hasEmptyCartGuard =
+        bodyText.includes('cart is empty') ||
+        bodyText.includes('your cart is empty') ||
+        bodyText.includes('empty cart') ||
+        bodyText.includes('go shop');
 
-      // Assert: Either redirected to cart or prevented from proceeding
-      const url = page.url();
-      expect(url).toContain('/cart');
+      expect(hasEmptyCartGuard).toBe(true);
+      await expect(page.getByTestId('checkout-name')).toHaveCount(0);
+      await expect(page.getByTestId('payment-element')).toHaveCount(0);
+      await expect(page.getByTestId('checkout-submit')).toHaveCount(0);
     });
   });
 
   test.describe('edge cases', () => {
+    test('STRIPE-E01: checkout total remains stable after page reload @e2e @checkout @regression', async ({ page, cartPage, checkoutPage }) => {
+      await gotoCheckoutFromCart(page, cartPage);
+      const beforeReload = CheckoutPage.parsePrice(await checkoutPage.getTotal());
 
-    test('STRIPE-E01: checkout handles cart validation before payment intent @e2e @checkout @regression', async ({ api, cartPage, checkoutPage }) => {
-      // Arrange: Navigate to checkout with valid cart
-      await cartPage.goto();
-      await cartPage.proceedToCheckout();
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await expect(page).toHaveURL(/\/order\/(checkout|place)/);
+      const afterReload = CheckoutPage.parsePrice(await checkoutPage.getTotal());
 
-      // Skip if mock payment
-      if (await checkoutPage.isMockPayment()) {
-        test.skip();
-      }
-
-      // Act: Wait for Stripe to be ready
-      await checkoutPage.waitForStripeReady();
-
-      // Assert: Page is ready for payment
-      const total = await checkoutPage.getTotal();
-      expect(total).toBeTruthy();
-      expect(parseFloat(total.replace(/[^0-9.]/g, ''))).toBeGreaterThan(0);
+      expect(afterReload).toBeCloseTo(beforeReload, 2);
     });
 
-    test('STRIPE-E02: stripe publishable key properly set from environment @e2e @checkout @smoke', async ({ page, cartPage, checkoutPage }) => {
-      // Arrange: Navigate to checkout
-      await cartPage.goto();
-      await cartPage.proceedToCheckout();
+    test('STRIPE-E02: submit button status exists in both stripe and mock modes @e2e @checkout @regression', async ({ page, cartPage, checkoutPage }) => {
+      await gotoCheckoutFromCart(page, cartPage);
 
-      // Skip if mock payment
-      if (await checkoutPage.isMockPayment()) {
-        test.skip();
+      if (!(await checkoutPage.isMockPayment())) {
+        await checkoutPage.waitForStripeReady();
       }
 
-      // Act: Check if Stripe script is loaded
-      const stripeLoaded = await page.evaluate(() => {
-        return typeof (window as any).Stripe !== 'undefined';
-      });
-
-      // Assert: Stripe SDK loaded successfully
-      expect(stripeLoaded).toBe(true);
+      const status = await checkoutPage.getSubmitStatus();
+      expect(status).not.toBeNull();
+      expect(['idle', 'ready', 'loading', 'error', 'success']).toContain(status ?? 'idle');
     });
   });
 });

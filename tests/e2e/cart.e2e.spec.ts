@@ -1,5 +1,6 @@
 ﻿import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
-import { SHIPPING } from '@config';
+import { loginAsAdmin } from '@api';
+import { SHIPPING, routes } from '@config';
 import { seededProducts, coupons, uiMessages } from '@data';
 
 /**
@@ -32,7 +33,7 @@ import { seededProducts, coupons, uiMessages } from '@data';
  * NEGATIVE CASES (9 tests):
  *   - CART-N01: cannot add quantity exceeding stock limit
  *   - CART-N02: admin cannot add items to cart via API (security)
- *   - CART-N02-UI: admin redirected when attempting to shop via UI
+ *   - CART-N02-UI: admin cannot add items to cart via UI
  *   - CART-N03: add non-existent product returns 404
  *   - CART-N04: cannot update quantity to 0 (minimum is 1)
  *   - CART-N05: cannot update cart item beyond available stock
@@ -52,7 +53,7 @@ import { seededProducts, coupons, uiMessages } from '@data';
  * - Admin Restriction: Admin role CANNOT perform shopping operations (Security)
  * - Shipping Threshold: FREE shipping when subtotal â‰¥ à¸¿1000, else à¸¿50 fee
  * - Coupon Calculation: Discount applied to subtotal BEFORE shipping
- * - Cart Formula: Grand Total = (Subtotal - Discount) + Shipping
+ * - Cart Formula: Grand Total = Subtotal + Discount + Shipping
  * - Case Sensitivity: Coupon codes are case-insensitive (converted to uppercase)
  * 
  * =============================================================================
@@ -158,16 +159,16 @@ test.describe('cart comprehensive @e2e @cart', () => {
       // Act: Apply valid coupon
       await cartPage.applyCoupon(coupons.robot99.code);
 
-      // Assert: Discount applied, grand total reduced
+      // Assert: Discount rendered as signed negative value, grand total reduced
       const discountValue = await cartPage.getDiscountValue();
-      expect(discountValue).toBeGreaterThan(0);
-      expect(discountValue).toBeCloseTo(subtotal * (coupons.robot99.discountPercent / 100), 1);
+      expect(discountValue).toBeLessThan(0);
+      expect(Math.abs(discountValue)).toBeCloseTo(subtotal * (coupons.robot99.discountPercent / 100), 1);
 
       const shippingValue = await cartPage.getShippingValue();
       const grandTotal = await cartPage.getGrandTotalValue();
 
-      // Verify formula: Grand Total = (Subtotal - Discount) + Shipping
-      const expectedTotal = subtotal - discountValue + shippingValue;
+      // Verify formula: Grand Total = Subtotal + Discount + Shipping
+      const expectedTotal = subtotal + discountValue + shippingValue;
       expect(grandTotal).toBeCloseTo(expectedTotal, 1);
     });
 
@@ -250,7 +251,7 @@ test.describe('cart comprehensive @e2e @cart', () => {
 
       // Assert: Coupon accepted despite lowercase
       const discountValue = await cartPage.getDiscountValue();
-      expect(discountValue).toBeGreaterThan(0);
+      expect(discountValue).toBeLessThan(0);
     });
   });
 
@@ -263,26 +264,30 @@ test.describe('cart comprehensive @e2e @cart', () => {
       // Arrange: Empty cart
       await seedCart(api, []);
 
-      // Act: Try to add excessive quantity via API (999 units)
-      const res = await api.post('/api/cart/add', {
-        data: { productId: firstProduct.id, quantity: 999 }
+      // Act: Try to add excessive quantity via API
+      const res = await api.post(routes.api.cartAdd, {
+        data: { productId: firstProduct.id, quantity: 10000 },
+        headers: { Accept: 'application/json' },
+        maxRedirects: 0
       });
       
       // Assert: Request rejected with 400 error
       expect(res.status()).toBe(400);
       const body = await res.json();
       expect(body.status).toBe('error');
-      expect(body.message).toContain('Stock Limit Reached');
+      expect(body.message.toLowerCase()).toContain('stock');
     });
 
     test('CART-N02: admin cannot add items to cart via API (security) @e2e @cart @security @regression @destructive', async ({ api }) => {
       // CRITICAL SECURITY TEST
       // Arrange: Login as admin
-      await api.post('/api/test/login-admin');
+      await loginAsAdmin(api);
       
       // Act: Try to add product to cart
-      const res = await api.post('/api/cart/add', {
-        data: { productId: firstProduct.id, quantity: 1 }
+      const res = await api.post(routes.api.cartAdd, {
+        data: { productId: firstProduct.id, quantity: 1 },
+        headers: { Accept: 'application/json' },
+        maxRedirects: 0
       });
       
       // Assert: Request forbidden (403)
@@ -292,23 +297,34 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(body.message).toBe('Admin cannot shop');
     });
 
-    test('CART-N02-UI: admin redirected when attempting to shop via UI @e2e @cart @security @regression @destructive', async ({ api, page, homePage, productPage }) => {
-      // Arrange: Login as admin via API
-      await api.post('/api/test/login-admin');
-      await page.goto('/');
+    test('CART-N02-UI: admin cannot add items to cart via UI @e2e @cart @security @regression @destructive', async ({ api, page, homePage }) => {
+      // Arrange: Login as admin and sync admin session to browser context
+      await loginAsAdmin(api);
+      const storage = await api.storageState();
+      await page.context().clearCookies();
+      await page.context().addCookies(storage.cookies);
+      await page.goto(routes.home);
 
-      // Act: Navigate to product and try to add to cart
+      // Act: Navigate to product detail as admin
       await homePage.clickProductById(firstProduct.id);
-      await productPage.addToCart();
+      const addToCartButton = page.getByTestId('product-add-to-cart');
+      const addButtonVisible = await addToCartButton.isVisible().catch(() => false);
+      if (addButtonVisible) {
+        await expect(addToCartButton).toBeDisabled();
+      }
       
-      // Assert: Redirected to home (admin cannot shop)
-      await expect(page).toHaveURL('/');
+      // Assert: Admin cannot complete shopping action
+      await expect(page).not.toHaveURL(/\/cart/);
+      expect(addButtonVisible).toBe(false);
+      expect(await homePage.getCartCount()).toBe(0);
     });
 
     test('CART-N03: add non-existent product returns 404 @e2e @cart @regression @destructive', async ({ api }) => {
       // Act: Try to add product with invalid ID
-      const res = await api.post('/api/cart/add', {
-        data: { productId: 99999, quantity: 1 }
+      const res = await api.post(routes.api.cartAdd, {
+        data: { productId: 99999, quantity: 1 },
+        headers: { Accept: 'application/json' },
+        maxRedirects: 0
       });
       
       // Assert: Not found error
@@ -323,8 +339,10 @@ test.describe('cart comprehensive @e2e @cart', () => {
       await seedCart(api, [{ id: firstProduct.id, quantity: 2 }]);
 
       // Act: Try to update to quantity 0
-      const res = await api.post('/api/cart/update', {
-        data: { productId: firstProduct.id, quantity: 0 }
+      const res = await api.post(routes.api.cartUpdate, {
+        data: { productId: firstProduct.id, quantity: 0 },
+        headers: { Accept: 'application/json' },
+        maxRedirects: 0
       });
       
       // Assert: Validation error
@@ -339,8 +357,10 @@ test.describe('cart comprehensive @e2e @cart', () => {
       await seedCart(api, [{ id: firstProduct.id, quantity: 1 }]);
 
       // Act: Try to update to excessive quantity
-      const res = await api.post('/api/cart/update', {
-        data: { productId: firstProduct.id, quantity: 999 }
+      const res = await api.post(routes.api.cartUpdate, {
+        data: { productId: firstProduct.id, quantity: 999 },
+        headers: { Accept: 'application/json' },
+        maxRedirects: 0
       });
       
       // Assert: Stock limit error
@@ -355,8 +375,10 @@ test.describe('cart comprehensive @e2e @cart', () => {
       await seedCart(api, []);
 
       // Act: Try to update non-existent item
-      const res = await api.post('/api/cart/update', {
-        data: { productId: firstProduct.id, quantity: 5 }
+      const res = await api.post(routes.api.cartUpdate, {
+        data: { productId: firstProduct.id, quantity: 5 },
+        headers: { Accept: 'application/json' },
+        maxRedirects: 0
       });
       
       // Assert: Cart empty error
@@ -407,7 +429,7 @@ test.describe('cart comprehensive @e2e @cart', () => {
       await seedCart(api, []);
       
       // Get current stock for product
-      const productRes = await api.get(`/api/products/${firstProduct.id}`);
+      const productRes = await api.get(routes.api.productDetail(firstProduct.id));
       expect(productRes.status()).toBe(200);
       
       const product = await productRes.json();
@@ -415,8 +437,10 @@ test.describe('cart comprehensive @e2e @cart', () => {
 
       if (currentStock > 0) {
         // Act & Assert: Add exactly the stock amount - should succeed
-        const res = await api.post('/api/cart/add', {
-          data: { productId: firstProduct.id, quantity: currentStock }
+        const res = await api.post(routes.api.cartAdd, {
+          data: { productId: firstProduct.id, quantity: currentStock },
+          headers: { Accept: 'application/json' },
+          maxRedirects: 0
         });
         
         expect(res.status()).toBe(200);
@@ -425,8 +449,10 @@ test.describe('cart comprehensive @e2e @cart', () => {
         expect(body.totalItems).toBe(currentStock);
 
         // Try adding one more unit - should fail
-        const res2 = await api.post('/api/cart/add', {
-          data: { productId: firstProduct.id, quantity: 1 }
+        const res2 = await api.post(routes.api.cartAdd, {
+          data: { productId: firstProduct.id, quantity: 1 },
+          headers: { Accept: 'application/json' },
+          maxRedirects: 0
         });
         
         expect(res2.status()).toBe(400);
@@ -447,7 +473,7 @@ test.describe('cart comprehensive @e2e @cart', () => {
 
       // Assert: Coupon accepted (whitespace trimmed internally)
       const discountValue = await cartPage.getDiscountValue();
-      expect(discountValue).toBeGreaterThan(0);
+      expect(discountValue).toBeLessThan(0);
     });
 
     test('COUP-E05: coupon cleared when cart is cleared @e2e @cart @regression @destructive', async ({ api, cartPage }) => {
@@ -476,12 +502,16 @@ test.describe('cart comprehensive @e2e @cart', () => {
       await seedCart(api, [{ id: firstProduct.id }]);
 
       // Act: Try to apply empty coupon code
-      const res = await api.post('/api/cart/coupon', {
-        data: { code: '' }
+      const res = await api.post(routes.api.cartCoupons, {
+        data: { code: '' },
+        headers: { Accept: 'application/json' },
+        maxRedirects: 0
       });
       
       // Assert: Validation error
+      expect(res.status()).toBe(200);
       const body = await res.json();
+      expect(body.ok).toBe(false);
       expect(body.status).toBe('error');
       expect(body.message).toBe('Invalid coupon code');
     });

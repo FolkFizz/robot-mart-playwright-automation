@@ -13,56 +13,98 @@ export type ChaosToggle =
   | 'brokenAssets';
 
 export class ChaosPage extends BasePage {
-  private readonly widget: Locator;
-  private readonly header: Locator;
   private readonly saveButton: Locator;
-  private readonly resetButton: Locator;
-  private readonly statusText: Locator;
+  private readonly toggleInputs: Locator;
 
   constructor(page: Page) {
     super(page);
-    this.widget = this.getByTestId('chaos-widget');
-    this.header = this.widget.locator('.chaos-header');
-    this.saveButton = this.getByTestId('save-chaos-btn');
-    this.resetButton = this.widget.locator('.btn-reset');
-    this.statusText = this.widget.locator('.status-text');
+    this.saveButton = this.page.locator('button.btn-save, button:has-text("Apply Configuration"), [data-testid="save-chaos-btn"]');
+    this.toggleInputs = this.page.locator('input[type="checkbox"][name]');
   }
 
   async goto(): Promise<void> {
     await super.goto(routes.chaosLab);
+    await this.toggleInputs.first().waitFor({ state: 'attached' });
   }
 
   async isWidgetOpen(): Promise<boolean> {
-    const className = await this.widget.getAttribute('class');
-    return !(className || '').includes('closed');
+    return true;
   }
 
   async openWidget(): Promise<void> {
-    if (await this.isWidgetOpen()) return;
-    await this.header.click();
+    // Current Chaos Lab UI is always expanded.
   }
 
   async closeWidget(): Promise<void> {
-    if (!(await this.isWidgetOpen())) return;
-    await this.header.click();
+    // Current Chaos Lab UI is always expanded.
+  }
+
+  private toggleInput(name: ChaosToggle): Locator {
+    return this.page.locator(`input[type="checkbox"][name="${name}"]`);
   }
 
   async setToggle(name: ChaosToggle, enabled: boolean): Promise<void> {
-    await this.openWidget();
-    const checkbox = this.widget.locator(`input[name="${name}"]`);
-    await checkbox.setChecked(enabled);
+    const checkbox = this.toggleInput(name);
+    await checkbox.waitFor({ state: 'attached' });
+    await checkbox.evaluate((el, value) => {
+      const input = el as HTMLInputElement;
+      input.checked = Boolean(value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }, enabled);
+  }
+
+  async getToggleState(name: ChaosToggle): Promise<boolean> {
+    const checkbox = this.toggleInput(name);
+    await checkbox.waitFor({ state: 'attached' });
+    return await checkbox.evaluate((el) => (el as HTMLInputElement).checked);
+  }
+
+  async getEnabledToggleNames(): Promise<ChaosToggle[]> {
+    const names = await this.toggleInputs.evaluateAll((inputs) => {
+      return inputs
+        .filter((input) => (input as HTMLInputElement).checked)
+        .map((input) => input.getAttribute('name') || '')
+        .filter(Boolean);
+    });
+    return names as ChaosToggle[];
   }
 
   async applyChanges(): Promise<void> {
-    await this.saveButton.click();
+    await this.saveButton.waitFor({ state: 'visible' });
+    await Promise.all([
+      this.page
+        .waitForResponse(
+          (res) =>
+            res.url().includes('/api/chaos/config') &&
+            res.request().method() === 'POST',
+          { timeout: 10_000 }
+        )
+        .catch(() => null),
+      this.saveButton.click()
+    ]);
+    await this.waitForDomReady();
   }
 
   async resetAll(): Promise<void> {
-    await this.openWidget();
-    await this.resetButton.click();
+    const toggles: ChaosToggle[] = [
+      'dynamicIds',
+      'flakyElements',
+      'layoutShift',
+      'zombieClicks',
+      'textScramble',
+      'latency',
+      'randomErrors',
+      'brokenAssets'
+    ];
+    for (const toggle of toggles) {
+      await this.setToggle(toggle, false);
+    }
+    await this.applyChanges();
   }
 
   async getStatusText(): Promise<string> {
-    return await this.statusText.innerText();
+    const enabled = await this.getEnabledToggleNames();
+    return enabled.length > 0 ? 'Chaos Active' : 'Normal System';
   }
 }

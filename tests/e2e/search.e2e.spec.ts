@@ -1,178 +1,136 @@
 import { test, expect } from '@fixtures';
+import { disableChaos } from '@api';
+import { catalogSearch, seededProducts } from '@data';
 
 /**
  * =============================================================================
  * PRODUCT SEARCH E2E TESTS
  * =============================================================================
- * 
+ *
  * Test Scenarios:
  * ---------------
  * 1. Valid product search returns results
- * 2. No results handling
- * 3. Empty search behavior
- * 4. Special character handling
- * 
+ * 2. Case-insensitive and partial-name matching
+ * 3. Empty and no-result search handling
+ * 4. Input safety with special characters and long terms
+ *
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (3 tests):
- *   - SEARCH-P01: Valid search returns matching products
- *   - SEARCH-P02: Case-insensitive search works
- *   - SEARCH-P03: Partial name match returns results
- * 
+ *   - SEARCH-P01: valid search returns matching product card
+ *   - SEARCH-P02: search is case-insensitive
+ *   - SEARCH-P03: partial name match returns expected product
+ *
  * NEGATIVE CASES (2 tests):
- *   - SEARCH-N01: No results shows appropriate message
- *   - SEARCH-N02: Empty search returns all products
- * 
+ *   - SEARCH-N01: no-result search shows empty state
+ *   - SEARCH-N02: empty search returns default unfiltered list
+ *
  * EDGE CASES (3 tests):
- *   - SEARCH-E01: Special characters handled safely
- *   - SEARCH-E02: Search with multiple spaces
- *   - SEARCH-E03: Very long search term
- * 
+ *   - SEARCH-E01: special characters are handled safely
+ *   - SEARCH-E02: multiple-space term handled as literal input
+ *   - SEARCH-E03: very long search term handled gracefully
+ *
  * Business Rules:
  * ---------------
- * - Search uses query parameter: ?q=searchterm
+ * - Search uses query parameter: ?q=<term>
  * - Search is case-insensitive
- * - Search looks for partial matches in product names
- * - Empty search shows all products (no filter)
- * 
+ * - Partial-name search works (e.g., "Rusty")
+ * - Empty search (q=) returns default catalog listing
+ * - Unsafe/special input must not break the page
+ *
  * =============================================================================
  */
 
 test.use({ seedData: true });
 
 test.describe('product search @e2e @search', () => {
+  test.beforeAll(async () => {
+    await disableChaos();
+  });
 
   test.describe('positive cases', () => {
+    test('SEARCH-P01: valid search returns matching product card @e2e @search @smoke', async ({ homePage }) => {
+      await homePage.gotoWithQuery(`q=${encodeURIComponent(catalogSearch.term)}`);
 
-    test('SEARCH-P01: valid search returns matching products @e2e @search @smoke', async ({ page }) => {
-      // Arrange: Navigate to home with search query
-      const searchTerm = 'Robot';
-
-      // Act: Perform search
-      await page.goto(`/?q=${searchTerm}`);
-
-      // Assert: Products matching search term are visible
-      const productGrid = page.locator('.product-card, .product-item, [data-testid="product"]');
-      const productCount = await productGrid.count();
-      expect(productCount).toBeGreaterThan(0);
-
-      // Verify at least one product contains search term
-      if (productCount > 0) {
-        const firstProductName = await productGrid.first().locator('h3, .product-name').innerText();
-        expect(firstProductName.toLowerCase()).toContain(searchTerm.toLowerCase());
-      }
+      expect(await homePage.getProductCount()).toBeGreaterThan(0);
+      expect(await homePage.isProductCardVisible(seededProducts[1].id)).toBe(true);
+      await expect(homePage.getSearchInput()).toHaveValue(catalogSearch.term);
     });
 
-    test('SEARCH-P02: search is case-insensitive @e2e @search @regression', async ({ page }) => {
-      // Arrange: Search with lowercase
-      const searchTerm = 'robot';
+    test('SEARCH-P02: search is case-insensitive @e2e @search @regression', async ({ homePage }) => {
+      await homePage.gotoWithQuery(`q=${encodeURIComponent(catalogSearch.term.toLowerCase())}`);
+      const lowerCount = await homePage.getProductCount();
 
-      // Act: Search with lowercase term
-      await page.goto(`/?q=${searchTerm}`);
+      await homePage.gotoWithQuery(`q=${encodeURIComponent(catalogSearch.term.toUpperCase())}`);
+      const upperCount = await homePage.getProductCount();
 
-      // Assert: Results found (products have "Robot" in uppercase)
-      const products = page.locator('.product-card, .product-item, [data-testid="product"]');
-      const count = await products.count();
-      expect(count).toBeGreaterThan(0);
+      expect(lowerCount).toBeGreaterThan(0);
+      expect(upperCount).toBeGreaterThan(0);
+      expect(upperCount).toBe(lowerCount);
     });
 
-    test('SEARCH-P03: partial name match returns results @e2e @search @regression', async ({ page }) => {
-      // Arrange: Use partial product name
-      const partialName = 'Bot'; // Should match "Robot", "Rusty-Bot", etc.
+    test('SEARCH-P03: partial name match returns expected product @e2e @search @regression', async ({ homePage }) => {
+      await homePage.gotoWithQuery(`q=${encodeURIComponent(catalogSearch.partial)}`);
 
-      // Act: Search with partial term
-      await page.goto(`/?q=${partialName}`);
-
-      // Assert: Products found
-      const products = page.locator('.product-card, .product-item, [data-testid="product"]');
-      const count = await products.count();
-      expect(count).toBeGreaterThan(0);
+      expect(await homePage.getProductCount()).toBeGreaterThan(0);
+      expect(await homePage.isProductCardVisible(seededProducts[0].id)).toBe(true);
+      await expect(homePage.getByTestId(`product-title-${seededProducts[0].id}`)).toContainText(catalogSearch.partial);
     });
   });
 
   test.describe('negative cases', () => {
+    test('SEARCH-N01: no-result search shows empty state @e2e @search @regression', async ({ homePage }) => {
+      await homePage.gotoWithQuery(`q=${encodeURIComponent(catalogSearch.noResults)}`);
 
-    test('SEARCH-N01: no results shows appropriate message @e2e @search @regression', async ({ page }) => {
-      // Arrange: Use search term that won't match any product
-      const searchTerm = 'NonExistentProduct12345XYZ';
-
-      // Act: Search with non-existent term
-      await page.goto(`/?q=${searchTerm}`);
-
-      // Assert: No products or empty message shown
-      const products = page.locator('.product-card, .product-item, [data-testid="product"]');
-      const count = await products.count();
-      
-      if (count === 0) {
-        // Verify empty state message
-        const emptyMessage = page.locator('text=/no.*found|no.*results|no.*products/i').first();
-        await expect(emptyMessage).toBeVisible().catch(() => {
-          // If no message, at least verify product grid is empty
-          expect(count).toBe(0);
-        });
-      }
+      expect(await homePage.getProductCount()).toBe(0);
+      expect(await homePage.isEmptyStateVisible()).toBe(true);
     });
 
-    test('SEARCH-N02: empty search shows all products @e2e @search @regression', async ({ page }) => {
-      // Act: Navigate without search query
-      await page.goto('/?q=');
+    test('SEARCH-N02: empty search returns default unfiltered list @e2e @search @regression', async ({ homePage }) => {
+      await homePage.goto();
+      const defaultCount = await homePage.getProductCount();
+      expect(defaultCount).toBeGreaterThan(0);
 
-      // Assert: All products shown (no filter applied)
-      const products = page.locator('.product-card, .product-item, [data-testid="product"]');
-      const count = await products.count();
-      
-      // Should show products (at least seeded ones)
-      expect(count).toBeGreaterThan(0);
+      await homePage.gotoWithQuery('q=');
+      const emptySearchCount = await homePage.getProductCount();
+      expect(emptySearchCount).toBe(defaultCount);
+      await expect(homePage.getSearchInput()).toHaveValue('');
     });
   });
 
   test.describe('edge cases', () => {
+    test('SEARCH-E01: special characters are handled safely @e2e @search @regression', async ({ page, homePage }) => {
+      const dialogs: string[] = [];
+      page.on('dialog', async (dialog) => {
+        dialogs.push(dialog.message());
+        await dialog.dismiss();
+      });
 
-    test('SEARCH-E01: special characters handled safely @e2e @search @regression', async ({ page }) => {
-      // Arrange: Use special characters
-      const searchTerm = '"><script>alert(1)</script>';
+      const xssAttempt = '\"><script>alert(1)</script>';
+      await homePage.gotoWithQuery(`q=${encodeURIComponent(xssAttempt)}`);
 
-      // Act: Search with special chars (XSS attempt)
-      await page.goto(`/?q=${encodeURIComponent(searchTerm)}`);
-
-      // Assert: Page loads without error, no XSS executed
-      const url = page.url();
-      expect(url).toBeDefined();
-      
-      // Verify no JavaScript alert (page should be stable)
-      const products = page.locator('.product-card, .product-item, [data-testid="product"]');
-      const count = await products.count();
-      expect(count).toBeGreaterThanOrEqual(0); // May be 0 results, but page stable
+      await expect(page.getByRole('heading', { name: /All Products/i })).toBeVisible();
+      expect(dialogs.length).toBe(0);
+      expect(await homePage.getProductCount()).toBe(0);
     });
 
-    test('SEARCH-E02: search with multiple spaces handled @e2e @search @regression', async ({ page }) => {
-      // Arrange: Search term with extra spaces
-      const searchTerm = '  Robot  ';
+    test('SEARCH-E02: multiple-space term handled as literal input @e2e @search @regression', async ({ homePage }) => {
+      const spacedTerm = `  ${catalogSearch.term}  `;
+      await homePage.gotoWithQuery(`q=${encodeURIComponent(spacedTerm)}`);
 
-      // Act: Search with spaces
-      await page.goto(`/?q=${encodeURIComponent(searchTerm)}`);
-
-      // Assert: Search works (trimmed internally)
-      const products = page.locator('.product-card, .product-item, [data-testid="product"]');
-      const count = await products.count();
-      expect(count).toBeGreaterThan(0);
+      await expect(homePage.getSearchInput()).toHaveValue(spacedTerm);
+      expect(await homePage.getProductCount()).toBe(0);
+      expect(await homePage.isEmptyStateVisible()).toBe(true);
     });
 
-    test('SEARCH-E03: very long search term gracefully handled @e2e @search @regression', async ({ page }) => {
-      // Arrange: Generate very long search term
+    test('SEARCH-E03: very long search term handled gracefully @e2e @search @regression', async ({ page, homePage }) => {
       const longTerm = 'A'.repeat(500);
+      await homePage.gotoWithQuery(`q=${encodeURIComponent(longTerm)}`);
 
-      // Act: Search with long term
-      await page.goto(`/?q=${encodeURIComponent(longTerm)}`);
-
-      // Assert: Page loads without crash
-      const url = page.url();
-      expect(url).toContain('?q=');
-      
-      // May have 0 results, but application should not crash
-      const products = page.locator('.product-card, .product-item, [data-testid="product"]');
-      const count = await products.count();
-      expect(count).toBeGreaterThanOrEqual(0);
+      await expect(page).toHaveURL(/\?q=/);
+      await expect(page.getByRole('heading', { name: /All Products/i })).toBeVisible();
+      expect(await homePage.getProductCount()).toBe(0);
+      expect(await homePage.isEmptyStateVisible()).toBe(true);
     });
   });
 });

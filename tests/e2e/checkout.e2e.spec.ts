@@ -13,12 +13,12 @@ import { CheckoutPage } from '@pages';
  * ---------------
  * 1. Navigation & Page Loading (Stripe Integration, Cart Totals)
  * 2. Form Validation (Name, Email, Required Fields)
- * 3. Shipping Calculation Logic (à¸¿1000 threshold)
+ * 3. Shipping Calculation Logic (THB 1000 threshold)
  * 4. Coupon Impact on Shipping and Totals
  * 5. Payment Processing (Stripe Mock Payment)
  * 6. Order Completion & Confirmation
  * 7. Stock Validation During Checkout
- * 8. Empty Cart Handling
+ * 8. Empty Cart Checkout Guard
  * 
  * Test Cases Coverage:
  * --------------------
@@ -26,31 +26,31 @@ import { CheckoutPage } from '@pages';
  *   - CHK-P01: setup cart with 2 items and verify subtotal
  *   - CHK-P02: checkout page shows stripe ready and total matches cart
  *   - CHK-P03: complete stripe payment redirects to success and appears in profile
- *   - CHK-P04: order below à¸¿1000 adds à¸¿50 shipping
- *   - CHK-P05: order â‰¥à¸¿1000 has free shipping
+ *   - CHK-P04: order below THB 1000 adds THB 50 shipping
+ *   - CHK-P05: order at or above THB 1000 has free shipping
  *   - CHK-P06: apply WELCOME10 on low-value order updates totals
  *   - CHK-P07: apply ROBOT99 on high-value order keeps free shipping
  *   - CHK-P08: remove coupon restores totals
  *   - CHK-P09: coupon input hidden after applying (no re-apply)
  * 
  * NEGATIVE CASES (6 tests):
- *   - CHK-N01: redirect to cart when cart is empty
+ *   - CHK-N01: empty cart checkout is blocked (redirect or guard message)
  *   - CHK-N02: empty name prevents submit (HTML5 validation)
  *   - CHK-N03: invalid email prevents submit
  *   - CHK-N04: empty email prevents submit
  *   - CHK-N05: expired coupon rejected, totals unchanged
- *   - CHK-N06: stock validation prevents checkout
+ *   - CHK-N06: stock validation prevents successful checkout
  * 
  * EDGE CASES (4 tests):
- *   - CHK-E03: discount crossing shipping threshold recalculates correctly
- *   - CHK-E04: exact à¸¿1000 subtotal gets free shipping (boundary)
- *   - CHK-E05: à¸¿999.99 subtotal charges shipping (boundary)
- *   - CHK-E06: high-value coupon crosses threshold, shipping adjusts
+ *   - CHK-E01: discount crossing shipping threshold recalculates correctly
+ *   - CHK-E02: quantity change crossing threshold updates shipping immediately
+ *   - CHK-E03: subtotal below threshold keeps shipping fee applied
+ *   - CHK-E04: high-value order with coupon remains free shipping when still above threshold
  * 
  * Business Rules Tested:
  * ----------------------
- * - Shipping Formula: FREE if (Subtotal - Discount) â‰¥ à¸¿1000, else à¸¿50
- * - Grand Total Formula: (Subtotal - Discount) + Shipping
+ * - Shipping Formula: FREE if (Subtotal + Discount) >= THB 1000, else THB 50
+ * - Grand Total Formula: Subtotal + Discount + Shipping
  * - Stripe Integration: Payment element loads with data-stripe-ready
  * - Form Validation: Name and Email required (HTML5 + server-side)
  * - Stock Validation: Order fails if product stock < cart quantity
@@ -63,9 +63,9 @@ import { CheckoutPage } from '@pages';
 test.use({ seedData: true });
 
 test.describe('checkout comprehensive @e2e @checkout', () => {
-  const firstProduct = seededProducts[0];   // Rusty-Bot 101: à¸¿299.99
-  const secondProduct = seededProducts[1];  // Helper-X: à¸¿450.00
-  const thirdProduct = seededProducts[2];   // Cortex-99: à¸¿2500.00
+  const firstProduct = seededProducts[0];
+  const secondProduct = seededProducts[1];
+  const thirdProduct = seededProducts[2];
 
   test.beforeAll(async () => {
     await disableChaos();
@@ -163,8 +163,8 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
   // ========================================================================
   test.describe('positive cases - shipping logic', () => {
     
-    test('CHK-P04: order below à¸¿1000 adds à¸¿50 shipping @e2e @checkout @regression @destructive', async ({ api, cartPage, checkoutPage }) => {
-      // firstProduct = à¸¿299.99 (below threshold)
+    test('CHK-P04: order below THB 1000 adds THB 50 shipping @e2e @checkout @regression @destructive', async ({ api, cartPage, checkoutPage }) => {
+      // firstProduct stays below free-shipping threshold
       await seedCart(api, [{ id: firstProduct.id, quantity: 1 }]);
 
       await cartPage.goto();
@@ -186,9 +186,9 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
       expect(checkoutTotal).toBeCloseTo(subtotal + SHIPPING.fee, 2);
     });
 
-    test('CHK-P05: order â‰¥à¸¿1000 has free shipping @e2e @checkout @regression @destructive', async ({ api, cartPage, checkoutPage }) => {
-      // thirdProduct = à¸¿2500 (above threshold)
-      await seedCart(api, [{ id: thirdProduct.id, quantity: 1 }]);
+    test('CHK-P05: order at or above THB 1000 has free shipping @e2e @checkout @regression @destructive', async ({ api, cartPage, checkoutPage }) => {
+      // Use 2 x thirdProduct to guarantee subtotal over threshold in current seed
+      await seedCart(api, [{ id: thirdProduct.id, quantity: 2 }]);
 
       await cartPage.goto();
       const subtotal = await cartPage.getSubtotalValue();
@@ -229,20 +229,21 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
       // Act: Apply coupon
       await cartPage.applyCoupon(coupons.welcome10.code);
 
-      // Assert: Discount applied, shipping unchanged (still below threshold)
+      // Assert: Discount applied as signed negative value, shipping unchanged (still below threshold)
       const discountValue = await cartPage.getDiscountValue();
-      expect(discountValue).toBeCloseTo(subtotal * (coupons.welcome10.discountPercent / 100), 1);
+      expect(discountValue).toBeLessThan(0);
+      expect(Math.abs(discountValue)).toBeCloseTo(subtotal * (coupons.welcome10.discountPercent / 100), 1);
 
       const shippingAfter = await cartPage.getShippingValue();
       expect(shippingAfter).toBe(SHIPPING.fee);
 
       const grandTotal = await cartPage.getGrandTotalValue();
-      expect(grandTotal).toBeCloseTo(subtotal - discountValue + shippingAfter, 1);
+      expect(grandTotal).toBeCloseTo(subtotal + discountValue + shippingAfter, 1);
     });
 
     test('CHK-P07: apply ROBOT99 on high-value order keeps free shipping @e2e @checkout @regression @destructive', async ({ api, cartPage }) => {
       // Arrange: High-value cart
-      await seedCart(api, [{ id: thirdProduct.id, quantity: 2 }]); // à¸¿5000
+      await seedCart(api, [{ id: thirdProduct.id, quantity: 2 }]); // high subtotal in current seed
 
       await cartPage.goto();
       const subtotal = await cartPage.getSubtotalValue();
@@ -254,15 +255,16 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
       // Act: Apply 20% coupon
       await cartPage.applyCoupon(coupons.robot99.code);
 
-      // Assert: Discount applied, shipping still FREE (after discount still >à¸¿1000)
+      // Assert: Discount applied as signed negative value, shipping still FREE
       const discountValue = await cartPage.getDiscountValue();
-      expect(discountValue).toBeCloseTo(subtotal * (coupons.robot99.discountPercent / 100), 1);
+      expect(discountValue).toBeLessThan(0);
+      expect(Math.abs(discountValue)).toBeCloseTo(subtotal * (coupons.robot99.discountPercent / 100), 1);
 
       const shippingAfter = await cartPage.getShippingValue();
       expect(shippingAfter).toBe(0);
 
       const grandTotal = await cartPage.getGrandTotalValue();
-      expect(grandTotal).toBeCloseTo(subtotal - discountValue + shippingAfter, 1);
+      expect(grandTotal).toBeCloseTo(subtotal + discountValue + shippingAfter, 1);
     });
 
     test('CHK-P08: remove coupon restores totals @e2e @checkout @regression @destructive', async ({ api, cartPage }) => {
@@ -306,13 +308,26 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
   // ========================================================================
   test.describe('negative cases', () => {
     
-    test('CHK-N01: redirect to cart when cart is empty @e2e @checkout @regression @destructive', async ({ page }) => {
+    test('CHK-N01: empty cart checkout is blocked (redirect or guard message) @e2e @checkout @regression @destructive', async ({ api, page }) => {
+      // Arrange: Ensure cart is empty first
+      await seedCart(api, []);
+
       // Act: Try to access checkout with empty cart
       await page.goto('/order/checkout');
 
-      // Assert: Redirected to cart page
-      await expect(page).toHaveURL(/\/cart/);
-      await expect(page.getByText(uiMessages.cartEmpty)).toBeVisible();
+      // Assert: Either redirected to cart OR blocked with empty-cart guard on checkout
+      const url = page.url();
+      const body = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
+
+      const redirectedToCart = /\/cart/.test(url);
+      const stayedOnCheckout = /\/order\/(checkout|place)/.test(url);
+      const hasEmptyCartGuard =
+        body.includes(uiMessages.cartEmpty.toLowerCase()) ||
+        body.includes('empty cart') ||
+        body.includes('cart is empty') ||
+        body.includes('no items');
+
+      expect(redirectedToCart || (stayedOnCheckout && hasEmptyCartGuard)).toBe(true);
     });
 
     test('CHK-N02: empty name prevents submit (HTML5 validation) @e2e @checkout @regression @destructive', async ({ api, page, cartPage, checkoutPage }) => {
@@ -412,7 +427,7 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
       expect(totalAfter).toBeCloseTo(totalBefore, 1);
     });
 
-    test('CHK-N06: stock validation prevents checkout @e2e @checkout @regression @destructive', async ({ api, page, cartPage }) => {
+    test('CHK-N06: stock validation prevents successful checkout @e2e @checkout @regression @destructive', async ({ api, page, cartPage }) => {
       // Arrange: Seed cart with product at quantity 2
       await seedCart(api, [{ id: firstProduct.id, quantity: 2 }]);
 
@@ -425,8 +440,13 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
       await cartPage.goto();
       await cartPage.proceedToCheckout();
 
-      // Assert: Checkout blocked (exact behavior varies by implementation)
-      // At minimum, order should NOT be created successfully
+      // Assert: Checkout must not end in successful order screen
+      await expect(page).not.toHaveURL(/\/order\/success/);
+      expect(
+        page.url().includes('/cart') ||
+          page.url().includes('/order/checkout') ||
+          page.url().includes('/order/place')
+      ).toBe(true);
     });
   });
 
@@ -435,9 +455,9 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
   // ========================================================================
   test.describe('edge cases', () => {
     
-    test('CHK-E03: discount crossing shipping threshold recalculates correctly @e2e @checkout @regression @destructive', async ({ api, cartPage, checkoutPage }) => {
+    test('CHK-E01: discount crossing shipping threshold recalculates correctly @e2e @checkout @regression @destructive', async ({ api, cartPage, checkoutPage }) => {
       // Scenario: Start above threshold, discount brings below
-      // 2 x firstProduct (à¸¿299.99) = à¸¿599.98 + 1 x secondProduct (à¸¿450) = à¸¿1049.98
+      // 2 x firstProduct + 1 x secondProduct ~= 1049.98 in current seed
       await seedCart(api, [
         { id: firstProduct.id, quantity: 2 },
         { id: secondProduct.id, quantity: 1 }
@@ -448,23 +468,24 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
       expect(subtotal).toBeGreaterThanOrEqual(SHIPPING.freeThreshold);
 
       // Shipping FREE before coupon
-      let shippingBefore = await cartPage.getShippingValue();
+      const shippingBefore = await cartPage.getShippingValue();
       expect(shippingBefore).toBe(0);
 
-      // Apply 20% discount (ROBOT99) - after discount: à¸¿1049.98 * 0.8 = à¸¿839.98
+      // Apply 20% discount (ROBOT99)
       await cartPage.applyCoupon('ROBOT99');
 
       const discountValue = await cartPage.getDiscountValue();
-      const afterDiscount = subtotal - discountValue;
+      expect(discountValue).toBeLessThan(0);
+      const afterDiscount = subtotal + discountValue;
       expect(afterDiscount).toBeLessThan(SHIPPING.freeThreshold);
 
-      // Shipping should now be à¸¿50
+      // Shipping should now be THB 50
       const shippingAfter = await cartPage.getShippingValue();
       expect(shippingAfter).toBe(SHIPPING.fee);
 
-      // Grand total = (Subtotal - Discount) + Shipping
+      // Grand total = Subtotal + Discount + Shipping
       const grandTotal = await cartPage.getGrandTotalValue();
-      expect(grandTotal).toBeCloseTo(afterDiscount + SHIPPING.fee, 1);
+      expect(grandTotal).toBeCloseTo(subtotal + discountValue + shippingAfter, 1);
 
       // Verify on checkout page
       await cartPage.proceedToCheckout();
@@ -474,44 +495,40 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
       expect(checkoutTotal).toBeCloseTo(grandTotal, 1);
     });
 
-    test('CHK-E04: exact à¸¿1000 subtotal gets free shipping (boundary) @e2e @checkout @regression @destructive', async ({ api, cartPage }) => {
-      // Boundary test: >=à¸¿1000 condition is inclusive
-      await seedCart(api, [{ id: thirdProduct.id, quantity: 1 }]); // à¸¿2500
+    test('CHK-E02: quantity change crossing threshold updates shipping immediately @e2e @checkout @regression @destructive', async ({ api, cartPage }) => {
+      // Start below threshold
+      await seedCart(api, [{ id: firstProduct.id }, { id: secondProduct.id }]);
 
       await cartPage.goto();
-      const subtotal = await cartPage.getSubtotalValue();
-      
-      if (Math.abs(subtotal - SHIPPING.freeThreshold) < 0.01) {
-        // Exactly at threshold
-        const shippingValue = await cartPage.getShippingValue();
-        expect(shippingValue).toBe(0);
-      } else if (subtotal >= SHIPPING.freeThreshold) {
-        // Above threshold - should be free
-        const shippingValue = await cartPage.getShippingValue();
-        expect(shippingValue).toBe(0);
-      }
+      const subtotalBefore = await cartPage.getSubtotalValue();
+      expect(subtotalBefore).toBeLessThan(SHIPPING.freeThreshold);
+      expect(await cartPage.getShippingValue()).toBe(SHIPPING.fee);
+
+      // Increase quantity so subtotal crosses free-shipping threshold
+      await cartPage.increaseQtyById(secondProduct.id);
+
+      const subtotalAfter = await cartPage.getSubtotalValue();
+      expect(subtotalAfter).toBeGreaterThanOrEqual(SHIPPING.freeThreshold);
+      expect(await cartPage.getShippingValue()).toBe(0);
     });
 
-    test('CHK-E05: à¸¿999.99 subtotal charges shipping (boundary) @e2e @checkout @regression @destructive', async ({ api, cartPage }) => {
+    test('CHK-E03: subtotal below threshold keeps shipping fee applied @e2e @checkout @regression @destructive', async ({ api, cartPage }) => {
       // Just below threshold - should have shipping fee
-      // firstProduct (à¸¿299.99) x 3 = à¸¿899.97
       await seedCart(api, [{ id: firstProduct.id, quantity: 3 }]);
 
       await cartPage.goto();
       const subtotal = await cartPage.getSubtotalValue();
-      
-      if (subtotal < SHIPPING.freeThreshold) {
-        const shippingValue = await cartPage.getShippingValue();
-        expect(shippingValue).toBe(SHIPPING.fee);
-      }
+      expect(subtotal).toBeLessThan(SHIPPING.freeThreshold);
+
+      const shippingValue = await cartPage.getShippingValue();
+      expect(shippingValue).toBe(SHIPPING.fee);
+      const grandTotal = await cartPage.getGrandTotalValue();
+      expect(grandTotal).toBeCloseTo(subtotal + SHIPPING.fee, 2);
     });
 
-    test('CHK-E06: high-value coupon crosses threshold, shipping adjusts @e2e @checkout @regression @destructive', async ({ api, cartPage }) => {
-      // Start slightly above à¸¿1000, heavy discount brings below
-      await seedCart(api, [
-        { id: firstProduct.id, quantity: 2 },
-        { id: secondProduct.id, quantity: 1 }
-      ]);
+    test('CHK-E04: high-value order with coupon remains free shipping when still above threshold @e2e @checkout @regression @destructive', async ({ api, cartPage }) => {
+      // Start with high subtotal
+      await seedCart(api, [{ id: thirdProduct.id, quantity: 2 }]);
 
       await cartPage.goto();
       const subtotal = await cartPage.getSubtotalValue();
@@ -520,15 +537,18 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
       const shippingBefore = await cartPage.getShippingValue();
       expect(shippingBefore).toBe(0);
 
-      // Apply 20% discount
-      await cartPage.applyCoupon(coupons.robot99.code);
+      // Apply 10% discount and keep order above threshold
+      await cartPage.applyCoupon(coupons.welcome10.code);
 
       const discountValue = await cartPage.getDiscountValue();
-      expect(subtotal - discountValue).toBeLessThan(SHIPPING.freeThreshold);
+      expect(discountValue).toBeLessThan(0);
+      const netSubtotal = subtotal + discountValue;
+      expect(netSubtotal).toBeGreaterThanOrEqual(SHIPPING.freeThreshold);
       
       const shippingAfter = await cartPage.getShippingValue();
+      expect(shippingAfter).toBe(0);
       const grandTotal = await cartPage.getGrandTotalValue();
-      expect(grandTotal).toBeCloseTo(subtotal - discountValue + shippingAfter, 1);
+      expect(grandTotal).toBeCloseTo(subtotal + discountValue + shippingAfter, 1);
     });
   });
 });

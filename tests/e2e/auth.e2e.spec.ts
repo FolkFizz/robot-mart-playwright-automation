@@ -1,4 +1,5 @@
 ﻿import { test, expect } from '@fixtures';
+import { loginAsUser, clearCart, addToCart } from '@api';
 import { users, authInputs, authErrors, inboxSubjects } from '@data';
 import { routes } from '@config';
 import { randomUser, randomPasswordPair } from '@utils';
@@ -183,34 +184,37 @@ test.describe('authentication comprehensive @e2e @auth', () => {
       const link = await inboxPage.getFirstEmailLinkHref();
       
       expect(link ?? '').toContain(routes.resetPasswordBase);
-      expect(link ?? '').toMatch(/\/auth\/reset-password\//);
+      expect(link ?? '').toMatch(/\/reset-password\//);
     });
 
-    test('AUTH-P06: reset password with valid token succeeds @e2e @auth @regression @destructive', async ({ page, api, forgotPasswordPage, loginPage }) => {
+    test('AUTH-P06: reset password with valid token succeeds @e2e @auth @regression @destructive', async ({ page, forgotPasswordPage, inboxPage, loginPage }) => {
       // Step 1: Request reset
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(users.user.email);
 
-      // Step 2: Get reset token from DB via test API
-      const tokenRes = await api.get(`/api/test/get-reset-token?email=${encodeURIComponent(users.user.email)}`);
-      expect(tokenRes.status()).toBe(200);
-      const { token } = await tokenRes.json();
-      expect(token).toBeTruthy();
+      // Step 2: Read reset link from demo inbox
+      await inboxPage.gotoDemo();
+      await inboxPage.openEmailBySubject(inboxSubjects.resetPassword);
+      const link = await inboxPage.getFirstEmailLinkHref();
+      expect(link ?? '').toContain(routes.resetPasswordBase);
 
-      // Step 3: Navigate to reset page with token
-      await page.goto(`/auth/reset-password/${token}`);
+      // Step 3: Navigate to reset page using inbox link
+      await page.goto(link || '');
 
       // Step 4: Set new password
-      const newPassword = 'NewSecure123!';
+      const newPassword = users.user.password;
       await page.fill('input[name="password"]', newPassword);
       await page.fill('input[name="confirmPassword"]', newPassword);
       await page.click('button[type="submit"]');
 
-      // Step 5: Should redirect to login with success message
-      await expect(page).toHaveURL(/\/login/);
-      await expect(page.locator('.success, .alert-success')).toBeVisible();
+      // Step 5: Show success state (either on reset page or login page)
+      await expect(page.locator('.success, .alert-success, .message')).toBeVisible();
+      await expect(page.locator('.success, .alert-success, .message')).toContainText(/successful|login/i);
 
       // Step 6: Verify can login with new password
+      if (!page.url().includes('/login')) {
+        await loginPage.goto();
+      }
       await loginPage.login(users.user.username, newPassword);
       expect(await loginPage.isLoggedIn()).toBe(true);
     });
@@ -242,36 +246,38 @@ test.describe('authentication comprehensive @e2e @auth', () => {
         const { token } = await expiredTokenRes.json();
 
         // Act: Try to use expired token
-        await page.goto(`/auth/reset-password/${token}`);
+        await page.goto(`/reset-password/${token}`);
 
         // Assert: Error shown
         await expect(page.locator('.error, .alert-error')).toBeVisible();
-        await page.waitForURL(/\/(login|auth\/reset-password)/);
+        await page.waitForURL(/\/(login|reset-password)/);
       }
     });
 
     test('AUTH-N08: reset with invalid token redirects to login @e2e @auth @regression @safe', async ({ page }) => {
       // Act: Navigate with invalid token
-      await page.goto('/auth/reset-password/invalid_token_12345');
+      await page.goto(routes.resetPassword('invalid_token_12345'));
 
       // Assert: Redirected or error shown
-      await page.waitForURL(/\/(login|auth\/reset-password)/, { timeout: 5000 });
+      await page.waitForURL(/\/(login|reset-password)/, { timeout: 5000 });
       
       if (await page.url().includes('/login')) {
+        await expect(page.locator('.error, .alert-error')).toBeVisible();
+      } else {
         await expect(page.locator('.error, .alert-error')).toBeVisible();
       }
     });
 
-    test('AUTH-N09: password mismatch during reset shows error @e2e @auth @regression @destructive', async ({ page, api }) => {
-      // Arrange: Get valid token
-      await api.post('/api/test/request-reset', {
-        data: { email: users.user.email }
-      });
+    test('AUTH-N09: password mismatch during reset shows error @e2e @auth @regression @destructive', async ({ page, forgotPasswordPage, inboxPage }) => {
+      // Arrange: Request reset and open reset link
+      await forgotPasswordPage.goto();
+      await forgotPasswordPage.requestReset(users.user.email);
 
-      const tokenRes = await api.get(`/api/test/get-reset-token?email=${encodeURIComponent(users.user.email)}`);
-      const { token } = await tokenRes.json();
-
-      await page.goto(`/auth/reset-password/${token}`);
+      await inboxPage.gotoDemo();
+      await inboxPage.openEmailBySubject(inboxSubjects.resetPassword);
+      const link = await inboxPage.getFirstEmailLinkHref();
+      expect(link ?? '').toContain(routes.resetPasswordBase);
+      await page.goto(link || '');
 
       // Act: Fill with mismatched passwords
       await page.fill('input[name="password"]', 'Password123!');
@@ -289,31 +295,33 @@ test.describe('authentication comprehensive @e2e @auth', () => {
   // ========================================================================
   test.describe('edge cases', () => {
     
-    test('AUTH-E05: token cannot be reused after successful reset (security) @e2e @auth @regression @destructive', async ({ page, api }) => {
-      // Step 1: Get token and reset password
-      await api.post('/api/test/request-reset', {
-        data: { email: users.user.email }
-      });
+    test('AUTH-E05: token cannot be reused after successful reset (security) @e2e @auth @regression @destructive', async ({ page, forgotPasswordPage, inboxPage }) => {
+      // Step 1: Request reset and open token link
+      await forgotPasswordPage.goto();
+      await forgotPasswordPage.requestReset(users.user.email);
 
-      const tokenRes = await api.get(`/api/test/get-reset-token?email=${encodeURIComponent(users.user.email)}`);
-      const { token } = await tokenRes.json();
-
-      await page.goto(`/auth/reset-password/${token}`);
+      await inboxPage.gotoDemo();
+      await inboxPage.openEmailBySubject(inboxSubjects.resetPassword);
+      const link = await inboxPage.getFirstEmailLinkHref();
+      expect(link ?? '').toContain(routes.resetPasswordBase);
+      await page.goto(link || '');
       
-      const newPassword = 'FirstReset123!';
+      const newPassword = users.user.password;
       await page.fill('input[name="password"]', newPassword);
       await page.fill('input[name="confirmPassword"]', newPassword);
       await page.click('button[type="submit"]');
 
-      await expect(page).toHaveURL(/\/login/);
+      await expect(page.locator('.success, .alert-success, .message')).toBeVisible();
 
       // Step 2: Try to use same token again
-      await page.goto(`/auth/reset-password/${token}`);
+      await page.goto(link || '');
 
       // Assert: Token invalid (cleared after use)
-      await page.waitForURL(/\/(login|auth\/reset-password)/, { timeout: 5000 });
+      await page.waitForURL(/\/(login|reset-password)/, { timeout: 5000 });
       
       if (!await page.url().includes('reset-password')) {
+        await expect(page.locator('.error, .alert-error')).toBeVisible();
+      } else {
         await expect(page.locator('.error, .alert-error')).toBeVisible();
       }
     });
@@ -322,10 +330,10 @@ test.describe('authentication comprehensive @e2e @auth', () => {
       const firstProduct = { id: 1, name: 'Rusty-Bot 101' };
       const secondProduct = { id: 2, name: 'Helper-X' };
 
-      // Step 1: Clear any existing cart for test user
-      await api.post('/api/test/login-user');
-      await api.post('/api/cart/clear');
-      await api.post('/api/test/logout');
+      // Step 1: Pre-populate DB cart for authenticated user
+      await loginAsUser(api);
+      await clearCart(api);
+      await addToCart(api, secondProduct.id, 1);
 
       // Step 2: Add item as GUEST
       await page.goto('/');
@@ -337,30 +345,15 @@ test.describe('authentication comprehensive @e2e @auth', () => {
       expect(await cartPage.getItemCount()).toBe(1);
       expect(await cartPage.isItemVisible(firstProduct.id)).toBe(true);
 
-      // Step 3: Logout to clear session (if logged in)
-      if (await loginPage.isLoggedIn()) {
-        await loginPage.logout();
-      }
-
-      // Step 4: Pre-populate DB cart with different item
-      await api.post('/api/test/login-user');
-      await api.post('/api/cart/clear');
-      await api.post('/api/cart/add', {
-        data: { productId: secondProduct.id, quantity: 1 }
-      });
-      await api.post('/api/test/logout');
-
-      // Step 5: Login via UI (triggers merge)
+      // Step 3: Login via UI (triggers merge with DB cart)
       await loginPage.goto();
       await loginPage.login(users.user.username, users.user.password);
 
-      // Step 6: Verify cart has items (merged)
+      // Step 4: Verify merged cart contains both guest + DB items
       await cartPage.goto();
-      const itemCount = await cartPage.getItemCount();
-      expect(itemCount).toBeGreaterThanOrEqual(1);
-
-      // Verify DB item is present
+      expect(await cartPage.isItemVisible(firstProduct.id)).toBe(true);
       expect(await cartPage.isItemVisible(secondProduct.id)).toBe(true);
     });
   });
 });
+

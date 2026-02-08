@@ -15,6 +15,7 @@ import { seededProducts, catalogSearch, catalogCategories, catalogSort, catalogP
  * 5. Product Detail Navigation
  * 6. Empty State Handling (No Results)
  * 7. URL Query Parameter Management
+ * 8. Boundary and malformed query handling
  * 
  * Test Cases Coverage:
  * --------------------
@@ -35,14 +36,21 @@ import { seededProducts, catalogSearch, catalogCategories, catalogSort, catalogP
  *   - CAT-P14: open product detail by clicking card
  *   - CAT-P15: product card displays correct price
  * 
- * NEGATIVE CASES (5 tests):
+ * NEGATIVE CASES (8 tests):
  *   - CAT-N01: search with no results shows empty state
  *   - CAT-N02: invalid category shows empty state
  *   - CAT-N03: price range min > max shows empty state
  *   - CAT-N04: search + category mismatch shows empty state
  *   - CAT-N05: search with special chars shows empty state
+ *   - CAT-N06: invalid sort query does not break catalog rendering
+ *   - CAT-N07: non-numeric price query falls back gracefully
+ *   - CAT-N08: whitespace-padded search term returns no results
  * 
- * EDGE CASES (0 tests):
+ * EDGE CASES (4 tests):
+ *   - CAT-E01: exact price boundary (min=max) is inclusive
+ *   - CAT-E02: deep-link with combined filters resolves deterministically
+ *   - CAT-E03: repeated same search remains idempotent
+ *   - CAT-E04: filter+sort combination preserves both constraints
  * 
  * Business Rules Tested:
  * ----------------------
@@ -56,10 +64,10 @@ import { seededProducts, catalogSearch, catalogCategories, catalogSort, catalogP
  * =============================================================================
  */
 
-test.describe('catalog ui @e2e @safe', () => {
+test.use({ seedData: true });
 
-  test.describe('positive cases - UI controls', () => {
-
+test.describe('catalog comprehensive @e2e @catalog', () => {
+  test.describe('positive cases', () => {
     test('CAT-P01: home shows main controls @smoke @e2e @safe', async ({ homePage }) => {
       // Act: Load homepage
       await homePage.goto();
@@ -106,34 +114,6 @@ test.describe('catalog ui @e2e @safe', () => {
       await expect(page).toHaveURL(new RegExp(`minPrice=${catalogPrice.min}`, 'i'));
       await expect(page).toHaveURL(new RegExp(`maxPrice=${catalogPrice.max}`, 'i'));
     });
-  });
-
-  test.describe('negative cases - empty states', () => {
-
-    test('CAT-N01: search with no results shows empty state @e2e @regression @safe', async ({ homePage }) => {
-      // Act: Search for non-existent product
-      await homePage.goto();
-      await homePage.search(catalogSearch.noResults);
-
-      // Assert: Empty state displayed
-      await homePage.waitForEmptyState();
-    });
-
-    test('CAT-N02: invalid category shows empty state @e2e @regression @safe', async ({ homePage }) => {
-      // Act: Navigate to invalid category
-      await homePage.gotoWithQuery(`category=${catalogCategories.unknown}`);
-
-      // Assert: Empty state displayed
-      await homePage.waitForEmptyState();
-    });
-  });
-});
-
-test.use({ seedData: true });
-
-test.describe('catalog with seeded data @e2e @destructive', () => {
-
-  test.describe('positive cases - search and filter', () => {
 
     test('CAT-P06: seeded products visible @smoke @e2e @destructive', async ({ homePage }) => {
       // Act: Load homepage
@@ -184,7 +164,7 @@ test.describe('catalog with seeded data @e2e @destructive', () => {
     });
 
     test('CAT-P10: filter by price max 500 @e2e @destructive', async ({ homePage }) => {
-      // Act: Apply price filter (max à¸¿500)
+      // Act: Apply price filter (max 500)
       await homePage.goto();
       await homePage.applyPriceFilter(0, catalogPrice.maxAffordable);
 
@@ -231,7 +211,7 @@ test.describe('catalog with seeded data @e2e @destructive', () => {
       expect(normalized).toEqual(sorted);
     });
 
-    test('CAT-P14: open product detail by clicking card @e2e @destructive', async ({ page, homePage, productPage }) => {
+    test('CAT-P14: open product detail by clicking card @e2e @destructive', async ({ homePage, productPage }) => {
       const target = seededProducts[0];
 
       // Act: Click product card
@@ -258,8 +238,24 @@ test.describe('catalog with seeded data @e2e @destructive', () => {
     });
   });
 
-  test.describe('negative cases - filter combinations', () => {
-    
+  test.describe('negative cases', () => {
+    test('CAT-N01: search with no results shows empty state @e2e @regression @safe', async ({ homePage }) => {
+      // Act: Search for non-existent product
+      await homePage.goto();
+      await homePage.search(catalogSearch.noResults);
+
+      // Assert: Empty state displayed
+      await homePage.waitForEmptyState();
+    });
+
+    test('CAT-N02: invalid category shows empty state @e2e @regression @safe', async ({ homePage }) => {
+      // Act: Navigate to invalid category
+      await homePage.gotoWithQuery(`category=${catalogCategories.unknown}`);
+
+      // Assert: Empty state displayed
+      await homePage.waitForEmptyState();
+    });
+
     test('CAT-N03: price range min > max shows empty state @e2e @regression @destructive', async ({ homePage }) => {
       // Act: Apply invalid price range
       await homePage.goto();
@@ -273,7 +269,7 @@ test.describe('catalog with seeded data @e2e @destructive', () => {
       // Act: Combine incompatible filters
       await homePage.goto();
       await homePage.selectCategory(catalogCategories.highTech);
-      await homePage.search(catalogSearch.partial); // Searches for automation product
+      await homePage.search(catalogSearch.partial);
 
       // Assert: Empty state (no match)
       await homePage.waitForEmptyState();
@@ -286,6 +282,108 @@ test.describe('catalog with seeded data @e2e @destructive', () => {
 
       // Assert: Graceful handling (empty state)
       await homePage.waitForEmptyState();
+    });
+
+    test('CAT-N06: invalid sort query does not break catalog rendering @e2e @regression @destructive', async ({ homePage }) => {
+      // Act: Open catalog with unsupported sort option
+      await homePage.gotoWithQuery('sort=not_a_real_sort');
+
+      // Assert: Catalog still renders products (fallback behavior)
+      expect(await homePage.hasProducts()).toBe(true);
+      await expect(homePage.getSearchInput()).toBeVisible();
+      await expect(homePage.getSortSelect()).toBeVisible();
+    });
+
+    test('CAT-N07: non-numeric price query falls back gracefully @e2e @regression @destructive', async ({ homePage }) => {
+      // Act: Open catalog with malformed price query values
+      await homePage.gotoWithQuery('minPrice=abc&maxPrice=xyz');
+
+      // Assert: Page remains usable and does not collapse to error state
+      expect(await homePage.hasProducts()).toBe(true);
+      expect(await homePage.isEmptyStateVisible()).toBe(false);
+    });
+
+    test('CAT-N08: whitespace-padded search term returns no results @e2e @regression @destructive', async ({ homePage }) => {
+      // Act: Search with leading/trailing spaces directly via query
+      await homePage.gotoWithQuery(`q=${encodeURIComponent('  helper  ')}`);
+
+      // Assert: Current behavior treats it as literal text and shows empty state
+      await homePage.waitForEmptyState();
+    });
+  });
+
+  test.describe('edge cases', () => {
+    test('CAT-E01: exact price boundary (min=max) is inclusive @e2e @regression @destructive', async ({ homePage }) => {
+      const target = seededProducts[1];
+
+      // Act: Filter exact boundary where min == max
+      await homePage.goto();
+      await homePage.applyPriceFilter(target.price, target.price);
+
+      // Assert: Boundary product is included and all visible prices stay on boundary
+      await homePage.waitForProductCardVisible(target.id);
+      const prices = await homePage.getVisibleProductPriceValues();
+      expect(prices.length).toBeGreaterThan(0);
+      for (const price of prices) {
+        expect(price).toBeCloseTo(target.price, 2);
+      }
+    });
+
+    test('CAT-E02: deep-link with combined filters resolves deterministically @e2e @regression @destructive', async ({ page, homePage }) => {
+      const query =
+        `q=${encodeURIComponent(catalogSearch.term)}` +
+        `&category=${catalogCategories.automation}` +
+        `&sort=${catalogSort.priceDesc}` +
+        '&minPrice=100&maxPrice=1000';
+
+      // Act: Load deep-link with all filters already in query
+      await homePage.gotoWithQuery(query);
+
+      // Assert: Query state is preserved and results match all constraints
+      expect(await homePage.hasProducts()).toBe(true);
+
+      const titles = await homePage.getVisibleProductTitleTexts();
+      expect(
+        titles.some((title) => title.toLowerCase().includes(catalogSearch.term.toLowerCase()))
+      ).toBe(true);
+
+      const prices = await homePage.getVisibleProductPriceValues();
+      for (const price of prices) {
+        expect(price).toBeGreaterThanOrEqual(100);
+        expect(price).toBeLessThanOrEqual(1000);
+      }
+
+      await expect(page).toHaveURL(/category=automation/i);
+      await expect(page).toHaveURL(/sort=price_desc/i);
+    });
+
+    test('CAT-E03: repeated same search remains idempotent @e2e @regression @destructive', async ({ homePage }) => {
+      // Act: Run same search twice
+      await homePage.goto();
+      await homePage.search(catalogSearch.term);
+      const firstCount = await homePage.getProductCount();
+
+      await homePage.search(catalogSearch.term);
+      const secondCount = await homePage.getProductCount();
+
+      // Assert: Repeating same query keeps same result cardinality
+      expect(secondCount).toBe(firstCount);
+    });
+
+    test('CAT-E04: filter+sort combination preserves both constraints @e2e @regression @destructive', async ({ homePage }) => {
+      // Act: Apply max price filter and descending price sort together
+      await homePage.gotoWithQuery(`minPrice=0&maxPrice=${catalogPrice.maxAffordable}&sort=${catalogSort.priceDesc}`);
+
+      // Assert: Every result is within boundary and sorted descending
+      const values = await homePage.getVisibleProductPriceValues();
+      expect(values.length).toBeGreaterThan(0);
+
+      const sorted = [...values].sort((a, b) => b - a);
+      expect(values).toEqual(sorted);
+
+      for (const value of values) {
+        expect(value).toBeLessThanOrEqual(catalogPrice.maxAffordable);
+      }
     });
   });
 });
