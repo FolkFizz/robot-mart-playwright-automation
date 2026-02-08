@@ -8,44 +8,41 @@ import { raceThresholds } from '../thresholds/index.js';
 
 /**
  * =============================================================================
- * RACE CONDITION TESTS - Inventory Overselling Prevention
+ * RACE CONDITION TEST - Overselling Protection During Concurrent Checkout
  * =============================================================================
- * 
- * Test Scenario:
- * --------------
- * - 20 VUs (Virtual Users) login as the SAME user
- * - Each VU adds a product to cart then attempts checkout SIMULTANEOUSLY
- * - Backend uses Atomic UPDATE to prevent overselling:
- *   `UPDATE products SET stock = stock - $1 WHERE stock >= $1`
- * 
- * Expected Behavior:
- * ------------------
- * - MAXIMUM N successes where N = initial stock
- * - Remaining requests get 400 (Stock limit reached)
- * - NO inventory oversold (stock should never go negative)
- * 
- * Target Endpoint:
- * ----------------
- * POST /order/api/mock-pay (has race condition protection)
- * 
+ *
+ * Scenario:
+ * - 20 VUs / 20 shared iterations (from `concurrent` scenario)
+ * - All VUs try to checkout the same product at nearly the same time
+ *
+ * Expected outcome:
+ * - Some checkouts succeed (HTTP 200)
+ * - Remaining requests are rejected (HTTP 400 or cart guard redirect)
+ * - No 5xx errors and no overselling behavior
+ *
+ * Notes:
+ * - Use PERF_RESET_STOCK=true to reset inventory before running.
+ * - Checkout uses mock payment endpoint to avoid real payment integration.
  * =============================================================================
  */
 
-// Custom metrics
-const successfulPurchases = new Counter('successful_purchases');
-const failedPurchases = new Counter('failed_purchases');
-const checkoutDuration = new Trend('checkout_duration');
-
-// Test configuration
 const TEST_USER = {
-    username: 'user',
-    password: 'user123'
+    username: __ENV.PERF_USER || 'user',
+    password: __ENV.PERF_PASSWORD || 'user123',
 };
 
 const TARGET_PRODUCT = {
-    id: 1,      // Product to race for
-    quantity: 1
+    id: Number(__ENV.PERF_RACE_PRODUCT_ID || 1),
+    quantity: Number(__ENV.PERF_RACE_QUANTITY || 1),
 };
+
+const RESET_STOCK = String(__ENV.PERF_RESET_STOCK || 'false').toLowerCase() === 'true';
+const RESET_KEY = __ENV.RESET_KEY || __ENV.PERF_RESET_KEY || '';
+
+const successfulPurchases = new Counter('successful_purchases');
+const rejectedPurchases = new Counter('rejected_purchases');
+const unexpectedPurchases = new Counter('unexpected_purchases');
+const checkoutDuration = new Trend('checkout_duration');
 
 export const options = {
     scenarios: {
@@ -54,100 +51,188 @@ export const options = {
     thresholds: raceThresholds,
 };
 
-// Setup: Each VU runs this once before the main test
-export function setup() {
-    console.log(`[Setup] Race Condition Test - Target: ${app.baseURL}`);
-    console.log(`[Setup] Testing concurrent checkout for Product ID: ${TARGET_PRODUCT.id}`);
-    return { baseURL: app.baseURL };
+function getLocation(res) {
+    return String((res && (res.headers.Location || res.headers.location)) || '');
 }
 
-export default function (data) {
-    // Create a unique jar for session management
-    const jar = http.cookieJar();
-    
-    group('🔐 Authenticate', () => {
-        const loginRes = http.post(
-            `${app.baseURL}/login`,
-            {
-                username: TEST_USER.username,
-                password: TEST_USER.password
-            },
-            {
-                headers: headers.form,
-                redirects: 0  // Don't follow redirects to check status
-            }
-        );
-        
-        check(loginRes, {
-            'login successful (302)': (r) => r.status === 302 || r.status === 200,
-        });
+function isCartRedirect(res) {
+    if (!res || (res.status !== 302 && res.status !== 303)) {
+        return false;
+    }
+    return getLocation(res).includes('/cart?error=');
+}
+
+function isAuthRedirect(res) {
+    if (!res || (res.status !== 302 && res.status !== 303)) {
+        return false;
+    }
+    return getLocation(res).includes('/login');
+}
+
+function isStockRejectResponse(res) {
+    if (!res) {
+        return false;
+    }
+
+    if (res.status === 400) {
+        return true;
+    }
+
+    if (isCartRedirect(res)) {
+        return getLocation(res).toLowerCase().includes('stock');
+    }
+
+    return false;
+}
+
+function authenticate() {
+    const loginRes = http.post(
+        `${app.baseURL}/login`,
+        {
+            username: TEST_USER.username,
+            password: TEST_USER.password,
+        },
+        {
+            headers: headers.form,
+            redirects: 0,
+            tags: { endpoint: 'auth_login' },
+        }
+    );
+
+    const location = getLocation(loginRes);
+    const loginOk = check(loginRes, {
+        'race login status is 200/302/303': (r) =>
+            r.status === 200 || r.status === 302 || r.status === 303,
+        'race login not redirected back to /login': () =>
+            loginRes.status === 200 || !location.includes('/login'),
     });
-    
-    group('🛒 Add to Cart', () => {
-        const addRes = http.post(
+
+    if (!loginOk) {
+        return false;
+    }
+
+    const profileRes = http.get(`${app.baseURL}/profile`, {
+        redirects: 0,
+        tags: { endpoint: 'auth_profile' },
+    });
+
+    return check(profileRes, {
+        'race profile is accessible': (r) => r.status === 200,
+    });
+}
+
+export function setup() {
+    console.log(`[Setup] Race test target: ${app.baseURL}`);
+    console.log(`[Setup] Target product: id=${TARGET_PRODUCT.id}, quantity=${TARGET_PRODUCT.quantity}`);
+
+    if (!RESET_STOCK) {
+        return;
+    }
+
+    if (!RESET_KEY) {
+        console.warn('[Setup] PERF_RESET_STOCK=true but RESET_KEY is missing. Skipping stock reset.');
+        return;
+    }
+
+    const resetRes = http.post(
+        `${app.baseURL}/api/products/reset-stock`,
+        null,
+        {
+            headers: { 'X-RESET-KEY': RESET_KEY },
+            redirects: 0,
+            tags: { endpoint: 'reset_stock' },
+            responseCallback: http.expectedStatuses(200, 403),
+        }
+    );
+
+    if (resetRes.status === 200) {
+        console.log('[Setup] Stock reset completed.');
+        return;
+    }
+
+    console.warn(`[Setup] Stock reset returned status=${resetRes.status}. Continuing without reset.`);
+}
+
+export default function () {
+    const isLoggedIn = group('Authenticate', () => authenticate());
+    if (!isLoggedIn) {
+        unexpectedPurchases.add(1);
+        return;
+    }
+
+    group('Add to Cart', () => {
+        const res = http.post(
             `${app.baseURL}/api/cart/add`,
             JSON.stringify({
                 productId: TARGET_PRODUCT.id,
-                quantity: TARGET_PRODUCT.quantity
+                quantity: TARGET_PRODUCT.quantity,
             }),
-            { headers: headers.json }
+            {
+                headers: headers.json,
+                redirects: 0,
+                tags: { endpoint: 'cart_add' },
+                responseCallback: http.expectedStatuses(200, 302, 303, 400),
+            }
         );
-        
-        check(addRes, {
-            'add to cart succeeded': (r) => r.status === 200,
+
+        check(res, {
+            'race cart add handled': (r) => r.status === 200 || isStockRejectResponse(r) || isAuthRedirect(r),
         });
     });
-    
-    // Small delay to ensure all VUs reach checkout at roughly the same time
+
+    // Small sync window so many VUs hit checkout close together.
     sleep(0.1);
-    
-    group('💳 Race: Concurrent Checkout', () => {
-        const startTime = Date.now();
-        
+
+    group('Concurrent Checkout', () => {
+        const startedAt = Date.now();
         const checkoutRes = http.post(
             `${app.baseURL}/order/api/mock-pay`,
             JSON.stringify({}),
-            { headers: headers.json }
+            {
+                headers: headers.json,
+                redirects: 0,
+                tags: { endpoint: 'checkout_mock_pay' },
+                responseCallback: http.expectedStatuses(200, 302, 303, 400),
+            }
         );
-        
-        const duration = Date.now() - startTime;
-        checkoutDuration.add(duration);
-        
-        // Check if purchase succeeded (200) or was rejected (400)
-        const isSuccess = checkoutRes.status === 200;
-        const isRejected = checkoutRes.status === 400;
-        
-        check(checkoutRes, {
-            'checkout completed (200 success)': (r) => r.status === 200,
-            'checkout rejected (400 out of stock)': (r) => r.status === 400,
-            'no server error (5xx)': (r) => r.status < 500,
+        checkoutDuration.add(Date.now() - startedAt);
+
+        const handled = check(checkoutRes, {
+            'race checkout handled': (r) => r.status === 200 || isStockRejectResponse(r) || isCartRedirect(r),
+            'race checkout no 5xx': (r) => r.status < 500,
         });
-        
-        // Track outcomes
-        if (isSuccess) {
-            successfulPurchases.add(1);
-            console.log(`✅ VU ${__VU}: Purchase SUCCESS - Order created`);
-        } else if (isRejected) {
-            failedPurchases.add(1);
-            // Expected behavior - stock was depleted
-        } else {
-            console.warn(`⚠️ VU ${__VU}: Unexpected status ${checkoutRes.status}`);
-            console.warn(`   Response: ${checkoutRes.body.substring(0, 200)}`);
+
+        if (!handled) {
+            unexpectedPurchases.add(1);
+            return;
         }
+
+        if (checkoutRes.status === 200) {
+            let hasOrderId = false;
+            try {
+                const body = checkoutRes.json();
+                hasOrderId = Boolean(body && body.orderId);
+            } catch (_error) {
+                hasOrderId = false;
+            }
+
+            if (hasOrderId) {
+                successfulPurchases.add(1);
+            } else {
+                unexpectedPurchases.add(1);
+            }
+            return;
+        }
+
+        rejectedPurchases.add(1);
     });
 }
 
-export function teardown(data) {
-    console.log(`\n========================================`);
-    console.log(`📊 RACE CONDITION TEST ANALYSIS`);
-    console.log(`========================================`);
-    console.log(`Target Endpoint: POST /order/api/mock-pay`);
-    console.log(`\n🎯 PASS Criteria:`);
-    console.log(`   - successful_purchases ≤ initial stock`);
-    console.log(`   - No 5xx errors (server stability)`);
-    console.log(`   - failed_purchases shows 400 rejections`);
-    console.log(`\n❌ FAIL Indicators:`);
-    console.log(`   - successful_purchases > initial stock → OVERSOLD!`);
-    console.log(`   - Many 5xx errors → Server crashed`);
-    console.log(`========================================\n`);
+export function teardown() {
+    console.log('\n========================================');
+    console.log('RACE CONDITION TEST ANALYSIS');
+    console.log('========================================');
+    console.log('Review successful_purchases vs rejected_purchases.');
+    console.log('Expected: controlled rejections when stock is exhausted, with no 5xx.');
+    console.log('========================================\n');
 }

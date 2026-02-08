@@ -1,29 +1,198 @@
 import http from 'k6/http';
 import { group, sleep, check } from 'k6';
-import { Counter, Trend, Rate } from 'k6/metrics';
+import { Counter, Trend } from 'k6/metrics';
+import { SharedArray } from 'k6/data';
 import { app } from '../lib/config.js';
 import { headers } from '../lib/http.js';
 
 /**
- * CONFIGURABLE LOAD TEST
- * 
- * Modes (set via TEST_MODE env var):
- * - balanced (default): Realistic thresholds, stages-based
- * - acceptance: No thresholds, always pass, measurement only
- * 
- * Usage:
- *   npm run test:perf:load              # balanced mode
- *   npm run test:perf:load-acceptance   # acceptance mode
+ * =============================================================================
+ * CONFIGURABLE LOAD TEST - End-to-End Customer Journey
+ * =============================================================================
+ *
+ * Flow per iteration:
+ * 1) Login
+ * 2) Browse home page
+ * 3) Add random product to cart
+ * 4) Attempt mock checkout
+ *
+ * Modes (TEST_MODE):
+ * - balanced (default): Enforce thresholds
+ * - acceptance: Measurement only (no thresholds)
+ *
+ * Notes:
+ * - Checkout uses POST /order/api/mock-pay.
+ * - HTTP 400 at checkout is treated as expected business rejection (e.g. stock depletion).
+ * - full_journey_success is counted only when checkout returns a successful order.
+ * =============================================================================
  */
 
-// ========== CONFIGURATION ==========
-const TEST_MODE = __ENV.TEST_MODE || 'balanced';
+const toPositiveInt = (value, fallback) => {
+    const parsed = Number(value);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+};
 
-// ========== CUSTOM METRICS ==========
+const TEST_MODE = String(__ENV.TEST_MODE || 'balanced').toLowerCase() === 'acceptance'
+    ? 'acceptance'
+    : 'balanced';
+
+const TEST_USER = {
+    username: __ENV.PERF_USER || 'user',
+    password: __ENV.PERF_PASSWORD || 'user123',
+};
+
+const PRODUCT_MIN = toPositiveInt(__ENV.PERF_PRODUCT_MIN, 1);
+const PRODUCT_MAX = Math.max(PRODUCT_MIN, toPositiveInt(__ENV.PERF_PRODUCT_MAX, 205));
+
+const productIdsFromCsv = new SharedArray('product_ids_from_csv', () => {
+    try {
+        const csv = open('../data/products.csv');
+        const rows = csv
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter(Boolean);
+
+        if (rows.length <= 1) {
+            return [];
+        }
+
+        const ids = [];
+        for (let i = 1; i < rows.length; i += 1) {
+            const [rawId] = rows[i].split(',');
+            const parsedId = Number(rawId);
+            if (Number.isInteger(parsedId) && parsedId > 0) {
+                ids.push(parsedId);
+            }
+        }
+
+        return ids;
+    } catch (_error) {
+        return [];
+    }
+});
+
+const fallbackProductIds = (() => {
+    const ids = [];
+    for (let id = PRODUCT_MIN; id <= PRODUCT_MAX; id += 1) {
+        ids.push(id);
+    }
+    return ids;
+})();
+
+function pickProductId() {
+    const source = productIdsFromCsv.length > 0 ? productIdsFromCsv : fallbackProductIds;
+    return source[Math.floor(Math.random() * source.length)];
+}
+
+function pickProductIdFrom(preferredIds) {
+    if (Array.isArray(preferredIds) && preferredIds.length > 0) {
+        return preferredIds[Math.floor(Math.random() * preferredIds.length)];
+    }
+
+    return pickProductId();
+}
+
+function parseProductsPayload(res) {
+    if (!res || res.status !== 200) {
+        return [];
+    }
+
+    try {
+        const body = res.json();
+        if (!body || body.ok !== true || !Array.isArray(body.products)) {
+            return [];
+        }
+        return body.products;
+    } catch (_error) {
+        return [];
+    }
+}
+
+function getInStockPreferredIds(products) {
+    const preferredIds = productIdsFromCsv.length > 0 ? productIdsFromCsv : fallbackProductIds;
+    const preferredSet = new Set(preferredIds.map((id) => Number(id)));
+    const inStock = [];
+
+    for (let i = 0; i < products.length; i += 1) {
+        const item = products[i] || {};
+        const id = Number(item.id);
+        const stock = Number(item.stock);
+
+        if (Number.isInteger(id) && preferredSet.has(id) && Number.isFinite(stock) && stock > 0) {
+            inStock.push(id);
+        }
+    }
+
+    return inStock;
+}
+
+function getInStockAnyIds(products) {
+    const inStock = [];
+
+    for (let i = 0; i < products.length; i += 1) {
+        const item = products[i] || {};
+        const id = Number(item.id);
+        const stock = Number(item.stock);
+
+        if (Number.isInteger(id) && Number.isFinite(stock) && stock > 0) {
+            inStock.push(id);
+        }
+    }
+
+    return inStock;
+}
+
+function fetchTargetProductIds() {
+    const productsRes = http.get(`${app.baseURL}/api/products`, {
+        redirects: 0,
+        tags: { endpoint: 'products_list' },
+    });
+
+    const products = parseProductsPayload(productsRes);
+    if (products.length === 0) {
+        return [];
+    }
+
+    const preferredInStock = getInStockPreferredIds(products);
+    if (preferredInStock.length > 0) {
+        return preferredInStock;
+    }
+
+    return getInStockAnyIds(products);
+}
+
+function getLocation(res) {
+    return String((res && (res.headers.Location || res.headers.location)) || '');
+}
+
+function isStockLimitResponse(res) {
+    if (!res) {
+        return false;
+    }
+
+    if ((res.status === 302 || res.status === 303) && getLocation(res).includes('/cart?error=')) {
+        return getLocation(res).toLowerCase().includes('stock');
+    }
+
+    if (res.status !== 400) {
+        return false;
+    }
+
+    try {
+        const body = res.json();
+        const message = String((body && body.message) || '').toLowerCase();
+        return message.includes('stock');
+    } catch (_error) {
+        return String(res.body || '').toLowerCase().includes('stock');
+    }
+}
+
 const loginAttempts = new Counter('login_attempts');
 const browseAttempts = new Counter('browse_attempts');
 const cartAttempts = new Counter('cart_attempts');
+const cartRejected = new Counter('cart_rejected');
 const checkoutAttempts = new Counter('checkout_attempts');
+const checkoutRejected = new Counter('checkout_rejected');
 const fullJourneySuccess = new Counter('full_journey_success');
 
 const loginDuration = new Trend('login_duration');
@@ -31,135 +200,204 @@ const browseDuration = new Trend('browse_duration');
 const cartDuration = new Trend('cart_duration');
 const checkoutDuration = new Trend('checkout_duration');
 
-// ========== TEST OPTIONS ==========
 const baseOptions = {
     stages: [
-        { duration: '30s', target: 20 },  // Ramp up
-        { duration: '1m', target: 20 },   // Sustained
-        { duration: '30s', target: 0 },   // Ramp down
+        { duration: '30s', target: 20 },
+        { duration: '1m', target: 20 },
+        { duration: '30s', target: 0 },
     ],
 };
 
-const thresholds = {
+const thresholdsByMode = {
     balanced: {
-        'http_req_failed': ['rate<0.10'],
-        'http_req_duration': ['p(95)<1500', 'p(99)<3000'],
-        'login_duration': ['p(95)<800'],
-        'browse_duration': ['p(95)<1000'],
-        'cart_duration': ['p(95)<500'],
-        'checkout_duration': ['p(95)<800'],
+        http_req_failed: ['rate<0.10'],
+        http_req_duration: ['p(95)<1500', 'p(99)<3000'],
+        login_duration: ['p(95)<800'],
+        browse_duration: ['p(95)<1000'],
+        cart_duration: ['p(95)<500'],
+        checkout_duration: ['p(95)<800'],
+        checkout_attempts: ['count>0'],
     },
-    acceptance: {},  // No thresholds = always pass
+    acceptance: {},
 };
 
 export const options = {
     ...baseOptions,
-    thresholds: thresholds[TEST_MODE],
+    thresholds: thresholdsByMode[TEST_MODE],
     tags: { test_mode: TEST_MODE },
 };
 
-// ========== SETUP ==========
 export function setup() {
-    console.log(`\n🚀 Load Test - Mode: ${TEST_MODE.toUpperCase()}`);
-    console.log(`Target: ${app.baseURL}`);
-    console.log(`Profile: 0→20→20→0 VUs (2 min)\n`);
-    return { baseURL: app.baseURL };
+    const productSource = productIdsFromCsv.length > 0
+        ? `csv(${productIdsFromCsv.length} ids)`
+        : `fallback(${PRODUCT_MIN}-${PRODUCT_MAX})`;
+    const selectedProductIds = fetchTargetProductIds();
+
+    console.log(`\n[Setup] Load Test - mode=${TEST_MODE.toUpperCase()}`);
+    console.log(`[Setup] Target: ${app.baseURL}`);
+    console.log('[Setup] Profile: 0->20->20->0 VUs (2m)');
+    console.log(`[Setup] Product source: ${productSource}`);
+    console.log(`[Setup] In-stock target pool: ${selectedProductIds.length}`);
+
+    if (selectedProductIds.length === 0) {
+        console.warn('[Setup] No in-stock product IDs discovered. Test may not reach checkout path.');
+    }
+
+    console.log('');
+    return { selectedProductIds };
 }
 
-// ========== TEST SCENARIO ==========
 export default function (data) {
-    let journeySuccess = true;
+    let journeyHealthy = true;
+    let checkoutCompleted = false;
+    const selectedProductIds = data && Array.isArray(data.selectedProductIds)
+        ? data.selectedProductIds
+        : null;
 
-    // Login
-    group('Login', () => {
+    const loginOk = group('Login', () => {
         const start = Date.now();
         loginAttempts.add(1);
 
-        const res = http.post(`${app.baseURL}/login`,
-            { username: 'user', password: 'user123' },
-            { headers: headers.form, redirects: 0 }
+        const res = http.post(
+            `${app.baseURL}/login`,
+            { username: TEST_USER.username, password: TEST_USER.password },
+            {
+                headers: headers.form,
+                redirects: 0,
+                tags: { endpoint: 'login' },
+            }
         );
 
         loginDuration.add(Date.now() - start);
-        
-        if (!check(res, { 'login ok': (r) => r.status === 200 || r.status === 302 })) {
-            journeySuccess = false;
-            return; // Exit if login fails
-        }
+
+        const redirectLocation = String(res.headers.Location || res.headers.location || '');
+        return check(res, {
+            'login status is 200/302/303': (r) => r.status === 200 || r.status === 302 || r.status === 303,
+            'login not redirected back to /login': () => res.status === 200 || !redirectLocation.includes('/login'),
+        });
     });
+
+    if (!loginOk) {
+        sleep(1);
+        return;
+    }
 
     sleep(1 + Math.random());
 
-    // Browse
-    group('Browse', () => {
+    const browseOk = group('Browse', () => {
         const start = Date.now();
         browseAttempts.add(1);
 
-        const res = http.get(`${app.baseURL}/`);
-        browseDuration.add(Date.now() - start);
+        const res = http.get(`${app.baseURL}/`, {
+            tags: { endpoint: 'home' },
+        });
 
-        if (!check(res, { 'browse ok': (r) => r.status === 200 })) {
-            journeySuccess = false;
-        }
+        browseDuration.add(Date.now() - start);
+        return check(res, { 'browse ok': (r) => r.status === 200 });
     });
+
+    if (!browseOk) {
+        journeyHealthy = false;
+    }
 
     sleep(2 + Math.random() * 2);
 
-    // Add to Cart
-    group('Cart', () => {
+    const cartOk = group('Cart', () => {
         const start = Date.now();
         cartAttempts.add(1);
 
-        // Random product from ALL products (1-205) instead of just 1-10
-        // This distributes load evenly across entire catalog
-        const productId = Math.floor(Math.random() * 205) + 1;
-
-        const res = http.post(`${app.baseURL}/api/cart/add`,
-            JSON.stringify({ 
-                productId, 
-                quantity: 1 
-            }),
-            { headers: headers.json }
+        const res = http.post(
+            `${app.baseURL}/api/cart/add`,
+            JSON.stringify({ productId: pickProductIdFrom(selectedProductIds), quantity: 1 }),
+            {
+                headers: headers.json,
+                redirects: 0,
+                tags: { endpoint: 'cart_add' },
+                responseCallback: http.expectedStatuses(200, 302, 303, 400),
+            }
         );
 
         cartDuration.add(Date.now() - start);
+        const handled = check(res, {
+            'cart handled': (r) => r.status === 200 || isStockLimitResponse(r),
+            'cart no 5xx': (r) => r.status < 500,
+        });
 
-        if (!check(res, { 'cart ok': (r) => r.status === 200 })) {
-            journeySuccess = false;
+        if (res.status === 200) {
+            return true;
         }
+
+        if (isStockLimitResponse(res)) {
+            cartRejected.add(1);
+            return false;
+        }
+
+        return handled;
     });
+
+    if (!cartOk) {
+        journeyHealthy = false;
+        sleep(1);
+        return;
+    }
 
     sleep(1 + Math.random());
 
-    // Checkout
     group('Checkout', () => {
         const start = Date.now();
         checkoutAttempts.add(1);
 
-        const res = http.post(`${app.baseURL}/order/api/mock-pay`,
+        const res = http.post(
+            `${app.baseURL}/order/api/mock-pay`,
             JSON.stringify({}),
-            { 
+            {
                 headers: headers.json,
-                // Tell k6 that 400 is an EXPECTED response (not an error)
-                // This prevents 400 from being counted in http_req_failed
-                responseCallback: http.expectedStatuses(200, 400)
+                redirects: 0,
+                tags: { endpoint: 'checkout_mock_pay' },
+                responseCallback: http.expectedStatuses(200, 400),
             }
         );
 
         checkoutDuration.add(Date.now() - start);
 
-        // Accept both 200 (success) and 400 (stock out/insufficient funds)
-        if (!check(res, { 'checkout attempted': (r) => r.status === 200 || r.status === 400 })) {
-            journeySuccess = false;
+        const handled = check(res, {
+            'checkout status is 200/400': (r) => r.status === 200 || r.status === 400,
+            'checkout has no 5xx': (r) => r.status < 500,
+        });
+
+        if (!handled) {
+            journeyHealthy = false;
+            return;
+        }
+
+        if (res.status === 400) {
+            checkoutRejected.add(1);
+            return;
+        }
+
+        try {
+            const body = res.json();
+            const payloadOk = check(res, {
+                'checkout success has orderId': () => Boolean(body && body.orderId),
+            });
+
+            if (payloadOk) {
+                checkoutCompleted = true;
+            } else {
+                journeyHealthy = false;
+            }
+        } catch (_error) {
+            journeyHealthy = false;
         }
     });
 
-    if (journeySuccess) fullJourneySuccess.add(1);
-    
+    if (journeyHealthy && checkoutCompleted) {
+        fullJourneySuccess.add(1);
+    }
+
     sleep(2);
 }
 
-// ========== TEARDOWN ==========
-export function teardown(data) {
-    console.log(`\n✅ Load Test Complete - Mode: ${TEST_MODE.toUpperCase()}\n`);
+export function teardown() {
+    console.log(`\n[Teardown] Load Test Complete - mode=${TEST_MODE.toUpperCase()}\n`);
 }

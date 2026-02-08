@@ -13,6 +13,7 @@
     "report:allure": "allure generate allure-results -o allure-report --clean",
     "report:open": "allure open allure-report",
     "setup:stock": "node performance/helpers/setup-stock.js",
+    "test:perf:auth": "node scripts/run-k6.js performance/scripts/auth.k6.js",
     "test:perf:smoke": "node scripts/run-k6.js performance/scripts/smoke.k6.js",
     "test:perf:browse": "node scripts/run-k6.js performance/scripts/browse.k6.js",
     "test:perf:cart": "node scripts/run-k6.js performance/scripts/cart.k6.js",
