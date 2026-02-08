@@ -25,6 +25,14 @@ export class ForgotPasswordPage extends BasePage {
     await this.submitButton.click();
   }
 
+  getEmailInput(): Locator {
+    return this.emailInput;
+  }
+
+  getSubmitButton(): Locator {
+    return this.submitButton;
+  }
+
   async getMessageText(): Promise<string> {
     return await this.messageText.innerText();
   }

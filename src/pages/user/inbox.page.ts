@@ -75,6 +75,11 @@ export class InboxPage extends BasePage {
     return await this.inboxItems.count();
   }
 
+  async getLatestSubjectText(): Promise<string> {
+    await this.inboxItems.first().waitFor({ state: 'visible', timeout: 15_000 });
+    return await this.inboxItems.first().locator('.subject-text').innerText();
+  }
+
   async waitForEmailBody(): Promise<void> {
     await this.emailBody.waitFor({ state: 'visible' });
   }

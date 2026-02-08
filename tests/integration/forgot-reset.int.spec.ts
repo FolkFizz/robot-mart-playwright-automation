@@ -1,261 +1,343 @@
-﻿import { test, expect } from '@fixtures';
+import type { APIRequestContext, TestInfo } from '@playwright/test';
+import { Client } from 'pg';
+import { test, expect } from '@fixtures';
 import { authInputs, inboxSubjects } from '@data';
 import { routes } from '@config';
+import { disableChaos } from '@api';
 
 /**
  * =============================================================================
  * PASSWORD RESET INTEGRATION TESTS
  * =============================================================================
- * 
+ *
  * Test Scenarios:
  * ---------------
- * 1. Forgot Password Flow (UI â†’ Email â†’ Reset Link)
- * 2. Token Validation (Format, Expiry, Reuse)
- * 3. Security & Personalization
- * 
+ * 1. Forgot Password flow (UI -> Email -> Reset link)
+ * 2. Token validation (format, expiry, one-time use)
+ * 3. Security behavior (generic response, invalid route handling)
+ *
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (3 tests):
  *   - RESET-INT-P01: forgot password sends reset link to demo inbox
- *   - RESET-INT-P02: reset email has correct subject line
- *   - RESET-INT-P03: reset link is valid URL format
- * 
+ *   - RESET-INT-P02: reset email has expected subject pattern
+ *   - RESET-INT-P03: reset link uses valid URL and token format
+ *
  * NEGATIVE CASES (4 tests):
- *   - RESET-INT-N01: non-existent email shows success for security
- *   - RESET-INT-N02: invalid email format rejected
- *   - RESET-INT-N03: expired reset token rejected by verification endpoint
+ *   - RESET-INT-N01: non-existent email shows generic success message
+ *   - RESET-INT-N02: invalid email format blocked by HTML5 validation
+ *   - RESET-INT-N03: expired reset token is rejected
  *   - RESET-INT-N04: used reset token cannot be reused
- * 
+ *
  * EDGE CASES (5 tests):
- *   - RESET-INT-E01: multiple reset requests for same email
- *   - RESET-INT-E02: reset link contains valid token format
- *   - RESET-INT-E03: reset link from different browser/context works
- *   - RESET-INT-E04: password reset email contains clear reset instructions
- *   - RESET-INT-E05: reset token query param validation
- * 
+ *   - RESET-INT-E01: repeated reset requests rotate token for same user
+ *   - RESET-INT-E02: reset link contains hex token in route param
+ *   - RESET-INT-E03: reset link is usable from fresh browser context
+ *   - RESET-INT-E04: reset email body includes reset instructions
+ *   - RESET-INT-E05: query-param token route is not accepted
+ *
  * Business Rules Tested:
  * ----------------------
- * - Integration Points: Forgot Password Page â†’ Email Service â†’ Demo Inbox
- * - Security: One-time use tokens, expiry windows, secure link generation
- * - Reset Link Format: /reset-password/{token}
- * - Email Subject: Matches expected subject from inboxSubjects
- * - Demo Inbox Access: /demo-inbox (test utility page)
- * - Token Validation: Link contains valid reset-password route
- * 
+ * - Integration: Forgot Password page -> Email service -> Demo inbox
+ * - Link Format: /reset-password/{token}
+ * - Token Format: 64-char hex token generated server-side
+ * - Security: Generic response for unknown email, one-time token use
+ * - Expiry: Expired token must be rejected by reset page guard
+ *
  * =============================================================================
  */
+
+type ResetTokenRow = {
+  reset_password_token: string | null;
+  reset_password_expires: string | null;
+};
+
+const resetTokenPattern = /^[a-f0-9]{64}$/i;
+
+const getDatabaseUrl = (): string => {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl || databaseUrl.trim().length === 0) {
+    throw new Error('Missing DATABASE_URL for reset-token integration checks.');
+  }
+  return databaseUrl;
+};
+
+const resolveSsl = (databaseUrl: string) => {
+  try {
+    const url = new URL(databaseUrl);
+    const isLocal =
+      url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1' ||
+      url.hostname === '::1';
+    const sslMode = url.searchParams.get('sslmode');
+    if (!isLocal || sslMode === 'require') {
+      return { rejectUnauthorized: false };
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
+};
+
+const withDb = async <T>(run: (client: Client) => Promise<T>): Promise<T> => {
+  const databaseUrl = getDatabaseUrl();
+  const client = new Client({
+    connectionString: databaseUrl,
+    ssl: resolveSsl(databaseUrl)
+  });
+
+  await client.connect();
+  try {
+    return await run(client);
+  } finally {
+    await client.end();
+  }
+};
+
+const readResetTokenByEmail = async (email: string): Promise<string> => {
+  return await withDb(async (client) => {
+    const res = await client.query<ResetTokenRow>(
+      `SELECT reset_password_token, reset_password_expires
+       FROM users
+       WHERE email = $1`,
+      [email]
+    );
+
+    expect(res.rowCount).toBe(1);
+    const token = res.rows[0]?.reset_password_token ?? null;
+    expect(token).toBeTruthy();
+    expect(token ?? '').toMatch(resetTokenPattern);
+    return token as string;
+  });
+};
+
+const expireResetTokenByEmail = async (email: string): Promise<void> => {
+  await withDb(async (client) => {
+    const res = await client.query(
+      `UPDATE users
+       SET reset_password_expires = NOW() - INTERVAL '1 minute'
+       WHERE email = $1`,
+      [email]
+    );
+    expect(res.rowCount).toBe(1);
+  });
+};
+
+const registerIsolatedUser = async (
+  api: APIRequestContext,
+  testInfo: TestInfo
+): Promise<{ email: string }> => {
+  const unique = `${Date.now()}_${testInfo.workerIndex}_${Math.random().toString(36).slice(2, 8)}`;
+  const username = `reset_${unique}`.toLowerCase();
+  const email = `${username}@example.com`;
+  const password = 'Pass12345!';
+
+  const registerRes = await api.post(routes.register, {
+    form: {
+      username,
+      email,
+      password,
+      confirmPassword: password
+    },
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+  });
+
+  expect([200, 302, 303]).toContain(registerRes.status());
+  return { email };
+};
+
+const extractTokenFromLink = (link: string): string => {
+  const parsed = new URL(link, 'http://localhost');
+  expect(parsed.pathname).toContain(`${routes.resetPasswordBase}/`);
+
+  const token = parsed.pathname.split('/').filter(Boolean).pop() ?? '';
+  expect(token).toMatch(resetTokenPattern);
+  return token;
+};
 
 test.use({ seedData: true });
 
 test.describe('password reset integration @integration @auth', () => {
+  test.beforeAll(async () => {
+    await disableChaos();
+  });
 
   test.describe('positive cases', () => {
-
     test('RESET-INT-P01: forgot password sends reset link to demo inbox @integration @auth @regression', async ({ forgotPasswordPage, inboxPage }) => {
-      // Arrange & Act: Request password reset
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
 
-      // Act: Navigate to demo inbox
+      const message = (await forgotPasswordPage.getMessageText()).toLowerCase();
+      expect(message).toContain('inbox');
+
       await inboxPage.gotoDemo();
-
-      // Assert: Email received
-      const count = await inboxPage.getEmailCount();
-      expect(count).toBeGreaterThan(0);
-
-      // Assert: Email contains reset link
       await inboxPage.openEmailBySubject(inboxSubjects.resetPassword);
+
       const link = await inboxPage.getFirstEmailLinkHref();
-      expect(link ?? '').toContain(routes.resetPasswordBase);
-    });
-
-    test('RESET-INT-P02: reset email has correct subject line @integration @auth @smoke', async ({ forgotPasswordPage, inboxPage }) => {
-      // Arrange & Act: Request password reset
-      await forgotPasswordPage.goto();
-      await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
-
-      // Act: Check inbox
-      await inboxPage.gotoDemo();
-
-      // Assert: Email subject is correct
-      await inboxPage.openEmailBySubject(inboxSubjects.resetPassword);
-      const emailExists = await inboxPage.getEmailCount();
-      expect(emailExists).toBeGreaterThan(0);
-    });
-
-    test('RESET-INT-P03: reset link is valid URL format @integration @auth @regression', async ({ forgotPasswordPage, inboxPage }) => {
-      // Arrange & Act: Request reset
-      await forgotPasswordPage.goto();
-      await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
-
-      // Act: Get link from email
-      await inboxPage.gotoDemo();
-      await inboxPage.openEmailBySubject(inboxSubjects.resetPassword);
-      const link = await inboxPage.getFirstEmailLinkHref();
-
-      // Assert: Link is valid URL
       expect(link).toBeTruthy();
-      expect(() => new URL(link || '', 'http://localhost')).not.toThrow();
+      extractTokenFromLink(link ?? '');
+    });
+
+    test('RESET-INT-P02: reset email has expected subject pattern @integration @auth @smoke', async ({ forgotPasswordPage, inboxPage }) => {
+      await forgotPasswordPage.goto();
+      await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
+
+      await inboxPage.gotoDemo();
+      const subject = (await inboxPage.getLatestSubjectText()).toLowerCase();
+      expect(subject).toContain('reset');
+      expect(subject).toContain('password');
+    });
+
+    test('RESET-INT-P03: reset link uses valid URL and token format @integration @auth @regression', async ({ forgotPasswordPage, inboxPage }) => {
+      await forgotPasswordPage.goto();
+      await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
+
+      await inboxPage.gotoDemo();
+      await inboxPage.openEmailBySubject(inboxSubjects.resetPassword);
+      const link = await inboxPage.getFirstEmailLinkHref();
+
+      expect(link).toBeTruthy();
+      const parsed = new URL(link ?? '', 'http://localhost');
+      expect(parsed.pathname).toContain(routes.resetPasswordBase);
+      extractTokenFromLink(link ?? '');
     });
   });
 
   test.describe('negative cases', () => {
+    test('RESET-INT-N01: non-existent email shows generic success message @integration @auth @security @regression', async ({ forgotPasswordPage }) => {
+      const fakeEmail = `nonexistent-${Date.now()}@example.com`;
 
-    test('RESET-INT-N01: non-existent email shows success for security @integration @auth @security @regression', async ({ forgotPasswordPage }) => {
-      // Arrange: Use email that doesn't exist
-      const fakeEmail = 'nonexistent-' + Date.now() + '@example.com';
-
-      // Act: Request password reset
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(fakeEmail);
 
-      // Assert: Success message shown (security: don't reveal if email exists)  
-      // This prevents attackers from enumerating valid emails
-      // Note: Application shows success regardless of email existence (security best practice)
-      // We simply verify the page doesn't crash
-      const message = await forgotPasswordPage.getMessageText().catch(() => '');
-      expect(message.length).toBeGreaterThanOrEqual(0); // Should show some message
+      const message = (await forgotPasswordPage.getMessageText()).toLowerCase();
+      expect(message).toContain('if that email exists');
+
+      const error = (await forgotPasswordPage.getErrorText().catch(() => '')).trim();
+      expect(error).toBe('');
     });
 
-    test('RESET-INT-N02: invalid email format rejected @integration @auth @regression', async ({ forgotPasswordPage }) => {
-      // Arrange: Use invalid email format
-      const invalidEmail = 'not-an-email';
-
-      // Act: Try to fill invalid email and check HTML5 validation
+    test('RESET-INT-N02: invalid email format blocked by HTML5 validation @integration @auth @regression', async ({ page, forgotPasswordPage }) => {
       await forgotPasswordPage.goto();
-      
-      // Note: Since we can't access protected page property, we simplify this test
-      // The requestReset method should handle invalid emails appropriately
-      // In a real scenario, HTML5 validation would prevent form submission
-      test.skip(); // Skip if page object doesn't expose email input directly
+
+      const emailInput = forgotPasswordPage.getEmailInput();
+      await emailInput.fill('not-an-email');
+
+      const isValid = await emailInput.evaluate((el) => (el as HTMLInputElement).checkValidity());
+      expect(isValid).toBe(false);
+
+      await forgotPasswordPage.getSubmitButton().click();
+      await expect(page).toHaveURL(/\/forgot-password/);
+
+      const message = (await forgotPasswordPage.getMessageText().catch(() => '')).trim();
+      expect(message).toBe('');
     });
 
-    test('RESET-INT-N03: expired reset token rejected by verification endpoint @integration @auth @security @regression', async ({ api, page }) => {
-      // Arrange: Create expired token via test hook
-      const expiredTokenRes = await api.post('/api/test/create-expired-reset-token', {
-        data: { email: authInputs.duplicateEmail }
-      });
+    test('RESET-INT-N03: expired reset token is rejected @integration @auth @security @regression', async ({ api, page, forgotPasswordPage }, testInfo) => {
+      const user = await registerIsolatedUser(api, testInfo);
 
-      // Skip when environment does not expose test hook
-      if (expiredTokenRes.status() !== 200) {
-        test.skip();
-      }
-
-      const { token } = await expiredTokenRes.json();
-      expect(token).toBeTruthy();
-
-      // Act: Try to use expired token in reset page
-      await page.goto(routes.resetPassword(token));
-
-      // Assert: Expired token should not allow a valid reset flow
-      await page.waitForURL(/\/(login|reset-password)/, { timeout: 5000 });
-      const body = (await page.locator('body').innerText()).toLowerCase();
-      const redirectedToLogin = page.url().includes('/login');
-      const hasTokenError = body.includes('expired') || body.includes('invalid') || body.includes('error');
-      expect(redirectedToLogin || hasTokenError).toBe(true);
-    });
-
-    test('RESET-INT-N04: used reset token cannot be reused @integration @auth @security @regression', async ({ forgotPasswordPage, inboxPage }) => {
-      // Arrange: Request reset
       await forgotPasswordPage.goto();
-      await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
-      
-      // Get token link from email
-      await inboxPage.gotoDemo();
-      await inboxPage.openEmailBySubject(inboxSubjects.resetPassword);
-      const link = await inboxPage.getFirstEmailLinkHref();
-      
-      // Placeholder validation: reset link should exist and be non-empty
-      expect(link).toBeTruthy();
+      await forgotPasswordPage.requestReset(user.email);
+      const token = await readResetTokenByEmail(user.email);
+
+      await expireResetTokenByEmail(user.email);
+      await page.goto(routes.resetPassword(token), { waitUntil: 'domcontentloaded' });
+
+      await expect(page.locator('input[name="username"], [data-testid="login-username"]')).toBeVisible();
+      await expect(page.locator('.error')).toContainText(/invalid|expired/i);
+    });
+
+    test('RESET-INT-N04: used reset token cannot be reused @integration @auth @security @regression', async ({ api, page, forgotPasswordPage }, testInfo) => {
+      const user = await registerIsolatedUser(api, testInfo);
+
+      await forgotPasswordPage.goto();
+      await forgotPasswordPage.requestReset(user.email);
+      const token = await readResetTokenByEmail(user.email);
+
+      await page.goto(routes.resetPassword(token), { waitUntil: 'domcontentloaded' });
+      await page.fill('input[name="password"]', 'NewPass123!');
+      await page.fill('input[name="confirmPassword"]', 'NewPass123!');
+      await page.click('button[type="submit"]');
+
+      await expect(page.locator('.success')).toContainText(/reset successful|please login/i);
+
+      await page.goto(routes.resetPassword(token), { waitUntil: 'domcontentloaded' });
+      await expect(page.locator('input[name="username"], [data-testid="login-username"]')).toBeVisible();
+      await expect(page.locator('.error')).toContainText(/invalid|expired/i);
     });
   });
 
   test.describe('edge cases', () => {
+    test('RESET-INT-E01: repeated reset requests rotate token for same user @integration @auth @regression', async ({ api, forgotPasswordPage }, testInfo) => {
+      const user = await registerIsolatedUser(api, testInfo);
 
-    test('RESET-INT-E01: multiple reset requests for same email @integration @auth @regression', async ({ forgotPasswordPage, inboxPage }) => {
-      // Arrange: Request multiple resets in short time
       await forgotPasswordPage.goto();
-      await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
-      
-      // Act: Request again immediately
+      await forgotPasswordPage.requestReset(user.email);
+      const tokenFirst = await readResetTokenByEmail(user.email);
+
       await forgotPasswordPage.goto();
-      await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
+      await forgotPasswordPage.requestReset(user.email);
+      const tokenSecond = await readResetTokenByEmail(user.email);
 
-      // Act: Check inbox
-      await inboxPage.gotoDemo();
-
-      // Assert: At least one email received (may be rate limited or allow multiple)
-      const count = await inboxPage.getEmailCount();
-      expect(count).toBeGreaterThan(0);
+      expect(tokenFirst).toMatch(resetTokenPattern);
+      expect(tokenSecond).toMatch(resetTokenPattern);
+      expect(tokenSecond).not.toBe(tokenFirst);
     });
 
-    test('RESET-INT-E02: reset link contains valid token format @integration @auth @smoke', async ({ forgotPasswordPage, inboxPage }) => {
-      // Arrange & Act: Request password reset
+    test('RESET-INT-E02: reset link contains hex token in route param @integration @auth @smoke', async ({ forgotPasswordPage, inboxPage }) => {
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
 
-      // Act: Check email link format
       await inboxPage.gotoDemo();
       await inboxPage.openEmailBySubject(inboxSubjects.resetPassword);
       const link = await inboxPage.getFirstEmailLinkHref();
 
-      // Assert: Link format is valid and contains reset route
       expect(link).toBeTruthy();
-      expect(link ?? '').toContain(routes.resetPasswordBase);
-      // Token should be present (any non-empty string after route)
-      const url = new URL(link || '', 'http://localhost');
-      expect(url.pathname.length).toBeGreaterThan(routes.resetPasswordBase.length);
+      const token = extractTokenFromLink(link ?? '');
+      expect(token).toMatch(resetTokenPattern);
     });
 
-    test('RESET-INT-E03: reset link from different browser/context works @integration @auth @regression', async ({ browser, forgotPasswordPage, inboxPage }) => {
-      // Arrange: Request in Context A
+    test('RESET-INT-E03: reset link is usable from fresh browser context @integration @auth @regression', async ({ api, browser, forgotPasswordPage }, testInfo) => {
+      const user = await registerIsolatedUser(api, testInfo);
+
       await forgotPasswordPage.goto();
-      await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
-      
-      // Act: Get link
-      await inboxPage.gotoDemo();
-      await inboxPage.openEmailBySubject(inboxSubjects.resetPassword);
-      const link = await inboxPage.getFirstEmailLinkHref();
-      
-      if (link) {
-        // Act: Open in Context B (new clean context)
-        const contextB = await browser.newContext();
-        const pageB = await contextB.newPage();
-        await pageB.goto(link);
-        
-        // Assert: Page loads successfully (no session requirement)
-        const title = await pageB.title();
-        expect(title).toBeTruthy();
-        
+      await forgotPasswordPage.requestReset(user.email);
+      const token = await readResetTokenByEmail(user.email);
+      const link = routes.resetPassword(token);
+
+      const contextB = await browser.newContext();
+      const pageB = await contextB.newPage();
+      try {
+        await pageB.goto(link, { waitUntil: 'domcontentloaded' });
+        await expect(pageB.locator('input[name="password"]')).toBeVisible();
+        await expect(pageB.locator('input[name="confirmPassword"]')).toBeVisible();
+      } finally {
         await contextB.close();
       }
     });
 
-    test('RESET-INT-E04: password reset email contains clear reset instructions @integration @auth @regression', async ({ forgotPasswordPage, inboxPage }) => {
-      // Arrange
+    test('RESET-INT-E04: reset email body includes reset instructions @integration @auth @regression', async ({ forgotPasswordPage, inboxPage }) => {
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
-      
-      // Act
+
       await inboxPage.gotoDemo();
       await inboxPage.openEmailBySubject(inboxSubjects.resetPassword);
-      const body = await inboxPage.getEmailBodyText();
-      
-      // Assert: Email contains reset instructions
-      expect(body.toLowerCase()).toContain('reset');
-      expect(body.toLowerCase()).toContain('password');
+      const body = (await inboxPage.getEmailBodyText()).toLowerCase();
+
+      expect(body).toContain('you requested to reset your password');
+      expect(body).toContain("if you didn't ask for this");
     });
 
-    test('RESET-INT-E05: reset token query param validation @integration @auth @security @regression', async ({ page }) => {
-      // Arrange: Construct URL with invalid token chars
+    test('RESET-INT-E05: query-param token route is not accepted @integration @auth @security @regression', async ({ page }) => {
       const invalidUrl = `${routes.resetPasswordBase}?token=INVALID_CHARS_!@#$%^`;
-      
-      // Act
-      await page.goto(invalidUrl);
-      
-      // Assert: Should handle gracefully (error message or redirect)
-      const content = await page.locator('body').innerText();
-      expect(content.length).toBeGreaterThan(0);
+
+      const res = await page.goto(invalidUrl, { waitUntil: 'domcontentloaded' });
+      expect(res).not.toBeNull();
+      expect(res?.status()).toBe(404);
+
+      const body = (await page.locator('body').innerText()).toLowerCase();
+      expect(body).toContain('404');
+      expect(body).toContain('not found');
     });
   });
 });

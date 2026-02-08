@@ -1,213 +1,228 @@
-﻿import { test, expect, loginAndSyncSession } from '@fixtures';
+import type { APIRequestContext } from '@playwright/test';
+import { test, expect, loginAndSyncSession, seedCart, resetAndSeed } from '@fixtures';
+import { disableChaos, loginAsUser } from '@api';
+import { routes } from '@config';
 import { seededProducts } from '@data';
 
 /**
  * =============================================================================
  * PRODUCT-CART INTEGRATION TESTS
  * =============================================================================
- * 
+ *
  * Test Scenarios:
  * ---------------
- * 1. Product Page â†’ Cart Data Transfer Accuracy
- * 2. Product Details Consistency (Name, Price, Image)
- * 3. Quantity Selection Preservation
- * 4. Stock Validation on Add to Cart
- * 
+ * 1. Product page to cart data transfer (price, name, quantity)
+ * 2. Stock validation on cart add API
+ * 3. Visual consistency for product image between pages
+ *
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (3 tests):
- *   - PROD-CART-INT-P01: product price matches cart price exactly
- *   - PROD-CART-INT-P02: product name transfers correctly to cart
- *   - PROD-CART-INT-P03: selected quantity preserved in cart
- * 
+ *   - PROD-CART-INT-P01: product price matches cart unit price
+ *   - PROD-CART-INT-P02: product name transfers correctly to cart row
+ *   - PROD-CART-INT-P03: selected quantity is preserved when added to cart
+ *
  * NEGATIVE CASES (2 tests):
- *   - PROD-CART-INT-N01: cannot add out-of-stock product via API
- *   - PROD-CART-INT-N02: quantity exceeding stock rejected
- * 
+ *   - PROD-CART-INT-N01: out-of-stock product cannot be added via API
+ *   - PROD-CART-INT-N02: quantity above current stock is rejected
+ *
  * EDGE CASES (2 tests):
- *   - PROD-CART-INT-E01: product image URL consistent between pages
- *   - PROD-CART-INT-E02: multiple additions accumulate quantity correctly
- * 
+ *   - PROD-CART-INT-E01: product image mapping remains consistent in cart
+ *   - PROD-CART-INT-E02: repeated add operations accumulate quantity and total
+ *
  * Business Rules Tested:
  * ----------------------
- * - Integration Point: Product Display â†’ Cart Storage
- * - Data Consistency: Price, name, quantity must match exactly
- * - Stock Validation: Cannot add out-of-stock or excessive quantities
- * - Image Transfer: Product image URL preserved in cart
- * - Quantity Logic: Multiple adds should accumulate, not replace
- * 
+ * - Integration Point: Product detail UI <-> Cart storage/API
+ * - Data Consistency: Name, unit price, and quantity must remain consistent
+ * - Stock Rule: Add-to-cart is rejected when stock is insufficient
+ * - Quantity Rule: Multiple add actions accumulate, not replace
+ * - Image Rule: Cart image should represent the same product image set
+ *
  * =============================================================================
  */
 
-test.use({ seedData: true });
+type ProductDetailResponse = {
+  ok: boolean;
+  product: {
+    id: number;
+    name: string;
+    stock: number;
+    image_set?: string;
+    price: string | number;
+  };
+};
+
+type CartMutationResponse = {
+  status?: 'success' | 'error';
+  message?: string;
+  totalItems?: number;
+};
+
+type CartStateResponse = {
+  ok: boolean;
+  cart: Array<{
+    id: number;
+    name: string;
+    price: number | string;
+    quantity: number;
+    image_set?: string;
+  }>;
+};
+
+const FIXED_STOCK = 20;
+const firstProduct = seededProducts[0];
+const secondProduct = seededProducts[1];
+
+const getProductDetail = async (api: APIRequestContext, productId: number) => {
+  const res = await api.get(routes.api.productDetail(productId), {
+    headers: { Accept: 'application/json' }
+  });
+  expect(res.status()).toBe(200);
+
+  const body = (await res.json()) as ProductDetailResponse;
+  expect(body.ok).toBe(true);
+  expect(body.product.id).toBe(productId);
+  return body.product;
+};
+
+const getProductStock = async (api: APIRequestContext, productId: number): Promise<number> => {
+  const product = await getProductDetail(api, productId);
+  expect(typeof product.stock).toBe('number');
+  return product.stock;
+};
+
+const addToCartRaw = async (api: APIRequestContext, productId: number, quantity: number) => {
+  const res = await api.post(routes.api.cartAdd, {
+    data: { productId, quantity },
+    headers: { Accept: 'application/json' },
+    maxRedirects: 0
+  });
+
+  const body = (await res.json().catch(() => ({}))) as CartMutationResponse;
+  return { status: res.status(), body };
+};
+
+const getCartItem = async (api: APIRequestContext, productId: number) => {
+  const res = await api.get(routes.api.cart, {
+    headers: { Accept: 'application/json' }
+  });
+  expect(res.status()).toBe(200);
+
+  const body = (await res.json()) as CartStateResponse;
+  expect(body.ok).toBe(true);
+  return body.cart.find((item) => item.id === productId);
+};
 
 test.describe('product to cart integration @integration @cart', () => {
-
-  const firstProduct = seededProducts[0];   // Rusty-Bot 101
-  const secondProduct = seededProducts[1];  // Helper-X
+  test.beforeAll(async () => {
+    await disableChaos();
+  });
 
   test.beforeEach(async ({ api, page }) => {
+    await resetAndSeed(FIXED_STOCK);
     await loginAndSyncSession(api, page);
+    await seedCart(api, []);
   });
 
   test.describe('positive cases', () => {
-
-    test('PROD-CART-INT-P01: product price matches cart price exactly @integration @cart @smoke', async ({ homePage, productPage, cartPage }) => {
-      // Arrange: Navigate to product page
+    test('PROD-CART-INT-P01: product price matches cart unit price @integration @cart @smoke', async ({ homePage, productPage, cartPage }) => {
       await homePage.goto();
       await homePage.clickProductById(firstProduct.id);
 
-      // Get price from product page
       const productPrice = await productPage.getPriceValue();
-
-      // Act: Add to cart
       await productPage.addToCart();
 
-      // Navigate to cart
       await cartPage.goto();
-
-      // Assert: Cart price matches product price
       const cartPrice = await cartPage.getItemPriceValue(firstProduct.id);
       expect(cartPrice).toBeCloseTo(productPrice, 2);
     });
 
-    test('PROD-CART-INT-P02: product name transfers correctly to cart @integration @cart @regression', async ({ homePage, productPage, cartPage }) => {
-      // Arrange: Navigate to product page
+    test('PROD-CART-INT-P02: product name transfers correctly to cart row @integration @cart @regression', async ({ homePage, productPage, cartPage }) => {
       await homePage.goto();
       await homePage.clickProductById(secondProduct.id);
 
-      // Get product name from product page
       const productName = await productPage.getTitle();
-
-      // Act: Add to cart
       await productPage.addToCart();
 
-      // Navigate to cart
       await cartPage.goto();
-
-      // Assert: Cart item name matches product name
       const cartItemName = await cartPage.getItemName(secondProduct.id);
       expect(cartItemName).toContain(productName);
     });
 
-    test('PROD-CART-INT-P03: selected quantity preserved in cart @integration @cart @regression', async ({ api, homePage, productPage, cartPage }) => {
-      // Arrange: Clear cart first
-      await api.post('/api/cart/clear');
-
-      // Navigate to product page
+    test('PROD-CART-INT-P03: selected quantity is preserved when added to cart @integration @cart @regression', async ({ homePage, productPage, cartPage }) => {
       await homePage.goto();
       await homePage.clickProductById(firstProduct.id);
 
-      // Act: Add to cart multiple times (quantity should accumulate)
-      await productPage.addToCart();
+      await productPage.setQuantity(2);
       await productPage.addToCart();
 
-      // Navigate to cart
       await cartPage.goto();
-
-      // Assert: Quantity is 2 (accumulated)
       const quantity = await cartPage.getItemQuantity(firstProduct.id);
       expect(quantity).toBe(2);
     });
   });
 
   test.describe('negative cases', () => {
+    test('PROD-CART-INT-N01: out-of-stock product cannot be added via API @integration @cart @regression', async ({ api }) => {
+      await resetAndSeed(0);
+      await loginAsUser(api);
+      await seedCart(api, []);
 
-    test('PROD-CART-INT-N01: cannot add out-of-stock product via API @integration @cart @regression', async ({ api }) => {
-      // Arrange: Try to add product with 0 stock (if any)
-      // Using API to simulate out-of-stock scenario
-      
-      // First, get product with low/no stock
-
-      
-      // Find product with 0 stock or use seeded product and set stock to 0
-      const productId = firstProduct.id;
-
-      // Act: Try to add excessive quantity that would exceed stock
-      const res = await api.post('/api/cart/add', {
-        data: { productId: productId, quantity: 999 }
-      });
-
-      // Assert: Request rejected
-      expect(res.status()).toBe(400);
-      const body = await res.json();
-      expect(body.status).toBe('error');
-      expect(body.message).toMatch(/stock|limit/i);
+      const add = await addToCartRaw(api, firstProduct.id, 1);
+      expect(add.status).toBe(400);
+      expect(add.body.status).toBe('error');
+      expect((add.body.message ?? '').toLowerCase()).toContain('stock');
     });
 
-    test('PROD-CART-INT-N02: quantity exceeding stock rejected @integration @cart @regression', async ({ api }) => {
-      // Arrange: Get product current stock
-      const productRes = await api.get(`/api/products/${firstProduct.id}`);
-      const product = await productRes.json();
-      const currentStock = product.stock;
+    test('PROD-CART-INT-N02: quantity above current stock is rejected @integration @cart @regression', async ({ api }) => {
+      const currentStock = await getProductStock(api, firstProduct.id);
+      expect(currentStock).toBeGreaterThan(0);
 
-      // Act: Try to add more than available stock
-      const res = await api.post('/api/cart/add', {
-        data: { productId: firstProduct.id, quantity: currentStock + 100 }
-      });
-
-      // Assert: Request rejected with stock limit error
-      expect(res.status()).toBe(400);
-      const body = await res.json();
-      expect(body.status).toBe('error');
-      expect(body.message).toContain('Stock Limit Reached');
+      const add = await addToCartRaw(api, firstProduct.id, currentStock + 1);
+      expect(add.status).toBe(400);
+      expect(add.body.status).toBe('error');
+      expect((add.body.message ?? '').toLowerCase()).toContain('stock');
     });
   });
 
   test.describe('edge cases', () => {
-
-    test('PROD-CART-INT-E01: product image URL consistent between pages @integration @cart @regression', async ({ page, homePage, productPage, cartPage }) => {
-      // Arrange: Navigate to product
+    test('PROD-CART-INT-E01: product image mapping remains consistent in cart @integration @cart @regression', async ({ api, page, homePage, productPage }) => {
       await homePage.goto();
       await homePage.clickProductById(firstProduct.id);
 
-      // Get product image from product page
       const productImage = await page
-        .locator('[data-testid="product-image"], .product-image img, .product-detail img, img')
+        .locator('[data-testid="product-image"], .product-image img, .product-detail img')
         .first()
-        .getAttribute('src')
-        .catch(() => null);
+        .getAttribute('src');
 
-      // Act: Add to cart
+      const product = await getProductDetail(api, firstProduct.id);
+      const imageSet = (product.image_set ?? '').toLowerCase();
+
       await productPage.addToCart();
-      await cartPage.goto();
+      const cartItem = await getCartItem(api, firstProduct.id);
 
-      // Assert: If image exists on product page, verify it's in cart
-      if (productImage) {
-        const cartImage = await page
-          .locator(`[data-testid="cart-item-${firstProduct.id}"] img, tr[data-testid="cart-item-${firstProduct.id}"] img, .cart-item img, img`)
-          .first()
-          .getAttribute('src')
-          .catch(() => null);
-        
-        if (cartImage && productImage) {
-          // Images should reference same product
-          expect(cartImage).toContain(firstProduct.id.toString());
-        }
+      expect(productImage).toBeTruthy();
+      expect(cartItem).toBeTruthy();
+
+      if (productImage && cartItem && imageSet) {
+        expect(productImage.toLowerCase()).toContain(imageSet);
+        expect((cartItem.image_set ?? '').toLowerCase()).toBe(imageSet);
       }
     });
 
-    test('PROD-CART-INT-E02: multiple additions accumulate quantity correctly @integration @cart @regression', async ({ api, homePage, productPage, cartPage }) => {
-      // Arrange: Clear cart
-      await api.post('/api/cart/clear');
-
-      // Navigate to product
+    test('PROD-CART-INT-E02: repeated add operations accumulate quantity and total @integration @cart @regression', async ({ homePage, productPage, cartPage }) => {
       await homePage.goto();
       await homePage.clickProductById(secondProduct.id);
 
-      // Act: Add to cart 3 times
       await productPage.addToCart();
       await productPage.addToCart();
       await productPage.addToCart();
 
-      // Navigate to cart
       await cartPage.goto();
 
-      // Assert: Quantity accumulated to 3
       const quantity = await cartPage.getItemQuantity(secondProduct.id);
       expect(quantity).toBe(3);
 
-      // Assert: Total price = unit price Ã— 3
       const itemTotal = await cartPage.getItemTotalValue(secondProduct.id);
       const unitPrice = await cartPage.getItemPriceValue(secondProduct.id);
       expect(itemTotal).toBeCloseTo(unitPrice * 3, 2);

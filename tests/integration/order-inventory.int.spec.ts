@@ -1,272 +1,295 @@
-﻿import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
+import type { APIRequestContext } from '@playwright/test';
+import { test, expect, seedCart, resetAndSeed } from '@fixtures';
+import { createApiContext, disableChaos, loginAsUser } from '@api';
+import { routes } from '@config';
 import { seededProducts } from '@data';
 
 /**
  * =============================================================================
  * ORDER-INVENTORY INTEGRATION TESTS
  * =============================================================================
- * 
+ *
  * Test Scenarios:
  * ---------------
- * 1. Order Creation â†’ Stock Deduction
- * 2. Stock Accuracy vs Order Quantity
- * 3. Concurrent Order Handling (Race Conditions)
- * 4. Failed Order â†’ Stock Restoration
- * 
+ * 1. Order creation to stock deduction
+ * 2. Stock deduction accuracy vs ordered quantity
+ * 3. Out-of-stock and over-limit validations
+ * 4. Concurrent checkout and stale-cart validation
+ *
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (3 tests):
  *   - ORD-INV-INT-P01: stock decreases after successful order
- *   - ORD-INV-INT-P02: stock reduction matches order quantity
- *   - ORD-INV-INT-P03: order only created when stock available
- * 
+ *   - ORD-INV-INT-P02: stock reduction equals ordered quantity
+ *   - ORD-INV-INT-P03: order is created when quantity is within stock
+ *
  * NEGATIVE CASES (2 tests):
- *   - ORD-INV-INT-N01: insufficient stock prevents order creation
- *   - ORD-INV-INT-N02: zero stock blocks checkout
- * 
+ *   - ORD-INV-INT-N01: cart rejects quantity above available stock
+ *   - ORD-INV-INT-N02: zero stock blocks adding and checkout
+ *
  * EDGE CASES (2 tests):
- *   - ORD-INV-INT-E01: concurrent orders validate stock correctly
- *   - ORD-INV-INT-E02: stock validates against current inventory at checkout
- * 
+ *   - ORD-INV-INT-E01: concurrent orders cannot oversell inventory
+ *   - ORD-INV-INT-E02: checkout revalidates stale cart against current stock
+ *
  * Business Rules Tested:
  * ----------------------
- * - Integration Point: Order Service â†” Inventory Service
- * - Stock Atomicity: Deduction happens atomically with order creation
- * - Race Condition Prevention: Concurrent orders can't oversell
- * - Data Consistency: Order quantity = Stock deduction amount
- * - Business Logic: Stock validation happens at checkout, not just cart
- * 
+ * - Integration Point: Order service <-> Inventory service
+ * - Deduction Rule: successful order deducts stock atomically
+ * - Validation Rule: cart and checkout both enforce stock constraints
+ * - Concurrency Rule: only one of competing oversubscribed orders succeeds
+ * - Consistency Rule: deducted amount equals purchased quantity
+ *
  * =============================================================================
  */
 
-test.use({ seedData: true });
+type ProductDetailResponse = {
+  ok: boolean;
+  product: {
+    id: number;
+    name: string;
+    stock: number;
+    price: string | number;
+  };
+};
+
+type CartMutationResponse = {
+  status?: 'success' | 'error';
+  message?: string;
+  totalItems?: number;
+};
+
+type OrderCreateResponse = {
+  status?: 'success' | 'error';
+  orderId?: string;
+  message?: string;
+  error?: {
+    message?: string;
+  };
+};
+
+const FIXED_STOCK = 20;
+const productId = seededProducts[0].id;
+
+const extractMessage = (body: CartMutationResponse | OrderCreateResponse): string => {
+  if (typeof body.message === 'string') return body.message;
+  if ('error' in body && typeof body.error?.message === 'string') return body.error.message;
+  return '';
+};
+
+const getProductStock = async (api: APIRequestContext, id: number): Promise<number> => {
+  const res = await api.get(routes.api.productDetail(id), {
+    headers: { Accept: 'application/json' }
+  });
+  expect(res.status()).toBe(200);
+
+  const body = (await res.json()) as ProductDetailResponse;
+  expect(body.ok).toBe(true);
+  expect(body.product.id).toBe(id);
+  expect(typeof body.product.stock).toBe('number');
+  return body.product.stock;
+};
+
+const addToCartRaw = async (api: APIRequestContext, id: number, quantity: number) => {
+  const res = await api.post(routes.api.cartAdd, {
+    data: { productId: id, quantity },
+    headers: { Accept: 'application/json' },
+    maxRedirects: 0
+  });
+
+  const body = (await res.json().catch(() => ({}))) as CartMutationResponse;
+  return { status: res.status(), body };
+};
+
+const createOrderFromCart = async (api: APIRequestContext) => {
+  const res = await api.post(routes.api.orderCreate, {
+    data: { items: [] },
+    headers: { Accept: 'application/json' },
+    maxRedirects: 0
+  });
+
+  const body = (await res.json().catch(() => ({}))) as OrderCreateResponse;
+  return { status: res.status(), body };
+};
+
+const createIsolatedUserContext = async (label: string): Promise<APIRequestContext> => {
+  const ctx = await createApiContext();
+  const token = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${label}`;
+  const username = `ordinv_${token}`;
+  const email = `${username}@example.com`;
+  const password = 'Pass12345!';
+
+  const registerRes = await ctx.post(routes.register, {
+    form: { username, email, password, confirmPassword: password },
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    maxRedirects: 0
+  });
+  expect([200, 302, 303]).toContain(registerRes.status());
+
+  const loginRes = await ctx.post(routes.login, {
+    form: { username, password },
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    maxRedirects: 0
+  });
+  expect([200, 302, 303]).toContain(loginRes.status());
+
+  return ctx;
+};
 
 test.describe('order to inventory integration @integration @orders @inventory', () => {
+  test.beforeAll(async () => {
+    await disableChaos();
+  });
 
-  const testProduct = seededProducts[0]; // Rusty-Bot 101
-
-  test.beforeEach(async ({ api, page }) => {
-    await loginAndSyncSession(api, page);
+  test.beforeEach(async ({ api }) => {
+    await resetAndSeed(FIXED_STOCK);
+    await loginAsUser(api);
+    await seedCart(api, []);
   });
 
   test.describe('positive cases', () => {
-
     test('ORD-INV-INT-P01: stock decreases after successful order @integration @orders @smoke @destructive', async ({ api }) => {
-      // Arrange: Get current stock level
-      const productBeforeRes = await api.get(`/api/products/${testProduct.id}`);
-      const productBefore = await productBeforeRes.json();
-      const stockBefore = productBefore.stock;
+      const stockBefore = await getProductStock(api, productId);
+      expect(stockBefore).toBe(FIXED_STOCK);
 
-      // Arrange: Add product to cart
-      await seedCart(api, [{ id: testProduct.id, quantity: 1 }]);
+      await seedCart(api, [{ id: productId, quantity: 1 }]);
 
-      // Act: Create order (mock payment)
-      const orderRes = await api.post('/api/orders/mock-pay', {
-        data: {
-          shippingAddress: 'Test Address 123',
-          billingAddress: 'Test Address 123'
-        }
-      });
+      const order = await createOrderFromCart(api);
+      expect(order.status).toBe(200);
+      expect(order.body.status).toBe('success');
+      expect(order.body.orderId).toMatch(/^ORD-/);
 
-      // Skip if mock payment not available
-      if (orderRes.status() !== 200) {
-        test.skip();
-      }
-
-      // Assert: Order created successfully
-      const orderBody = await orderRes.json();
-      expect(orderBody.status).toBe('success');
-
-      // Assert: Stock decreased by 1
-      const productAfterRes = await api.get(`/api/products/${testProduct.id}`);
-      const productAfter = await productAfterRes.json();
-      const stockAfter = productAfter.stock;
-
+      const stockAfter = await getProductStock(api, productId);
       expect(stockAfter).toBe(stockBefore - 1);
     });
 
-    test('ORD-INV-INT-P02: stock reduction matches order quantity @integration @orders @regression @destructive', async ({ api }) => {
-      // Arrange: Get current stock
-      const productBeforeRes = await api.get(`/api/products/${testProduct.id}`);
-      const productBefore = await productBeforeRes.json();
-      const stockBefore = productBefore.stock;
-
-      // Arrange: Add multiple quantity to cart
+    test('ORD-INV-INT-P02: stock reduction equals ordered quantity @integration @orders @regression @destructive', async ({ api }) => {
       const orderQuantity = 3;
-      await seedCart(api, [{ id: testProduct.id, quantity: orderQuantity }]);
+      const stockBefore = await getProductStock(api, productId);
+      expect(stockBefore).toBeGreaterThanOrEqual(orderQuantity);
 
-      // Act: Create order
-      const orderRes = await api.post('/api/orders/mock-pay', {
-        data: {
-          shippingAddress: 'Test Address 123',
-          billingAddress: 'Test Address 123'
-        }
-      });
+      await seedCart(api, [{ id: productId, quantity: orderQuantity }]);
 
-      if (orderRes.status() !== 200) {
-        test.skip();
-      }
+      const order = await createOrderFromCart(api);
+      expect(order.status).toBe(200);
+      expect(order.body.status).toBe('success');
 
-      // Assert: Stock decreased by exact order quantity
-      const productAfterRes = await api.get(`/api/products/${testProduct.id}`);
-      const productAfter = await productAfterRes.json();
-      const stockAfter = productAfter.stock;
-
+      const stockAfter = await getProductStock(api, productId);
       expect(stockAfter).toBe(stockBefore - orderQuantity);
     });
 
-    test('ORD-INV-INT-P03: order only created when stock available @integration @orders @regression @destructive', async ({ api }) => {
-      // Arrange: Get product with available stock
-      const productRes = await api.get(`/api/products/${testProduct.id}`);
-      const product = await productRes.json();
-      
-      // Only test if stock exists
-      if (product.stock <= 0) {
-        test.skip();
-      }
+    test('ORD-INV-INT-P03: order is created when quantity is within stock @integration @orders @regression @destructive', async ({ api }) => {
+      const stockBefore = await getProductStock(api, productId);
+      expect(stockBefore).toBeGreaterThan(0);
 
-      // Arrange: Add 1 item to cart (within stock limit)
-      await seedCart(api, [{ id: testProduct.id, quantity: 1 }]);
+      await seedCart(api, [{ id: productId, quantity: stockBefore }]);
 
-      // Act: Create order
-      const orderRes = await api.post('/api/orders/mock-pay', {
-        data: {
-          shippingAddress: 'Test Address 123',
-          billingAddress: 'Test Address 123'
-        }
-      });
+      const order = await createOrderFromCart(api);
+      expect(order.status).toBe(200);
+      expect(order.body.status).toBe('success');
+      expect(order.body.orderId).toBeTruthy();
 
-      // Assert: Order created successfully
-      expect(orderRes.status()).toBe(200);
-      const body = await orderRes.json();
-      expect(body.status).toBe('success');
-      expect(body.orderId).toBeTruthy();
+      const stockAfter = await getProductStock(api, productId);
+      expect(stockAfter).toBe(0);
     });
   });
 
   test.describe('negative cases', () => {
+    test('ORD-INV-INT-N01: cart rejects quantity above available stock @integration @orders @regression @destructive', async ({ api }) => {
+      const currentStock = await getProductStock(api, productId);
+      const excessiveQuantity = currentStock + 1;
 
-    test('ORD-INV-INT-N01: insufficient stock prevents order creation @integration @orders @regression @destructive', async ({ api }) => {
-      // Arrange: Get current stock
-      const productRes = await api.get(`/api/products/${testProduct.id}`);
-      const product = await productRes.json();
-      const currentStock = product.stock;
-
-      // Add quantity exceeding stock to cart
-      const excessiveQuantity = currentStock + 50;
-      const addRes = await api.post('/api/cart/add', {
-        data: { productId: testProduct.id, quantity: excessiveQuantity }
-      });
-
-      // Assert: Cannot add excessive quantity to cart
-      expect(addRes.status()).toBe(400);
-      const addBody = await addRes.json();
-      expect(addBody.status).toBe('error');
-      expect(addBody.message).toMatch(/stock|limit/i);
+      const add = await addToCartRaw(api, productId, excessiveQuantity);
+      expect(add.status).toBe(400);
+      expect(add.body.status).toBe('error');
+      expect(extractMessage(add.body).toLowerCase()).toContain('stock');
     });
 
-    test('ORD-INV-INT-N02: zero stock blocks checkout @integration @orders @regression @destructive', async ({ api }) => {
-      // Note: This test validates that checkout validates stock
-      // In real scenario, products with 0 stock shouldn't be in cart
-      
-      // Arrange: Try to create order with product (validation should happen)
-      await seedCart(api, [{ id: testProduct.id, quantity: 1 }]);
+    test('ORD-INV-INT-N02: zero stock blocks adding and checkout @integration @orders @regression @destructive', async ({ api }) => {
+      const currentStock = await getProductStock(api, productId);
+      expect(currentStock).toBeGreaterThan(0);
 
-      // Get current stock
-      const productRes = await api.get(`/api/products/${testProduct.id}`);
-      const product = await productRes.json();
+      await seedCart(api, [{ id: productId, quantity: currentStock }]);
 
-      // If stock exists, order should succeed
-      // If stock is 0, order should fail
-      const orderRes = await api.post('/api/orders/mock-pay', {
-        data: {
-          shippingAddress: 'Test Address 123',
-          billingAddress: 'Test Address 123'
-        }
-      });
+      const depletionOrder = await createOrderFromCart(api);
+      expect(depletionOrder.status).toBe(200);
+      expect(depletionOrder.body.status).toBe('success');
+      expect(await getProductStock(api, productId)).toBe(0);
 
-      if (product.stock > 0) {
-        expect(orderRes.status()).toBe(200);
-      } else {
-        expect(orderRes.status()).not.toBe(200);
-      }
+      const addAfterDepletion = await addToCartRaw(api, productId, 1);
+      expect(addAfterDepletion.status).toBe(400);
+      expect(addAfterDepletion.body.status).toBe('error');
+
+      const orderAfterDepletion = await createOrderFromCart(api);
+      expect(orderAfterDepletion.status).toBe(400);
+      expect(orderAfterDepletion.body.status).toBe('error');
+      expect(extractMessage(orderAfterDepletion.body)).toMatch(/cart is empty/i);
     });
   });
 
   test.describe('edge cases', () => {
+    test('ORD-INV-INT-E01: concurrent orders cannot oversell inventory @integration @orders @regression @destructive', async ({ api }) => {
+      const stockBefore = await getProductStock(api, productId);
+      expect(stockBefore).toBeGreaterThan(1);
 
-    test('ORD-INV-INT-E01: concurrent orders validate stock correctly @integration @orders @regression @destructive', async ({ api }) => {
-      // Arrange: Get current stock
-      const productRes = await api.get(`/api/products/${testProduct.id}`);
-      const product = await productRes.json();
-      const currentStock = product.stock;
+      const quantityPerUser = Math.floor(stockBefore / 2) + 1;
+      const userA = await createIsolatedUserContext('a');
+      const userB = await createIsolatedUserContext('b');
 
-      // Only run if stock is limited
-      if (currentStock < 2) {
-        test.skip();
+      try {
+        await Promise.all([
+          seedCart(userA, [{ id: productId, quantity: quantityPerUser }]),
+          seedCart(userB, [{ id: productId, quantity: quantityPerUser }])
+        ]);
+
+        const [orderA, orderB] = await Promise.all([
+          createOrderFromCart(userA),
+          createOrderFromCart(userB)
+        ]);
+
+        const statuses = [orderA.status, orderB.status];
+        const successCount = statuses.filter((status) => status === 200).length;
+        const failureCount = statuses.filter((status) => status === 400).length;
+
+        expect(successCount).toBe(1);
+        expect(failureCount).toBe(1);
+
+        const failedOrder = [orderA, orderB].find((order) => order.status !== 200);
+        expect(failedOrder?.body.status).toBe('error');
+        expect(extractMessage(failedOrder?.body ?? {})).toMatch(/only|remain|stock/i);
+
+        const stockAfter = await getProductStock(api, productId);
+        expect(stockAfter).toBe(stockBefore - quantityPerUser);
+      } finally {
+        await userA.dispose();
+        await userB.dispose();
       }
-
-      // Arrange: Create two separate carts (simulating concurrent users)
-      await seedCart(api, [{ id: testProduct.id, quantity: 1 }]);
-
-      // Act: Create first order
-      const order1Res = await api.post('/api/orders/mock-pay', {
-        data: {
-          shippingAddress: 'Test Address 1',
-          billingAddress: 'Test Address 1'
-        }
-      });
-
-      if (order1Res.status() !== 200) {
-        test.skip();
-      }
-
-      // Add to cart again for second order
-      await api.post('/api/cart/clear');
-      await seedCart(api, [{ id: testProduct.id, quantity: currentStock }]);
-
-      // Act: Try to create second order with all remaining stock
-      const order2Res = await api.post('/api/orders/mock-pay', {
-        data: {
-          shippingAddress: 'Test Address 2',
-          billingAddress: 'Test Address 2'
-        }
-      });
-
-      // Assert: Second order should fail (not enough stock)
-      // Because first order already consumed 1 unit
-      expect(order2Res.status()).not.toBe(200);
     });
 
-    test('ORD-INV-INT-E02: stock validates against current inventory at checkout @integration @orders @regression @destructive', async ({ api }) => {
-      // Arrange: Get current stock
-      const productRes = await api.get(`/api/products/${testProduct.id}`);
-      const product = await productRes.json();
-      const currentStock = product.stock;
+    test('ORD-INV-INT-E02: checkout revalidates stale cart against current stock @integration @orders @regression @destructive', async ({ api }) => {
+      const stockBefore = await getProductStock(api, productId);
+      expect(stockBefore).toBeGreaterThan(1);
 
-      if (currentStock <= 0) {
-        test.skip();
-      }
+      const userA = await createIsolatedUserContext('a-stale');
+      const userB = await createIsolatedUserContext('b-fresh');
 
-      // Arrange: Add item to cart with valid quantity
-      await seedCart(api, [{ id: testProduct.id, quantity: 1 }]);
+      try {
+        await seedCart(userA, [{ id: productId, quantity: stockBefore }]);
+        await seedCart(userB, [{ id: productId, quantity: 1 }]);
 
-      // Act: Create order
-      const orderRes = await api.post('/api/orders/mock-pay', {
-        data: {
-          shippingAddress: 'Test Address 123',
-          billingAddress: 'Test Address 123'
-        }
-      });
+        const freshOrder = await createOrderFromCart(userB);
+        expect(freshOrder.status).toBe(200);
+        expect(freshOrder.body.status).toBe('success');
 
-      // Assert: Order validates against current stock
-      if (currentStock > 0) {
-        expect(orderRes.status()).toBe(200);
-        
-        // Assert: Stock was deducted
-        const afterRes = await api.get(`/api/products/${testProduct.id}`);
-        const after = await afterRes.json();
-        expect(after.stock).toBeLessThan(currentStock);
+        const staleOrder = await createOrderFromCart(userA);
+        expect(staleOrder.status).toBe(400);
+        expect(staleOrder.body.status).toBe('error');
+        expect(extractMessage(staleOrder.body)).toMatch(/only|remain|stock/i);
+
+        const stockAfter = await getProductStock(api, productId);
+        expect(stockAfter).toBe(stockBefore - 1);
+      } finally {
+        await userA.dispose();
+        await userB.dispose();
       }
     });
   });
