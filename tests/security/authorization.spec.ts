@@ -1,256 +1,280 @@
-﻿import { test, expect } from '@fixtures';
+import type { APIRequestContext, Page } from '@playwright/test';
+import { test, expect, seedCart } from '@fixtures';
+import { createApiContext, disableChaos, loginAsAdmin, loginAsUser } from '@api';
 import { routes } from '@config';
+import { seededProducts } from '@data';
 
 /**
  * =============================================================================
- * AUTHORIZATION & SECURITY TESTS - Comprehensive Coverage
+ * AUTHORIZATION & ACCESS CONTROL SECURITY TESTS
  * =============================================================================
- * 
+ *
  * Test Scenarios:
  * ---------------
- * 1. Anonymous User Access Control (Redirects to Login)
- * 2. Role-Based Access Control (RBAC) - User vs Admin
- * 3. Cross-User Data Access Prevention
- * 4. Admin Shopping Restrictions (Business Rule)
- * 5. API Endpoint Authorization
- * 6. Protected Route Access
- * 
+ * 1. Anonymous access control for protected routes
+ * 2. Role-based access control (user vs admin)
+ * 3. Admin business restrictions (cannot shop)
+ * 4. Session invalidation and role transition
+ * 5. Cross-user data isolation (invoice ownership)
+ *
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (2 tests):
- *   - AUTHZ-P01: admin can access admin dashboard
- *   - AUTHZ-P02: admin can access admin notifications API
- * 
+ *   - AUTHZ-P01: admin can access admin dashboard and admin notifications API
+ *   - AUTHZ-P02: authenticated user can access own protected resources
+ *
  * NEGATIVE CASES (7 tests):
- *   - AUTHZ-N01: anonymous redirect from notifications API
- *   - AUTHZ-N01-UI: anonymous redirect from profile page
- *   - AUTHZ-N01-ORDERS: anonymous redirect from order history
- *   - AUTHZ-N02: regular user forbidden on admin notifications API
- *   - AUTHZ-N02-UI: regular user forbidden on admin dashboard
- *   - AUTHZ-N03: admin blocked from viewing cart
- *   - AUTHZ-N03-CHECKOUT: admin blocked from checkout
- * 
+ *   - AUTHZ-N01: anonymous is redirected from notifications API
+ *   - AUTHZ-N02: regular user is forbidden from admin notifications API
+ *   - AUTHZ-N03: admin dashboard rejects anonymous and regular users
+ *   - AUTHZ-N04: admin is blocked from cart add API
+ *   - AUTHZ-N05: reset-stock endpoint rejects requests without reset key
+ *   - AUTHZ-N06: logout invalidates protected API access
+ *   - AUTHZ-N07: anonymous cannot access profile orders page
+ *
  * EDGE CASES (3 tests):
- *   - ORD-N01: user cannot view another user order invoice
- *   - ORD-N02: invoice with invalid order ID returns 404
- *   - AUTHZ-E01: API endpoints honor authentication tokens
- * 
+ *   - AUTHZ-E01: invoice access is restricted to order owner
+ *   - AUTHZ-E02: invalid invoice id returns 404 without stack trace leak
+ *   - AUTHZ-E03: role switch in same API context updates authorization
+ *
  * Business Rules Tested:
  * ----------------------
- * - Security Model: JWT-based session authentication
- * - RBAC: Admin role has elevated permissions, user role has shopping access
- * - Admin Restriction: Admin CANNOT shop (business rule for inventory management)
- * - Anonymous Access: Public routes (home, products) allowed, protected routes redirect
- * - Cross-User Access: Users can only view their own orders/data (privacy)
- * - API Authorization: All protected API endpoints check authentication status
- * 
+ * - Protected User API: /notifications/list requires authenticated session
+ * - Admin API and UI: /admin/notifications/list and /admin/dashboard require admin role
+ * - Admin Business Guard: admin users cannot add items to cart
+ * - Secret Endpoint Guard: /api/products/reset-stock requires X-RESET-KEY
+ * - Order Privacy: invoice endpoint is owner-only
+ *
  * =============================================================================
  */
 
+type OrderCreateResponse = {
+  status?: 'success' | 'error';
+  orderId?: string;
+  message?: string;
+};
+
+const logoutPath = '/logout';
+
+const syncSessionFromApi = async (api: APIRequestContext, page: Page): Promise<void> => {
+  const storage = await api.storageState();
+  await page.context().addCookies(storage.cookies);
+};
+
+const registerAndLoginIsolatedUserContext = async (label: string): Promise<APIRequestContext> => {
+  const ctx = await createApiContext();
+  const token = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${label}`;
+  const username = `authz_${token}`;
+  const email = `${username}@example.com`;
+  const password = 'Pass12345!';
+
+  const registerRes = await ctx.post(routes.register, {
+    form: { username, email, password, confirmPassword: password },
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    maxRedirects: 0
+  });
+  expect([200, 302, 303]).toContain(registerRes.status());
+
+  const loginRes = await ctx.post(routes.login, {
+    form: { username, password },
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    maxRedirects: 0
+  });
+  expect([200, 302, 303]).toContain(loginRes.status());
+
+  return ctx;
+};
+
+const createOrderForCurrentSession = async (
+  api: APIRequestContext,
+  items: Array<{ id: number; quantity?: number }>
+): Promise<string> => {
+  await seedCart(api, items);
+
+  const res = await api.post(routes.api.orderCreate, {
+    data: { items: [] },
+    headers: { Accept: 'application/json' },
+    maxRedirects: 0
+  });
+  expect(res.status()).toBe(200);
+
+  const body = (await res.json()) as OrderCreateResponse;
+  expect(body.status).toBe('success');
+  expect(body.orderId).toMatch(/^ORD-/);
+
+  return body.orderId as string;
+};
+
+const hasStackTraceSignature = (text: string): boolean => {
+  return /(referenceerror|typeerror|syntaxerror|node_modules|\bat\s+\S+\s*\()/i.test(text);
+};
+
 test.use({ seedData: true });
 
-test.describe('authorization security comprehensive @e2e @security @authz', () => {
+test.describe('authorization security @security @authz', () => {
+  test.beforeAll(async () => {
+    await disableChaos();
+  });
 
-  // ========================================================================
-  // POSITIVE TEST CASES - Admin Access Rights
-  // ========================================================================
-  test.describe('positive cases - admin access', () => {
-    
-    test('AUTHZ-P01: admin can access admin dashboard @security @authz @regression @safe', async ({ page, api }) => {
-      // Arrange: Login as admin
-      await api.post('/api/test/login-admin');
-      await page.goto('/');
+  test.describe('positive cases', () => {
+    test('AUTHZ-P01: admin can access admin dashboard and admin notifications API @security @authz @smoke', async ({ api, page }) => {
+      await loginAsAdmin(api);
+      await syncSessionFromApi(api, page);
 
-      // Act: Navigate to admin dashboard
-      await page.goto('/admin/dashboard');
+      const adminNotificationsRes = await api.get(routes.api.adminNotifications, {
+        headers: { Accept: 'application/json' },
+        maxRedirects: 0
+      });
+      expect(adminNotificationsRes.status()).toBe(200);
+      const adminNotificationsBody = await adminNotificationsRes.json();
+      expect(adminNotificationsBody.status).toBe('success');
 
-      // Assert: Successfully loaded
-      await expect(page).toHaveURL(/\/admin\/dashboard/);
+      const dashboardRes = await page.goto(routes.admin.dashboard, { waitUntil: 'domcontentloaded' });
+      expect(dashboardRes?.status()).toBe(200);
+      expect(page.url()).toContain(routes.admin.dashboard);
     });
 
-    test('AUTHZ-P02: admin can access admin notifications API @security @authz @smoke @safe', async ({ api }) => {
-      // Arrange: Login as admin
-      await api.post('/api/test/login-admin');
+    test('AUTHZ-P02: authenticated user can access own protected resources @security @authz @regression', async ({ api, page }) => {
+      await loginAsUser(api);
+      await syncSessionFromApi(api, page);
 
-      // Act: Call admin-only API
-      const res = await api.get(routes.api.adminNotifications);
-      
-      // Assert: Success response
-      expect(res.status()).toBe(200);
-      const body = await res.json();
-      expect(body.status).toBe('success');
+      const notificationsRes = await api.get(routes.api.notifications, {
+        headers: { Accept: 'application/json' },
+        maxRedirects: 0
+      });
+      expect(notificationsRes.status()).toBe(200);
+      const notificationsBody = await notificationsRes.json();
+      expect(notificationsBody.status).toBe('success');
+
+      const profileRes = await page.goto(`${routes.profile}?tab=orders`, { waitUntil: 'domcontentloaded' });
+      expect(profileRes?.status()).toBe(200);
+      await expect(page).toHaveURL(/\/profile\?tab=orders/);
     });
   });
 
-  // ========================================================================
-  // NEGATIVE TEST CASES - Anonymous User Restrictions
-  // ===============================================================================
-  test.describe('negative cases - anonymous restrictions', () => {
-    
-    test('AUTHZ-N01: anonymous redirect from notifications API @security @authz @regression @safe', async ({ api }) => {
-      // CRITICAL SECURITY TEST: API endpoints must check authentication
-      
-      // Arrange: Ensure not logged in
-      await api.post('/api/test/logout');
-
-      // Act: Try to access protected API
+  test.describe('negative cases', () => {
+    test('AUTHZ-N01: anonymous is redirected from notifications API @security @authz @regression', async ({ api }) => {
       const res = await api.get(routes.api.notifications, { maxRedirects: 0 });
-      
-      // Assert: 302 redirect (to login)
+
       expect(res.status()).toBe(302);
+      expect(res.headers()['location'] ?? '').toContain('/login');
     });
 
-    test('AUTHZ-N01-UI: anonymous redirect from profile page @security @authz @regression @safe', async ({ page }) => {
-      // Act: Try to access protected page
-      await page.goto('/user/profile');
+    test('AUTHZ-N02: regular user is forbidden from admin notifications API @security @authz @regression', async ({ api }) => {
+      await loginAsUser(api);
 
-      // Assert: Redirected to login
-      await expect(page).toHaveURL(/\/login/);
+      const res = await api.get(routes.api.adminNotifications, { maxRedirects: 0 });
+      const text = await res.text();
+
+      expect(res.status()).toBe(403);
+      expect(text).toContain('Admin Access Only');
     });
 
-    test('AUTHZ-N01-ORDERS: anonymous redirect from order history @security @authz @regression @safe', async ({ page }) => {
-      // Act: Try to access orders page
-      await page.goto('/user/orders');
+    test('AUTHZ-N03: admin dashboard rejects anonymous and regular users @security @authz @regression', async ({ api }) => {
+      const anonRes = await api.get(routes.admin.dashboard, { maxRedirects: 0 });
+      const anonText = await anonRes.text();
+      expect(anonRes.status()).toBe(403);
+      expect(anonText).toContain('Admin Access Only');
 
-      // Assert: Redirected to login
-      await expect(page).toHaveURL(/\/login/);
+      await loginAsUser(api);
+      const userRes = await api.get(routes.admin.dashboard, { maxRedirects: 0 });
+      const userText = await userRes.text();
+      expect(userRes.status()).toBe(403);
+      expect(userText).toContain('Admin Access Only');
     });
-  });
 
-  // ========================================================================
-  // NEGATIVE TEST CASES - User Role Restrictions
-  // ========================================================================
-  test.describe('negative cases - user role restrictions', () => {
-    
-    test('AUTHZ-N02: regular user forbidden on admin notifications API @security @authz @regression @safe', async ({ api }) => {
-      // CRITICAL SECURITY TEST: Regular user must not access admin APIs
-      
-      // Arrange: Login as regular user
-      await api.post('/api/test/login-user');
+    test('AUTHZ-N04: admin is blocked from cart add API @security @authz @regression', async ({ api }) => {
+      await loginAsAdmin(api);
 
-      // Act: Try to access admin API
-      const res = await api.get(routes.api.adminNotifications);
-      
-      // Assert: 403 Forbidden
+      const res = await api.post(routes.api.cartAdd, {
+        data: { productId: seededProducts[0].id, quantity: 1 },
+        headers: { Accept: 'application/json' },
+        maxRedirects: 0
+      });
+
       expect(res.status()).toBe(403);
       const body = await res.json();
       expect(body.status).toBe('error');
+      expect(body.message).toContain('Admin cannot shop');
     });
 
-    test('AUTHZ-N02-UI: regular user forbidden on admin dashboard @security @authz @regression @safe', async ({ page, api }) => {
-      // Arrange: Login as user
-      await api.post('/api/test/login-user');
-      await page.goto('/');
+    test('AUTHZ-N05: reset-stock endpoint rejects requests without reset key @security @authz @security @regression', async ({ api }) => {
+      const res = await api.post(routes.api.resetStockSafe, { maxRedirects: 0 });
 
-      // Act: Try to access admin dashboard
-      await page.goto('/admin/dashboard');
-
-      // Assert: Access denied (not on /admin route)
-      const currentUrl = page.url();
-      expect(currentUrl.includes('/admin') || currentUrl.includes('/403')).toBe(false);
-    });
-  });
-
-  // ========================================================================
-  // NEGATIVE TEST CASES - Admin Shopping Restriction
-  // ========================================================================
-  test.describe('negative cases - admin shopping restriction', () => {
-    
-    test('AUTHZ-N03: admin blocked from viewing cart @security @authz @regression @safe', async ({ page, api }) => {
-      // BUSINESS RULE: Admin role cannot shop (inventory management personnel)
-      
-      // Arrange: Login as admin
-      await api.post('/api/test/login-admin');
-      await page.goto('/');
-
-      // Act: Try to view cart
-      await page.goto('/cart');
-
-      // Assert: Cart empty or redirected
-      // Admin should NOT be able to add items (tested in cart.e2e.spec.ts)
+      expect(res.status()).toBe(403);
+      const body = await res.json();
+      expect(body.ok).toBe(false);
+      expect(body.status).toBe('forbidden');
+      expect(body.message).toContain('Invalid or missing X-RESET-KEY');
     });
 
-    test('AUTHZ-N03-CHECKOUT: admin blocked from checkout @security @authz @regression @safe', async ({ page, api }) => {
-      // Arrange: Login as admin
-      await api.post('/api/test/login-admin');
-      await page.goto('/');
+    test('AUTHZ-N06: logout invalidates protected API access @security @authz @regression', async ({ api }) => {
+      await loginAsUser(api);
 
-      // Act: Try to access checkout
-      await page.goto('/order/checkout');
+      const beforeLogout = await api.get(routes.api.notifications, { maxRedirects: 0 });
+      expect(beforeLogout.status()).toBe(200);
 
-      // Assert: Redirected away from checkout
-      await expect(page).not.toHaveURL(/\/order\/checkout/);
+      const logoutRes = await api.get(logoutPath, { maxRedirects: 0 });
+      expect([302, 303]).toContain(logoutRes.status());
+
+      const afterLogout = await api.get(routes.api.notifications, { maxRedirects: 0 });
+      expect(afterLogout.status()).toBe(302);
+      expect(afterLogout.headers()['location'] ?? '').toContain('/login');
+    });
+
+    test('AUTHZ-N07: anonymous cannot access profile orders page @security @authz @regression', async ({ page }) => {
+      await page.context().clearCookies();
+      await page.goto(`${routes.profile}?tab=orders`, { waitUntil: 'domcontentloaded' });
+
+      const redirectedToLogin = /\/login/.test(page.url());
+      const hasLoginForm = (await page.locator('input[name="username"], input[name="email"], [data-testid="login-username"]').count()) > 0;
+      expect(redirectedToLogin || hasLoginForm).toBe(true);
     });
   });
 
-  // ========================================================================
-  // EDGE CASES - Cross-User Access Prevention
-  // ========================================================================
-  test.describe('edge cases - cross-user access', () => {
-    
-    test('ORD-N01: user cannot view another user order invoice @security @authz @regression @destructive', async ({ page, api }) => {
-      // CRITICAL SECURITY TEST: Prevent data leakage between users
-      
-      // Step 1: Login as user1 and create an order
-      await api.post('/api/test/login-user');
-      
-      const orderRes = await api.post('/api/test/create-order', {
-        data: { userId: 1, total: 100 }
-      });
-      
-      if (orderRes.status() === 200) {
-        const { orderId } = await orderRes.json();
+  test.describe('edge cases', () => {
+    test('AUTHZ-E01: invoice access is restricted to order owner @security @authz @regression @destructive', async () => {
+      const ownerCtx = await registerAndLoginIsolatedUserContext('owner');
+      const otherCtx = await registerAndLoginIsolatedUserContext('other');
 
-        // Step 2: Logout and login as different user
-        await api.post('/api/test/logout');
-        await api.post('/api/test/login-as', {
-          data: { username: 'otheruser', password: 'otherpass' }
-        });
+      try {
+        const orderId = await createOrderForCurrentSession(ownerCtx, [{ id: seededProducts[0].id, quantity: 1 }]);
 
-        // Step 3: Try to access user1's order
-        await page.goto(`/order/invoice/${orderId}`);
+        const ownerInvoice = await ownerCtx.get(`/order/invoice/${orderId}`, { maxRedirects: 0 });
+        expect(ownerInvoice.status()).toBe(200);
 
-        // Assert: 403 Unauthorized or redirect
-        await page.waitForLoadState('domcontentloaded');
-        const content = await page.textContent('body');
-        expect(content?.includes('Unauthorized') || content?.includes('403')).toBe(true);
+        const otherInvoice = await otherCtx.get(`/order/invoice/${orderId}`, { maxRedirects: 0 });
+        expect(otherInvoice.status()).toBe(403);
+        expect(await otherInvoice.text()).toContain('Unauthorized');
+      } finally {
+        await ownerCtx.dispose();
+        await otherCtx.dispose();
       }
     });
 
-    test('ORD-N02: invoice with invalid order ID returns 404 @security @authz @regression @safe', async ({ page, api }) => {
-      // Arrange: Login as user
-      await api.post('/api/test/login-user');
-      await page.goto('/');
+    test('AUTHZ-E02: invalid invoice id returns 404 without stack trace leak @security @authz @regression', async ({ api }) => {
+      await loginAsUser(api);
 
-      // Act: Try to access non-existent order
-      await page.goto('/order/invoice/INVALID_ORDER_999');
+      const res = await api.get('/order/invoice/INVALID_ORDER_999', { maxRedirects: 0 });
+      const text = await res.text();
 
-      // Assert: 404 error
-      await page.waitForLoadState('domcontentloaded');
-      const content = await page.textContent('body');
-      expect(content?.includes('not found') || content?.includes('404')).toBe(true);
+      expect(res.status()).toBe(404);
+      expect(/invoice not found|404/i.test(text)).toBe(true);
+      expect(hasStackTraceSignature(text)).toBe(false);
     });
 
-    test('AUTHZ-E01: API endpoints honor authentication tokens @security @authz @regression @safe', async ({ api }) => {
-      // Arrange: Login and get session
-      await api.post('/api/test/login-user');
+    test('AUTHZ-E03: role switch in same API context updates authorization @security @authz @regression', async ({ api }) => {
+      await loginAsUser(api);
 
-      // Act: Call protected API
-      const res = await api.get('/api/user/profile');
+      const before = await api.get(routes.api.adminNotifications, { maxRedirects: 0 });
+      expect(before.status()).toBe(403);
 
-      // Assert: Authenticated access works
-      if (res.status() === 200 || res.status() === 404) {
-        // Success (endpoint exists) or not found (endpoint missing)
-        // Either way, NOT a 401/403 (authentication worked)
-        expect([200, 404]).toContain(res.status());
-      }
+      await loginAsAdmin(api);
 
-      // Logout and retry
-      await api.post('/api/test/logout');
-      const res2 = await api.get('/api/user/profile', { maxRedirects: 0 });
-
-      // Assert: Redirect or forbidden after logout
-      expect([302, 401, 403]).toContain(res2.status());
+      const after = await api.get(routes.api.adminNotifications, { maxRedirects: 0 });
+      expect(after.status()).toBe(200);
+      const body = await after.json();
+      expect(body.status).toBe('success');
     });
   });
 });
