@@ -1,14 +1,30 @@
-
-# Playwright
 node_modules/
+.env
+.env.*.local
+
+# Playwright artifacts
 /test-results/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+playwright/.auth/*.json
+reports/
 allure-results/
 allure-report/
-performance/results/
-reports/
-.env
+
+# Performance artifacts
+results/
+!performance/results/
+performance/results/*
+!performance/results/.gitkeep
+!performance/results/latest.txt
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
 .vscode/
+
+# Logs
+*.log

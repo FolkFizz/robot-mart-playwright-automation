@@ -1,0 +1,109 @@
+name: Regression Nightly (Lean, No AI by Default)
+
+on:
+  schedule:
+    - cron: '0 20 * * 6'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Optional BASE_URL override'
+        required: false
+        default: ''
+      include_destructive:
+        description: 'Include tests tagged @destructive'
+        required: false
+        type: boolean
+        default: false
+      include_chat_ai:
+        description: 'Include tests tagged @chat/@ai (may call external LLM services)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: regression-nightly
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      BASE_URL: ${{ github.event.inputs.base_url || vars.BASE_URL || 'https://robot-store-sandbox.onrender.com' }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgres://ci:ci@localhost:5432/ci' }}
+      TEST_API_KEY: ${{ secrets.TEST_API_KEY || 'ci-placeholder' }}
+      RESET_KEY: ${{ secrets.RESET_KEY || 'ci-placeholder' }}
+      USER_USERNAME: ${{ vars.USER_USERNAME || 'user' }}
+      USER_PASSWORD: ${{ secrets.USER_PASSWORD || vars.USER_PASSWORD || 'user123' }}
+      ADMIN_USERNAME: ${{ vars.ADMIN_USERNAME || 'admin' }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD || vars.ADMIN_PASSWORD || 'admin123' }}
+      INCLUDE_DESTRUCTIVE: ${{ github.event.inputs.include_destructive || 'false' }}
+      INCLUDE_CHAT_AI: ${{ github.event.inputs.include_chat_ai || 'false' }}
+      SEED_DATA: 'false'
+      CI: 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Cache Playwright Browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-chromium-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-chromium-
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build regression filters
+        id: filters
+        shell: bash
+        run: |
+          grep_invert='@chaos|@stripe'
+          if [[ "${INCLUDE_DESTRUCTIVE}" != "true" ]]; then
+            grep_invert="${grep_invert}|@destructive"
+          fi
+          if [[ "${INCLUDE_CHAT_AI}" != "true" ]]; then
+            grep_invert="${grep_invert}|@chat|@ai"
+          fi
+          echo "grep_invert=${grep_invert}" >> "$GITHUB_OUTPUT"
+          echo "Using --grep-invert=${grep_invert}"
+
+      - name: Run lean regression pack
+        shell: bash
+        run: |
+          npx playwright test \
+            tests/api \
+            tests/e2e \
+            tests/security \
+            tests/integration/checkout-mock.int.spec.ts \
+            tests/integration/notifications.int.spec.ts \
+            tests/integration/order-inventory.int.spec.ts \
+            tests/integration/product-cart.int.spec.ts \
+            --project=chromium \
+            --grep "@regression" \
+            --grep-invert "${{ steps.filters.outputs.grep_invert }}" \
+            --max-failures=20
+
+      - name: Upload Regression Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-nightly-artifacts
+          path: |
+            playwright-report
+            test-results
+          retention-days: 14

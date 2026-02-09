@@ -1,20 +1,44 @@
 {
   "name": "robot-store-playwright-automation",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {},
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "version": "0.1.0",
+  "private": true,
   "type": "commonjs",
+  "scripts": {
+    "test": "playwright test",
+    "test:prod": "cross-env BASE_URL=https://robot-store-sandbox.onrender.com playwright test --grep \"@smoke|@safe\"",
+    "test:smoke": "playwright test --grep \"@smoke\" --grep-invert \"@stripe|@chaos|@ai\"",
+    "test:regression": "playwright test --grep \"@regression\"",
+    "test:api": "playwright test tests/api --grep \"@api\"",
+    "test:a11y": "playwright test tests/a11y --grep \"@a11y\"",
+    "report:allure": "allure generate allure-results -o allure-report --clean",
+    "report:open": "allure open allure-report",
+    "setup:stock": "node performance/helpers/setup-stock.js",
+    "test:perf:auth": "node scripts/run-k6.js performance/scripts/auth.k6.js",
+    "test:perf:smoke": "node scripts/run-k6.js performance/scripts/smoke.k6.js",
+    "test:perf:browse": "node scripts/run-k6.js performance/scripts/browse.k6.js",
+    "test:perf:cart": "node scripts/run-k6.js performance/scripts/cart.k6.js",
+    "test:perf:checkout": "node scripts/run-k6.js performance/scripts/checkout.k6.js",
+    "test:perf:checkout-acceptance": "cross-env CHECKOUT_MODE=acceptance node scripts/run-k6.js performance/scripts/checkout.k6.js",
+    "test:perf:race": "node scripts/run-k6.js performance/scripts/race-condition.k6.js",
+    "test:perf:load": "node scripts/run-k6.js performance/scripts/load.k6.js",
+    "test:perf:load-acceptance": "cross-env TEST_MODE=acceptance node scripts/run-k6.js performance/scripts/load.k6.js",
+    "test:perf:stress": "node scripts/run-k6.js performance/scripts/stress.k6.js",
+    "test:perf:soak": "node scripts/run-k6.js performance/scripts/soak.k6.js",
+    "test:perf:breakpoint": "node scripts/run-k6.js performance/scripts/breakpoint.k6.js",
+    "test:perf:suite": "node scripts/run-perf-suite.js --profile portfolio",
+    "test:perf:suite:gate": "node scripts/run-perf-suite.js --profile gate"
+  },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.1",
     "@playwright/test": "^1.57.0",
-    "@types/node": "^25.0.10"
+    "@types/node": "^20.11.30",
+    "@types/pg": "^8.16.0",
+    "allure-playwright": "^2.15.1",
+    "cross-env": "^7.0.3",
+    "pg": "^8.12.0",
+    "typescript": "^5.5.4"
   },
   "dependencies": {
-    "axios": "^1.13.2",
-    "dotenv": "^17.2.3"
+    "dotenv": "^16.4.5"
   }
 }
-
