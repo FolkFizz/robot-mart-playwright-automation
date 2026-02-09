@@ -11,3 +11,4 @@ allure-report/
 performance/results/
 reports/
 .env
+.vscode/
