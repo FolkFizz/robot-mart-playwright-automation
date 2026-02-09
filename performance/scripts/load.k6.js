@@ -23,6 +23,8 @@ import { headers } from '../lib/http.js';
  * Notes:
  * - Checkout uses POST /order/api/mock-pay.
  * - HTTP 400 at checkout is treated as expected business rejection (e.g. stock depletion).
+ * - Optional stock reset before setup: PERF_RESET_STOCK=true with RESET_KEY.
+ * - Balanced mode requires at least one in-stock target product; setup fails fast otherwise.
  * - full_journey_success is counted only when checkout returns a successful order.
  * =============================================================================
  */
@@ -40,6 +42,9 @@ const TEST_USER = {
     username: __ENV.PERF_USER || 'user',
     password: __ENV.PERF_PASSWORD || 'user123',
 };
+
+const RESET_STOCK = String(__ENV.PERF_RESET_STOCK || 'false').toLowerCase() === 'true';
+const RESET_KEY = __ENV.RESET_KEY || __ENV.PERF_RESET_KEY || '';
 
 const PRODUCT_MIN = toPositiveInt(__ENV.PERF_PRODUCT_MIN, 1);
 const PRODUCT_MAX = Math.max(PRODUCT_MIN, toPositiveInt(__ENV.PERF_PRODUCT_MAX, 205));
@@ -161,6 +166,35 @@ function fetchTargetProductIds() {
     return getInStockAnyIds(products);
 }
 
+function setupStockIfNeeded() {
+    if (!RESET_STOCK) {
+        return;
+    }
+
+    if (!RESET_KEY) {
+        console.warn('[Setup] PERF_RESET_STOCK=true but RESET_KEY is missing. Skipping stock reset.');
+        return;
+    }
+
+    const resetRes = http.post(
+        `${app.baseURL}/api/products/reset-stock`,
+        null,
+        {
+            headers: { 'X-RESET-KEY': RESET_KEY },
+            redirects: 0,
+            tags: { endpoint: 'reset_stock' },
+            responseCallback: http.expectedStatuses(200, 403),
+        }
+    );
+
+    if (resetRes.status === 200) {
+        console.log('[Setup] Stock reset completed.');
+        return;
+    }
+
+    console.warn(`[Setup] Stock reset returned status=${resetRes.status}. Continuing without reset.`);
+}
+
 function getLocation(res) {
     return String((res && (res.headers.Location || res.headers.location)) || '');
 }
@@ -231,6 +265,9 @@ export function setup() {
     const productSource = productIdsFromCsv.length > 0
         ? `csv(${productIdsFromCsv.length} ids)`
         : `fallback(${PRODUCT_MIN}-${PRODUCT_MAX})`;
+
+    setupStockIfNeeded();
+
     const selectedProductIds = fetchTargetProductIds();
 
     console.log(`\n[Setup] Load Test - mode=${TEST_MODE.toUpperCase()}`);
@@ -240,7 +277,14 @@ export function setup() {
     console.log(`[Setup] In-stock target pool: ${selectedProductIds.length}`);
 
     if (selectedProductIds.length === 0) {
-        console.warn('[Setup] No in-stock product IDs discovered. Test may not reach checkout path.');
+        if (TEST_MODE === 'balanced') {
+            throw new Error(
+                'No in-stock product IDs discovered for balanced mode. ' +
+                'Set TEST_MODE=acceptance for measurement-only run, or replenish/reset stock before rerunning.'
+            );
+        }
+
+        console.warn('[Setup] No in-stock product IDs discovered. Acceptance mode will measure browse/login only.');
     }
 
     console.log('');

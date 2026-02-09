@@ -32,6 +32,9 @@ import { headers } from '../lib/http.js';
  * - Inventory Protection: Stock depletion returns controlled 400 responses
  * 
  * Note:
+ * - Modes:
+ *   - CHECKOUT_MODE=strict (default): enforce checkout quality gates.
+ *   - CHECKOUT_MODE=acceptance: measurement mode for unstable/shared environments.
  * - Uses mock payment intentionally to avoid calling real Stripe API.
  * - 400 responses are treated as expected business outcomes (not transport errors).
  * - If configured product IDs have no stock, setup falls back to any in-stock API product.
@@ -54,6 +57,10 @@ const TEST_USER = {
     username: __ENV.PERF_USER || 'user',
     password: __ENV.PERF_PASSWORD || 'user123',
 };
+
+const CHECKOUT_MODE = String(__ENV.CHECKOUT_MODE || 'strict').toLowerCase() === 'acceptance'
+    ? 'acceptance'
+    : 'strict';
 
 const RESET_STOCK = String(__ENV.PERF_RESET_STOCK || 'false').toLowerCase() === 'true';
 const RESET_KEY = __ENV.RESET_KEY || __ENV.PERF_RESET_KEY || '';
@@ -113,10 +120,14 @@ let vuCredentials = {
     password: TEST_USER.password,
 };
 
-const thresholdByCheckoutEndpoint = {
+const strictCheckoutThresholds = {
     'http_req_duration{endpoint:checkout_mock_pay}': ['p(95)<1000'],
     'http_req_failed{endpoint:checkout_mock_pay}': ['rate==0.00'],
     checkout_unexpected: ['count==0'],
+    checkout_attempts: ['count>0'],
+};
+
+const acceptanceCheckoutThresholds = {
     checkout_attempts: ['count>0'],
 };
 
@@ -125,7 +136,8 @@ export const options = {
         // Checkout is often spike-loaded during promotions or flash sales.
         flash_sale: spike,
     },
-    thresholds: thresholdByCheckoutEndpoint,
+    thresholds: CHECKOUT_MODE === 'strict' ? strictCheckoutThresholds : acceptanceCheckoutThresholds,
+    tags: { checkout_mode: CHECKOUT_MODE },
 };
 
 function pickProductId() {
@@ -258,6 +270,7 @@ export function setup() {
         ? `csv(${productIdsFromCsv.length} ids)`
         : `fallback(${PRODUCT_MIN}-${PRODUCT_MAX})`;
 
+    console.log(`[Setup] Checkout mode: ${CHECKOUT_MODE.toUpperCase()}`);
     console.log(`[Setup] Checkout test target: ${app.baseURL}`);
     console.log(`[Setup] Product source: ${productSource}`);
 

@@ -94,6 +94,83 @@ function pickProductId() {
     return source[Math.floor(Math.random() * source.length)];
 }
 
+function pickProductIdFrom(preferredIds) {
+    if (Array.isArray(preferredIds) && preferredIds.length > 0) {
+        return preferredIds[Math.floor(Math.random() * preferredIds.length)];
+    }
+
+    return pickProductId();
+}
+
+function parseProductsPayload(res) {
+    if (!res || res.status !== 200) {
+        return [];
+    }
+
+    try {
+        const body = res.json();
+        if (!body || body.ok !== true || !Array.isArray(body.products)) {
+            return [];
+        }
+        return body.products;
+    } catch (_error) {
+        return [];
+    }
+}
+
+function getInStockPreferredIds(products) {
+    const preferredIds = productIdsFromCsv.length > 0 ? productIdsFromCsv : fallbackProductIds;
+    const preferredSet = new Set(preferredIds.map((id) => Number(id)));
+    const inStock = [];
+
+    for (let i = 0; i < products.length; i += 1) {
+        const item = products[i] || {};
+        const id = Number(item.id);
+        const stock = Number(item.stock);
+
+        if (Number.isInteger(id) && preferredSet.has(id) && Number.isFinite(stock) && stock > 0) {
+            inStock.push(id);
+        }
+    }
+
+    return inStock;
+}
+
+function getInStockAnyIds(products) {
+    const inStock = [];
+
+    for (let i = 0; i < products.length; i += 1) {
+        const item = products[i] || {};
+        const id = Number(item.id);
+        const stock = Number(item.stock);
+
+        if (Number.isInteger(id) && Number.isFinite(stock) && stock > 0) {
+            inStock.push(id);
+        }
+    }
+
+    return inStock;
+}
+
+function fetchTargetProductIds() {
+    const productsRes = http.get(`${app.baseURL}/api/products`, {
+        redirects: 0,
+        tags: { endpoint: 'products_list' },
+    });
+
+    const products = parseProductsPayload(productsRes);
+    if (products.length === 0) {
+        return [];
+    }
+
+    const preferredInStock = getInStockPreferredIds(products);
+    if (preferredInStock.length > 0) {
+        return preferredInStock;
+    }
+
+    return getInStockAnyIds(products);
+}
+
 // Custom metrics to track degradation and failure type
 const performanceScore = new Trend('performance_score');
 const errorsByStage = new Counter('errors_by_stage');
@@ -102,17 +179,23 @@ const authFailures = new Counter('auth_failures');
 const cartSuccess = new Counter('cart_success');
 const cartRejected = new Counter('cart_rejected');
 const cartUnexpected = new Counter('cart_unexpected');
+const checkoutAttempts = new Counter('checkout_attempts');
 const checkoutRejected = new Counter('checkout_rejected');
 const checkoutUnexpected = new Counter('checkout_unexpected');
 
 let isAuthenticated = false;
 let unexpectedLogCount = 0;
 
+const stressCustomThresholds = {
+    ...stressThresholds,
+    checkout_attempts: ['count>0'],
+};
+
 export const options = {
     scenarios: {
         stress_test: QUICK_MODE ? QUICK_SCENARIO : stress,
     },
-    thresholds: stressThresholds,
+    thresholds: stressCustomThresholds,
     tags: { run_mode: QUICK_MODE ? 'quick' : 'full' },
 };
 
@@ -130,27 +213,33 @@ export function setup() {
     if (RESET_STOCK) {
         if (!RESET_KEY) {
             console.warn('[Setup] PERF_RESET_STOCK=true but RESET_KEY is missing. Skipping stock reset.');
-            return;
-        }
+        } else {
+            const resetRes = http.post(
+                `${app.baseURL}/api/products/reset-stock`,
+                null,
+                {
+                    headers: { 'X-RESET-KEY': RESET_KEY },
+                    redirects: 0,
+                    tags: { endpoint: 'reset_stock' },
+                    responseCallback: http.expectedStatuses(200, 403),
+                }
+            );
 
-        const resetRes = http.post(
-            `${app.baseURL}/api/products/reset-stock`,
-            null,
-            {
-                headers: { 'X-RESET-KEY': RESET_KEY },
-                redirects: 0,
-                tags: { endpoint: 'reset_stock' },
-                responseCallback: http.expectedStatuses(200, 403),
+            if (resetRes.status === 200) {
+                console.log('[Setup] Stock reset completed.');
+            } else {
+                console.warn(`[Setup] Stock reset returned status=${resetRes.status}. Continuing without reset.`);
             }
-        );
-
-        if (resetRes.status === 200) {
-            console.log('[Setup] Stock reset completed.');
-            return;
         }
-
-        console.warn(`[Setup] Stock reset returned status=${resetRes.status}. Continuing without reset.`);
     }
+
+    const selectedProductIds = fetchTargetProductIds();
+    console.log(`[Setup] In-stock target pool: ${selectedProductIds.length}`);
+    if (selectedProductIds.length === 0) {
+        console.warn('[Setup] No in-stock product IDs found. Stress cart path may be mostly rejections.');
+    }
+
+    return { selectedProductIds };
 }
 
 function getLocation(res) {
@@ -284,18 +373,22 @@ function ensureAuthenticated() {
     return true;
 }
 
-export default function () {
+export default function (data) {
     if (!ensureAuthenticated()) {
         sleep(0.5);
         return;
     }
+
+    const selectedProductIds = data && Array.isArray(data.selectedProductIds)
+        ? data.selectedProductIds
+        : null;
 
     // Weighted operation mix
     const rand = Math.random();
     if (rand < 0.5) {
         browseProducts();
     } else if (rand < 0.8) {
-        addToCart();
+        addToCart(selectedProductIds);
     } else {
         checkout();
     }
@@ -329,14 +422,14 @@ function browseProducts() {
     });
 }
 
-function addToCart() {
+function addToCart(selectedProductIds) {
     group('Cart', () => {
         const startTime = Date.now();
         const res = withReauthRetry(() =>
             http.post(
                 `${app.baseURL}/api/cart/add`,
                 JSON.stringify({
-                    productId: pickProductId(),
+                    productId: pickProductIdFrom(selectedProductIds),
                     quantity: 1,
                 }),
                 {
@@ -375,6 +468,7 @@ function addToCart() {
 function checkout() {
     group('Checkout', () => {
         const startTime = Date.now();
+        checkoutAttempts.add(1);
         const res = withReauthRetry(() =>
             http.post(
                 `${app.baseURL}/order/api/mock-pay`,

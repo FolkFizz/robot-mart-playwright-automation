@@ -51,7 +51,7 @@ import { seededProducts, coupons, uiMessages } from '@data';
  * ----------------------
  * - Stock Validation: Cannot add/update beyond available stock
  * - Admin Restriction: Admin role CANNOT perform shopping operations (Security)
- * - Shipping Threshold: FREE shipping when subtotal â‰¥ à¸¿1000, else à¸¿50 fee
+ * - Shipping Threshold: FREE shipping when subtotal >= THB 1000, else THB 50 fee
  * - Coupon Calculation: Discount applied to subtotal BEFORE shipping
  * - Cart Formula: Grand Total = Subtotal + Discount + Shipping
  * - Case Sensitivity: Coupon codes are case-insensitive (converted to uppercase)
@@ -62,9 +62,9 @@ import { seededProducts, coupons, uiMessages } from '@data';
 test.use({ seedData: true });
 
 test.describe('cart comprehensive @e2e @cart', () => {
-  const firstProduct = seededProducts[0];   // Rusty-Bot 101: à¸¿299.99
-  const secondProduct = seededProducts[1];  // Helper-X: à¸¿450.00
-  const thirdProduct = seededProducts[2];   // Cortex-99: à¸¿2500.00
+  const firstProduct = seededProducts[0];   // Rusty-Bot 101: THB 299.99
+  const secondProduct = seededProducts[1];  // Helper-X: THB 450.00
+  const thirdProduct = seededProducts[2];   // Cortex-99: THB 2500.00
 
   test.beforeEach(async ({ api, page }) => {
     await loginAndSyncSession(api, page);
@@ -117,13 +117,13 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(subtotal).toBeCloseTo(expectedSubtotal, 2);
       expect(await cartPage.getCartCount()).toBe(2);
 
-      // Verify shipping fee (below à¸¿1000 threshold)
+      // Verify shipping fee (below THB 1000 threshold)
       const shippingValue = await cartPage.getShippingValue();
       expect(shippingValue).toBe(SHIPPING.fee);
     });
 
     test('CART-P03: increase quantity updates totals and enables free shipping @e2e @cart @regression @destructive', async ({ api, cartPage }) => {
-      // Arrange: Cart with 2 items (total is below à¸¿1000 initially)
+      // Arrange: Cart with 2 items (total is below THB 1000 initially)
       await seedCart(api, [{ id: firstProduct.id }, { id: secondProduct.id }]);
 
       await cartPage.goto();
@@ -144,7 +144,7 @@ test.describe('cart comprehensive @e2e @cart', () => {
       const expectedSubtotal = firstProduct.price * afterQty + secondProduct.price;
       expect(subtotal).toBeCloseTo(expectedSubtotal, 2);
 
-      // Verify free shipping (should be over à¸¿1000 now)
+      // Verify free shipping (should be over THB 1000 now)
       const shippingValue = await cartPage.getShippingValue();
       expect(shippingValue).toBe(0);
     });

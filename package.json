@@ -18,12 +18,15 @@
     "test:perf:browse": "node scripts/run-k6.js performance/scripts/browse.k6.js",
     "test:perf:cart": "node scripts/run-k6.js performance/scripts/cart.k6.js",
     "test:perf:checkout": "node scripts/run-k6.js performance/scripts/checkout.k6.js",
+    "test:perf:checkout-acceptance": "cross-env CHECKOUT_MODE=acceptance node scripts/run-k6.js performance/scripts/checkout.k6.js",
     "test:perf:race": "node scripts/run-k6.js performance/scripts/race-condition.k6.js",
     "test:perf:load": "node scripts/run-k6.js performance/scripts/load.k6.js",
     "test:perf:load-acceptance": "cross-env TEST_MODE=acceptance node scripts/run-k6.js performance/scripts/load.k6.js",
     "test:perf:stress": "node scripts/run-k6.js performance/scripts/stress.k6.js",
     "test:perf:soak": "node scripts/run-k6.js performance/scripts/soak.k6.js",
-    "test:perf:breakpoint": "node scripts/run-k6.js performance/scripts/breakpoint.k6.js"
+    "test:perf:breakpoint": "node scripts/run-k6.js performance/scripts/breakpoint.k6.js",
+    "test:perf:suite": "node scripts/run-perf-suite.js --profile portfolio",
+    "test:perf:suite:gate": "node scripts/run-perf-suite.js --profile gate"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.1",

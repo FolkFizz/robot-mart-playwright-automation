@@ -1,97 +1,170 @@
-# 🚀 Performance Testing (k6)
+# Performance Testing with k6
 
-This directory contains performance testing scripts using [k6](https://k6.io/).
-The framework is designed to verify system stability and response times under load, supporting both local and production environments.
+This directory contains k6 performance scripts for the Robot Store project.
+The goal is to provide reproducible load evidence and portfolio-ready test artifacts.
 
-## 📂 Structure
+## Hiring Snapshot
 
-- **`scripts/`**: proper k6 test scripts (e.g., `smoke.k6.js`).
-- **`scenarios/`**: Reusable load profiles (e.g., `smoke`, `stress`, `soak`).
-- **`lib/`**: Shared configuration and logic.
-- **`thresholds/`**: Pass/Fail criteria logic.
+- Last verified full rerun: `February 9, 2026`
+- Primary evidence:
+  - `performance/results/20260209-121019-portfolio/manifest.md`
+  - `performance/results/20260209-122753-gate/manifest.md`
+- Coverage includes `smoke`, `auth`, `browse`, `cart`, `race`, `checkout`, `load`, `stress`, `soak`, `breakpoint`
+- Current bottlenecks observed under load:
+  - Checkout strict path instability (unexpected/server-error outcomes)
+  - Elevated p95 latency in stress/soak quick modes
 
-## 🛠️ Prerequisites
+## Scope
 
-1.  **Install k6**: [Installation Guide](https://k6.io/docs/get-started/installation/)
-    - Windows: `winget install k6` or `choco install k6`
-    - Mac: `brew install k6`
-2.  **Environment Variables**:
-    - The tests automatically load variables from the root `.env` file.
-    - Ensure `REAL_URL` or `BASE_URL` is set.
+The suite covers these categories:
 
-## 🏃‍♂️ How to Run
+- Smoke: basic service health check
+- Auth: session and login stability
+- Browse: read-heavy catalog usage
+- Cart: write path and stock-guard behavior
+- Checkout: critical payment path under spike
+- Race condition: concurrent checkout contention
+- Load: end-to-end customer journey
+- Stress: degradation under increasing concurrency
+- Soak: stability over longer runtime
+- Breakpoint: capacity discovery under arrival-rate load
 
-Reference the custom runner script in `package.json`:
+## Directory Layout
+
+- `performance/scripts/`: k6 test scripts (`*.k6.js`)
+- `performance/scenarios/`: reusable scenario profiles
+- `performance/thresholds/`: shared threshold presets
+- `performance/lib/`: config, headers, shared helpers
+- `performance/data/`: input data (`users.csv`, `products.csv`)
+- `performance/results/`: generated artifacts from suite and k6 runs
+
+## Prerequisites
+
+1. Install k6
+   - Windows: `winget install k6` or `choco install k6`
+   - macOS: `brew install k6`
+2. Configure environment in `.env`
+   - `REAL_URL` (preferred target) or `BASE_URL`
+3. Optional but recommended for stable checkout/load runs
+   - `RESET_KEY` for stock reset endpoint
+   - or DB access for `npm run setup:stock`
+
+## Test Modes
+
+### Checkout mode (`performance/scripts/checkout.k6.js`)
+
+- `CHECKOUT_MODE=strict` (default)
+  - Enforces checkout endpoint quality gates
+- `CHECKOUT_MODE=acceptance`
+  - Measurement-focused mode for unstable/shared environments
+
+Commands:
+
+- Strict: `npm run test:perf:checkout`
+- Acceptance: `npm run test:perf:checkout-acceptance`
+
+### Load mode (`performance/scripts/load.k6.js`)
+
+- `TEST_MODE=balanced` (default)
+  - Enforces thresholds and now fails fast if no in-stock target is available
+- `TEST_MODE=acceptance`
+  - Measurement-only mode without strict threshold gating
+
+Commands:
+
+- Balanced: `npm run test:perf:load`
+- Acceptance: `npm run test:perf:load-acceptance`
+
+### Quick toggles for long tests
+
+- Stress quick: `STRESS_QUICK=true`
+- Soak quick: `SOAK_QUICK=true`
+
+## Recommended Run Order
+
+1. `npm run test:perf:smoke`
+2. `npm run test:perf:auth`
+3. `npm run test:perf:browse`
+4. `npm run test:perf:cart`
+5. `npm run test:perf:race`
+6. `npm run test:perf:checkout-acceptance` (or strict when environment is stable)
+7. `npm run test:perf:load-acceptance` (or balanced after stock reset)
+8. `npm run test:perf:stress`
+9. `npm run test:perf:soak`
+10. `npm run test:perf:breakpoint`
+
+## Stock Preparation
+
+Option A: API reset (if supported by target env)
+
+- Set `PERF_RESET_STOCK=true`
+- Set `RESET_KEY=<your-reset-key>`
+- `run-perf-suite` enables this automatically for stock-sensitive scripts:
+  - `cart`, `race`, `checkout-*`, `load-*`, `stress-*`, `soak-*`
+
+Option B: direct DB setup
+
+- `npm run setup:stock`
+
+## Portfolio Artifact Collection
+
+A sequential suite runner is available and stores a timestamped evidence bundle.
+
+Commands:
+
+- Portfolio profile: `npm run test:perf:suite`
+- Gate profile: `npm run test:perf:suite:gate`
+
+Output:
+
+- `performance/results/<timestamp-profile>/manifest.json`
+- `performance/results/<timestamp-profile>/manifest.md`
+- `performance/results/<timestamp-profile>/*.summary.json`
+- `performance/results/<timestamp-profile>/*.log.txt`
+- `performance/results/latest.txt`
+
+`manifest.md` is the primary file for submission and quick review.
+
+## Single Script Summary Export
+
+You can still export a single script summary manually:
 
 ```bash
-# Run a quick Smoke Test (1 VU, 1 min) - Checks if system is alive
-npm run test:perf:smoke
-
-# Run Race Condition Test (20 VUs competing for same resource)
-npm run test:perf:race
+node scripts/run-k6.js performance/scripts/smoke.k6.js --summary-export performance/results/smoke.summary.json
 ```
 
-## ⚙️ Configuration
+## Allure Note
 
-The configuration logic is in `lib/config.js`. It intelligently selects the target environment:
+Allure reporting in this repository is focused on Playwright tests.
+Use `performance/results/` artifacts as the source of truth for k6 evidence.
 
-1.  **`REAL_URL`** (Highest Priority): Used for testing Production/Staging.
-2.  **`BASE_URL`**: Used for testing Localhost.
-3.  **Default**: `http://localhost:3000`
+## Latest Verification Snapshot
 
-To test against a specific environment, usually you just update your `.env` file or pass variables to the runner.
+Last full rerun date: `February 9, 2026`
 
-## 📊 Test Types
+- Portfolio profile: `performance/results/20260209-121019-portfolio/manifest.md`
+- Gate profile: `performance/results/20260209-122753-gate/manifest.md`
+- Latest pointer: `performance/results/latest.txt`
 
-We provide comprehensive performance testing across 4 main categories:
+## Known Issues (From Latest Runs)
 
-### 1️⃣ Load Testing (Normal Conditions)
+- `checkout-strict` can fail in shared environments due to checkout endpoint instability under spike load.
+  - Evidence: `checkout_unexpected count=9`, `http_req_duration{endpoint:checkout_mock_pay} p(95)=5.28s`, `http_req_failed{endpoint:checkout_mock_pay} rate=2.49%`
+  - Source: `performance/results/20260209-122753-gate/checkout-strict.log.txt`
+- `stress-quick` breached response-time gate in both profiles.
+  - Evidence:
+    - portfolio: `http_req_duration p(95)=3.9s` vs threshold `<3.0s`
+    - gate: `http_req_duration p(95)=4.01s` vs threshold `<3.0s`
+  - Source:
+    - `performance/results/20260209-121019-portfolio/stress-quick.log.txt`
+    - `performance/results/20260209-122753-gate/stress-quick.log.txt`
+- `soak-quick` breached response-time gate in both profiles.
+  - Evidence:
+    - portfolio: `http_req_duration p(95)=1.53s` vs threshold `<1.5s`
+    - gate: `http_req_duration p(95)=1.82s` vs threshold `<1.5s`
+  - Source:
+    - `performance/results/20260209-121019-portfolio/soak-quick.log.txt`
+    - `performance/results/20260209-122753-gate/soak-quick.log.txt`
 
-| Script             | Scenario | Description                         | Duration |
-| :----------------- | :------- | :---------------------------------- | :------- |
-| **smoke.k6.js**    | smoke    | Health check (1 VU)                 | 60s      |
-| **browse.k6.js**   | ramping  | Browse products under gradual load  | 2m       |
-| **cart.k6.js**     | ramping  | Cart operations under gradual load  | 2m       |
-| **checkout.k6.js** | spike    | Checkout under traffic spike        | 1.5m     |
-| **load.k6.js**     | load     | Full E2E journey (20 VUs sustained) | 5m       |
-
-### 2️⃣ Stress Testing (Breaking Point)
-
-| Script           | Scenario | Description                    | Duration |
-| :--------------- | :------- | :----------------------------- | :------- |
-| **stress.k6.js** | stress   | Find system limits (0→150 VUs) | 9m       |
-
-### 3️⃣ Spike & Soak Testing (Resilience)
-
-| Script                   | Scenario   | Description                                | Duration |
-| :----------------------- | :--------- | :----------------------------------------- | :------- |
-| **race-condition.k6.js** | concurrent | Test race conditions (20 VUs simultaneous) | 30s      |
-| **soak.k6.js**           | soak       | Long-duration stability (10 VUs)           | 30m      |
-
-### 4️⃣ Scalability & Capacity
-
-| Script               | Scenario   | Description                   | Duration |
-| :------------------- | :--------- | :---------------------------- | :------- |
-| **breakpoint.k6.js** | breakpoint | Max throughput (10→300 req/s) | 4m       |
-
-## 🏃‍♂️ Quick Start
-
-```bash
-# 1. Health check (always run first)
-npm run test:perf:smoke
-
-# 2. Load testing (normal conditions)
-npm run test:perf:load
-
-# 3. Stress testing (find limits)
-npm run test:perf:stress
-
-# 4. Soak testing (long-duration, 30min)
-npm run test:perf:soak
-
-# 5. Breakpoint testing (max capacity)
-npm run test:perf:breakpoint
-
-# 6. Race condition testing
-npm run test:perf:race
-```
+These are intentionally retained as transparent evidence.
+Do not relax strict thresholds for gate runs unless the business SLA is redefined.

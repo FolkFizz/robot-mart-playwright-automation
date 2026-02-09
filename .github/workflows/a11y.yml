@@ -1,0 +1,87 @@
+name: A11y Smoke (Safe)
+
+on:
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'src/**'
+      - 'tests/a11y/**'
+      - 'playwright.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/a11y.yml'
+  push:
+    branches: [main, master]
+    paths:
+      - 'src/**'
+      - 'tests/a11y/**'
+      - 'playwright.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/a11y.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: a11y-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  a11y-smoke:
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      BASE_URL: ${{ vars.BASE_URL || 'https://robot-store-sandbox.onrender.com' }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgres://ci:ci@localhost:5432/ci' }}
+      TEST_API_KEY: ${{ secrets.TEST_API_KEY || 'ci-placeholder' }}
+      RESET_KEY: ${{ secrets.RESET_KEY || 'ci-placeholder' }}
+      USER_USERNAME: ${{ vars.USER_USERNAME || 'user' }}
+      USER_PASSWORD: ${{ secrets.USER_PASSWORD || vars.USER_PASSWORD || 'user123' }}
+      ADMIN_USERNAME: ${{ vars.ADMIN_USERNAME || 'admin' }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD || vars.ADMIN_PASSWORD || 'admin123' }}
+      SEED_DATA: 'false'
+      CI: 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Cache Playwright Browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-chromium-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-chromium-
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run a11y smoke subset
+        run: >
+          npx playwright test tests/a11y
+          --project=chromium
+          --grep "@smoke"
+          --grep-invert "@stripe|@destructive|@chat|@ai"
+          --max-failures=5
+
+      - name: Upload A11y Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a11y-smoke-artifacts
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7

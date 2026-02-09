@@ -20,8 +20,8 @@ import { soakThresholds } from '../thresholds/index.js';
  *
  * Notes:
  * - Use SOAK_QUICK=true for shorter local validation.
- * - Cart stock-limit rejections are treated as expected business outcomes.
- * - Checkout HTTP 400 and cart guard redirects are treated as controlled rejections.
+ * - Uses in-stock product IDs discovered during setup.
+ * - checkout_attempts must be > 0 to avoid false-pass runs.
  * =============================================================================
  */
 
@@ -95,9 +95,16 @@ const firstQuarterRT = new Trend('first_quarter_response_time');
 const lastQuarterRT = new Trend('last_quarter_response_time');
 const authAttempts = new Counter('auth_attempts');
 const authFailures = new Counter('auth_failures');
+const cartSuccess = new Counter('cart_success');
 const cartRejected = new Counter('cart_rejected');
+const checkoutAttempts = new Counter('checkout_attempts');
 const checkoutRejected = new Counter('checkout_rejected');
 const unexpectedResponses = new Counter('unexpected_responses');
+
+const soakCustomThresholds = {
+    ...soakThresholds,
+    checkout_attempts: ['count>0'],
+};
 
 let isAuthenticated = false;
 
@@ -105,13 +112,21 @@ export const options = {
     scenarios: {
         soak_test: QUICK_MODE ? QUICK_SCENARIO : soak,
     },
-    thresholds: soakThresholds,
+    thresholds: soakCustomThresholds,
     tags: { run_mode: QUICK_MODE ? 'quick' : 'full' },
 };
 
 function pickProductId() {
     const source = productIdsFromCsv.length > 0 ? productIdsFromCsv : fallbackProductIds;
     return source[Math.floor(Math.random() * source.length)];
+}
+
+function pickProductIdFrom(preferredIds) {
+    if (Array.isArray(preferredIds) && preferredIds.length > 0) {
+        return preferredIds[Math.floor(Math.random() * preferredIds.length)];
+    }
+
+    return pickProductId();
 }
 
 function getLocation(res) {
@@ -159,6 +174,75 @@ function isStockLimitResponse(res) {
     } catch (_error) {
         return String(res.body || '').toLowerCase().includes('stock');
     }
+}
+
+function parseProductsPayload(res) {
+    if (!res || res.status !== 200) {
+        return [];
+    }
+
+    try {
+        const body = res.json();
+        if (!body || body.ok !== true || !Array.isArray(body.products)) {
+            return [];
+        }
+        return body.products;
+    } catch (_error) {
+        return [];
+    }
+}
+
+function getInStockPreferredIds(products) {
+    const preferredIds = productIdsFromCsv.length > 0 ? productIdsFromCsv : fallbackProductIds;
+    const preferredSet = new Set(preferredIds.map((id) => Number(id)));
+    const inStock = [];
+
+    for (let i = 0; i < products.length; i += 1) {
+        const item = products[i] || {};
+        const id = Number(item.id);
+        const stock = Number(item.stock);
+
+        if (Number.isInteger(id) && preferredSet.has(id) && Number.isFinite(stock) && stock > 0) {
+            inStock.push(id);
+        }
+    }
+
+    return inStock;
+}
+
+function getInStockAnyIds(products) {
+    const inStock = [];
+
+    for (let i = 0; i < products.length; i += 1) {
+        const item = products[i] || {};
+        const id = Number(item.id);
+        const stock = Number(item.stock);
+
+        if (Number.isInteger(id) && Number.isFinite(stock) && stock > 0) {
+            inStock.push(id);
+        }
+    }
+
+    return inStock;
+}
+
+function fetchTargetProductIds() {
+    const productsRes = http.get(`${app.baseURL}/api/products`, {
+        redirects: 0,
+        tags: { endpoint: 'products_list' },
+    });
+
+    const products = parseProductsPayload(productsRes);
+    if (products.length === 0) {
+        return [];
+    }
+
+    const preferredInStock = getInStockPreferredIds(products);
+    if (preferredInStock.length > 0) {
+        return preferredInStock;
+    }
+
+    return getInStockAnyIds(products);
 }
 
 function trackResponseTime(duration, elapsedMinutes, durationMinutes) {
@@ -249,6 +333,35 @@ function withReauthRetry(requestFn) {
     return res;
 }
 
+function setupStockIfNeeded() {
+    if (!RESET_STOCK) {
+        return;
+    }
+
+    if (!RESET_KEY) {
+        console.warn('[Setup] PERF_RESET_STOCK=true but RESET_KEY is missing. Skipping stock reset.');
+        return;
+    }
+
+    const resetRes = http.post(
+        `${app.baseURL}/api/products/reset-stock`,
+        null,
+        {
+            headers: { 'X-RESET-KEY': RESET_KEY },
+            redirects: 0,
+            tags: { endpoint: 'reset_stock' },
+            responseCallback: http.expectedStatuses(200, 403),
+        }
+    );
+
+    if (resetRes.status === 200) {
+        console.log('[Setup] Stock reset completed.');
+        return;
+    }
+
+    console.warn(`[Setup] Stock reset returned status=${resetRes.status}. Continuing without reset.`);
+}
+
 export function setup() {
     const productSource = productIdsFromCsv.length > 0
         ? `csv(${productIdsFromCsv.length} ids)`
@@ -257,38 +370,29 @@ export function setup() {
     console.log(`[Setup] Soak Test - Target: ${app.baseURL} (mode=${QUICK_MODE ? 'quick' : 'full'})`);
     console.log(`[Setup] Product source: ${productSource}`);
 
-    if (RESET_STOCK) {
-        if (!RESET_KEY) {
-            console.warn('[Setup] PERF_RESET_STOCK=true but RESET_KEY is missing. Skipping stock reset.');
-        } else {
-            const resetRes = http.post(
-                `${app.baseURL}/api/products/reset-stock`,
-                null,
-                {
-                    headers: { 'X-RESET-KEY': RESET_KEY },
-                    redirects: 0,
-                    tags: { endpoint: 'reset_stock' },
-                    responseCallback: http.expectedStatuses(200, 403),
-                }
-            );
+    setupStockIfNeeded();
 
-            if (resetRes.status === 200) {
-                console.log('[Setup] Stock reset completed.');
-            } else {
-                console.warn(`[Setup] Stock reset returned status=${resetRes.status}. Continuing without reset.`);
-            }
-        }
+    const selectedProductIds = fetchTargetProductIds();
+    console.log(`[Setup] In-stock target pool: ${selectedProductIds.length}`);
+
+    if (selectedProductIds.length === 0) {
+        throw new Error(
+            'No in-stock products available for soak checkout path. ' +
+            'Set PERF_RESET_STOCK=true with RESET_KEY or replenish inventory before running soak test.'
+        );
     }
 
     return {
         startTimeMs: Date.now(),
         plannedDurationMinutes: QUICK_MODE ? 1.2 : 30,
+        selectedProductIds,
     };
 }
 
 export default function (data) {
     const elapsedMinutes = (Date.now() - data.startTimeMs) / 1000 / 60;
     const durationMinutes = Number(data.plannedDurationMinutes || (QUICK_MODE ? 1.2 : 30));
+    const selectedProductIds = Array.isArray(data.selectedProductIds) ? data.selectedProductIds : null;
 
     iterationCount.add(1);
 
@@ -327,7 +431,7 @@ export default function (data) {
         const res = withReauthRetry(() =>
             http.post(
                 `${app.baseURL}/api/cart/add`,
-                JSON.stringify({ productId: pickProductId(), quantity: 1 }),
+                JSON.stringify({ productId: pickProductIdFrom(selectedProductIds), quantity: 1 }),
                 {
                     headers: headers.json,
                     redirects: 0,
@@ -346,6 +450,7 @@ export default function (data) {
         });
 
         if (res.status === 200) {
+            cartSuccess.add(1);
             cartReady = true;
             return;
         }
@@ -363,6 +468,8 @@ export default function (data) {
     if (cartReady) {
         group('Checkout', () => {
             const startedAt = Date.now();
+            checkoutAttempts.add(1);
+
             const res = withReauthRetry(() =>
                 http.post(
                     `${app.baseURL}/order/api/mock-pay`,

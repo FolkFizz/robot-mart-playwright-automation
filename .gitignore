@@ -9,6 +9,11 @@ test-results/
 reports/
 allure-results/
 allure-report/
+results/
+!performance/results/
+performance/results/*
+!performance/results/.gitkeep
+!performance/results/latest.txt
 
 # OS/editor
 .DS_Store
