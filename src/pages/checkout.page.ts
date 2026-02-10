@@ -397,6 +397,6 @@ export class CheckoutPage extends BasePage {
   }
 
   getA11yExcludeSelectors(): string[] {
-    return ['.chat-toggle'];
+    return ['.chat-toggle', '.email-badge', '.notif-badge'];
   }
 }

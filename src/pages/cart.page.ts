@@ -266,9 +266,24 @@ export class CartPage extends BasePage {
   }> {
     const couponInput = this.page
       .locator(
-        'input[name="coupon"], input[placeholder*="coupon" i], input[aria-label*="coupon" i]'
+        [
+          '[data-testid="cart-coupon-input"]',
+          'input[name="coupon"]',
+          'input[id*="coupon" i]',
+          'input[placeholder*="coupon" i]',
+          'input[aria-label*="coupon" i]'
+        ].join(', ')
       )
       .first();
+    if ((await couponInput.count()) === 0) {
+      return {
+        ariaLabel: null,
+        placeholder: null,
+        id: null,
+        hasLabelByFor: false
+      };
+    }
+
     const id = await couponInput.getAttribute('id');
     const hasLabelByFor = id ? (await this.page.locator(`label[for="${id}"]`).count()) > 0 : false;
 
@@ -316,10 +331,24 @@ export class CartPage extends BasePage {
 
   async applyInvalidCouponAndReadError(code: string): Promise<string> {
     const couponInput = this.page
-      .locator('input[name="coupon"], input[placeholder*="coupon" i]')
+      .locator(
+        [
+          '[data-testid="cart-coupon-input"]',
+          'input[name="coupon"]',
+          'input[id*="coupon" i]',
+          'input[placeholder*="coupon" i]'
+        ].join(', ')
+      )
       .first();
-    const applyButton = this.page.locator('button:has-text("apply")').first();
-    if ((await couponInput.count()) === 0 || (await applyButton.count()) === 0) return '';
+    if ((await couponInput.count()) === 0) return '';
+
+    let applyButton = this.applyCouponButton;
+    if ((await applyButton.count()) === 0) {
+      const couponForm = couponInput.locator('xpath=ancestor::form[1]');
+      if ((await couponForm.count()) === 0) return '';
+      applyButton = couponForm.locator('button[type="submit"], button').first();
+      if ((await applyButton.count()) === 0) return '';
+    }
 
     await couponInput.fill(code);
     await applyButton.click();

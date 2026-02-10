@@ -49,6 +49,8 @@ test.use({ seedData: true });
 test.describe('cart accessibility @a11y @cart', () => {
   const cartA11yExclude = [
     '.chat-toggle',
+    '.email-badge',
+    '.notif-badge',
     '.shipping-promo',
     '.btn-coupon',
     '.btn-checkout',

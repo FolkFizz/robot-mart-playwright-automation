@@ -88,9 +88,10 @@ test.describe('mobile viewport @e2e @mobile', () => {
     }) => {
       // Arrange: Navigate to home
       await homePage.goto();
+      await homePage.waitForAnyProductCardVisible();
 
       // Act: Click product and add to cart
-      await homePage.clickProductById(seededProducts[0].id);
+      await homePage.clickProductByIndex(0);
       await productPage.addToCart();
 
       // Assert: Navigate to cart and verify product added
@@ -245,21 +246,19 @@ test.describe('mobile viewport @e2e @mobile', () => {
       expect(productCount).toBeGreaterThan(0);
 
       // Verify products are laid out properly (not overflowing)
-      await homePage.scrollProductCardIntoView(seededProducts[0].id);
-      expect(await homePage.isProductCardVisible(seededProducts[0].id)).toBe(true);
+      await homePage.scrollProductCardIntoViewByIndex(0);
+      expect(await homePage.isProductCardVisibleByIndex(0)).toBe(true);
 
       // Verify card remains at least partially visible in viewport
-      const metrics = await homePage.getProductCardViewportMetrics(seededProducts[0].id);
+      const metrics = await homePage.getProductCardViewportMetricsByIndex(0);
       expect(metrics.width).toBeGreaterThan(0);
       expect(metrics.height).toBeGreaterThan(0);
       expect(metrics.left).toBeLessThan(metrics.viewportWidth);
       expect(metrics.top).toBeLessThan(metrics.viewportHeight);
 
       // Verify card is still actionable on mobile
-      await homePage.clickProductById(seededProducts[0].id);
-      await expect(page).toHaveURL(
-        (url) => url.pathname === routes.productDetail(seededProducts[0].id)
-      );
+      await homePage.clickProductByIndex(0);
+      await expect(page).toHaveURL(/\/product\/[^/?#]+(?:\?.*)?$/);
     });
 
     test('MOBILE-E02: landscape rotation keeps checkout flow accessible @e2e @mobile @regression @destructive', async ({

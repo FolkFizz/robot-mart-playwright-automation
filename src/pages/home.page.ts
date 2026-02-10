@@ -91,10 +91,17 @@ export class HomePage extends BasePage {
     await this.waitForNetworkIdle();
   }
 
+  private productCards(): Locator {
+    return this.page.locator('[data-testid^="product-card-"]');
+  }
+
+  async waitForAnyProductCardVisible(timeoutMs = 10_000): Promise<void> {
+    await this.productCards().first().waitFor({ state: 'visible', timeout: timeoutMs });
+  }
+
   // Click a product card by index (0 = first).
   async clickProductByIndex(index: number): Promise<void> {
-    const cards = this.page.locator('[data-testid^="product-card-"]');
-    await cards.nth(index).click();
+    await this.productCards().nth(index).click();
     await this.waitForNetworkIdle();
   }
 
@@ -158,7 +165,7 @@ export class HomePage extends BasePage {
 
   // Count visible products (useful for pagination checks).
   async getProductCount(): Promise<number> {
-    return await this.page.locator('[data-testid^="product-card-"]').count();
+    return await this.productCards().count();
   }
 
   async isNavigationVisible(): Promise<boolean> {
@@ -299,8 +306,45 @@ export class HomePage extends BasePage {
     });
   }
 
+  async getProductCardViewportMetricsByIndex(index: number): Promise<{
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+    width: number;
+    height: number;
+    viewportWidth: number;
+    viewportHeight: number;
+  }> {
+    const card = this.productCards().nth(index);
+    return await card.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      return {
+        left: r.left,
+        top: r.top,
+        right: r.right,
+        bottom: r.bottom,
+        width: r.width,
+        height: r.height,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight
+      };
+    });
+  }
+
+  async isProductCardVisibleByIndex(index: number): Promise<boolean> {
+    return await this.productCards()
+      .nth(index)
+      .isVisible()
+      .catch(() => false);
+  }
+
   async scrollProductCardIntoView(id: number | string): Promise<void> {
     await this.getByTestId(`product-card-${id}`).scrollIntoViewIfNeeded();
+  }
+
+  async scrollProductCardIntoViewByIndex(index: number): Promise<void> {
+    await this.productCards().nth(index).scrollIntoViewIfNeeded();
   }
 
   async isFirstCategoryLinkVisible(): Promise<boolean> {

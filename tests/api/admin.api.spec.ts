@@ -45,9 +45,24 @@ import { securityTestData } from '@data';
 
 test.use({ seedData: true });
 
+const canRunResetStockTests = (): boolean => {
+  const key = process.env.RESET_KEY?.trim();
+  if (!key) return false;
+
+  const normalized = key.toLowerCase();
+  return (
+    normalized !== 'ci-placeholder' && normalized !== 'placeholder' && normalized !== 'changeme'
+  );
+};
+
 test.describe('admin api @api @admin', () => {
   test.describe('positive cases', () => {
     test('ADMIN-API-P01: reset stock safely via API @api @admin @regression', async ({ api }) => {
+      test.skip(
+        !canRunResetStockTests(),
+        'Reset stock tests require a real RESET_KEY (not placeholder value).'
+      );
+
       // Act: Reset stock levels to defaults
       const res = await resetStockSafe(api);
 
@@ -91,6 +106,11 @@ test.describe('admin api @api @admin', () => {
     });
 
     test('ADMIN-API-P04: stock reset returns confirmation @api @admin @smoke', async ({ api }) => {
+      test.skip(
+        !canRunResetStockTests(),
+        'Reset stock tests require a real RESET_KEY (not placeholder value).'
+      );
+
       // Act: Reset stock and check response
       const res = await resetStockSafe(api);
       const body = await res.json();
@@ -167,6 +187,11 @@ test.describe('admin api @api @admin', () => {
     test('ADMIN-API-E02: concurrent stock resets handled gracefully @api @admin @regression', async ({
       api
     }) => {
+      test.skip(
+        !canRunResetStockTests(),
+        'Reset stock tests require a real RESET_KEY (not placeholder value).'
+      );
+
       // Act: Trigger multiple reset requests concurrently
       const promises = [resetStockSafe(api), resetStockSafe(api), resetStockSafe(api)];
 
