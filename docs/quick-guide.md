@@ -33,6 +33,7 @@ In this test repo:
 
 ```bash
 npm run env:targets
+npm run ci:quick
 npm run test
 ```
 
@@ -45,7 +46,7 @@ PERF_BASE_URL=
 
 - Uses `.env` as the single source of truth
 - **Reset/seed runs** (unless `SEED_DATA=false`)
-- Seed data comes from `robot-store-sandbox/database/init.sql`
+- Seed path strategy: API test hooks first, SQL fallback from `database/init.sql`
 
 ## 3) Production testing (safe only)
 
@@ -94,7 +95,7 @@ SEED_STOCK=200 npx playwright test
 If your web repo is not at the default path:
 
 ```bash
-INIT_SQL_PATH=C:\path\to\robot-store-sandbox\database\init.sql npx playwright test
+INIT_SQL_PATH=C:\path\to\robot-store-playwright-automation\database\init.sql npx playwright test
 ```
 
 ## 8) Key environment variables
@@ -121,6 +122,7 @@ INIT_SQL_PATH=C:\path\to\robot-store-sandbox\database\init.sql npx playwright te
 ## See also
 
 - [Environments & .env](./environments.md)
+- [Test Architecture](./test-architecture.md)
 - [Tagging Convention](./tagging-convention.md)
 - [Test Taxonomy](./test-taxonomy.md)
 - [CI Pipeline](./ci-pipeline.md)

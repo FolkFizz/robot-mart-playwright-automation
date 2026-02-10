@@ -2,7 +2,7 @@ import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from './base.page';
 import { routes } from '@config/constants';
 
-// POM สำหรับหน้า Checkout
+// Page object model for Checkout page.
 export class CheckoutPage extends BasePage {
   private readonly totalLabel: Locator;
   private readonly nameInput: Locator;
@@ -57,12 +57,12 @@ export class CheckoutPage extends BasePage {
     await super.goto(routes.checkout);
   }
 
-  // อ่านยอดรวม (total)
+  // Read total amount text.
   async getTotal(): Promise<string> {
     return await this.totalLabel.innerText();
   }
 
-  // กรอกชื่อ/อีเมล (จำเป็นก่อนจ่าย)
+  // Fill customer name/email (required before payment).
   async fillCustomerInfo(name: string, email: string): Promise<void> {
     await this.nameInput.fill(name);
     await this.emailInput.fill(email);
@@ -100,12 +100,12 @@ export class CheckoutPage extends BasePage {
     return this.paymentMessage;
   }
 
-  // เช็คว่าเป็น mock payment mode หรือไม่
+  // Check whether the page is in mock payment mode.
   async isMockPayment(): Promise<boolean> {
     return await this.mockNote.isVisible().catch(() => false);
   }
 
-  // รอ Stripe element พร้อม (ใช้ data-stripe-ready="true")
+  // Wait until Stripe UI is ready (data-stripe-ready="true").
   async waitForStripeReady(): Promise<void> {
     if (await this.isMockPayment()) return;
     await this.paymentElement.waitFor({ state: 'visible', timeout: 15000 });
@@ -114,7 +114,7 @@ export class CheckoutPage extends BasePage {
         timeout: 15000
       });
     } catch {
-      // Fallback: บางครั้ง data-stripe-ready อัปเดตช้า ให้เช็คว่า input ใน iframe โผล่แทน
+      // Fallback: if readiness attribute lags, wait for a Stripe iframe input instead.
       const frame = this.page.frameLocator(
         'iframe[name^="__privateStripeFrame"]:not([aria-hidden="true"])'
       );
@@ -158,10 +158,10 @@ export class CheckoutPage extends BasePage {
     await numberInput.fill(number);
   }
 
-  // กดจ่ายเงิน (ทั้ง mock และ stripe ใช้ปุ่มเดียวกัน)
+  // Submit payment (same button for mock and Stripe flows).
   async submitPayment(): Promise<void> {
     await this.submitButton.click();
-    // รอให้ loading จบ (อาศัย body[data-loading])
+    // Wait until loading finishes via body[data-loading].
     await this.page.waitForFunction(() => document.body.getAttribute('data-loading') === 'false');
   }
 
@@ -238,7 +238,7 @@ export class CheckoutPage extends BasePage {
     return await this.waitForPaymentResult(options.timeoutMs ?? 30000);
   }
 
-  // อ่านข้อความ error/payment message
+  // Read payment/error message text.
   async getPaymentMessage(): Promise<string> {
     return await this.paymentMessage.innerText();
   }

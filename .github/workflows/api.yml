@@ -54,11 +54,22 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Cache Playwright Browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-chromium-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-chromium-
+
       - name: Install Dependencies
         run: npm ci
 
       - name: Quality Gates (format, typecheck, lint)
         run: npm run ci:quality
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
 
       - name: Run API smoke/security subset
         run: >
@@ -68,6 +79,11 @@ jobs:
           --grep-invert "@chat|@ai|@admin|@destructive"
           --max-failures=5
 
+      - name: Generate Allure Report
+        if: always()
+        continue-on-error: true
+        run: npm run report:allure
+
       - name: Upload API Artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -76,4 +92,6 @@ jobs:
           path: |
             playwright-report
             test-results
+            allure-results
+            allure-report
           retention-days: 7

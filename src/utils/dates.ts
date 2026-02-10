@@ -1,21 +1,21 @@
-// helper วันที่/เวลา
+// Date/time helper utilities.
 
-// คืนค่า ISO string ของเวลา ณ ตอนนี้
+// Return current time as an ISO string.
 export const nowIso = () => new Date().toISOString();
 
-// แปลงเป็นวันที่แบบอ่านง่าย (en-US)
+// Format as a readable date (en-US).
 export const formatDate = (date: Date | string) => {
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString('en-US');
 };
 
-// แปลงเป็นวันที่+เวลา (en-US)
+// Format as date + time (en-US).
 export const formatDateTime = (date: Date | string) => {
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleString('en-US');
 };
 
-// แสดงเวลาใน timezone Bangkok (ให้ตรงกับ UI sandbox)
+// Format using Bangkok timezone to match sandbox UI output.
 export const formatBangkok = (date: Date | string) => {
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' });

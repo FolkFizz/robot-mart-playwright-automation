@@ -1,4 +1,4 @@
-// รวม type ของโดเมนหลักในระบบ
+// Core domain model types.
 
 export type IdLike = number | string;
 
@@ -77,7 +77,7 @@ export type Notification = {
   created_at?: string;
 };
 
-// รูปแบบมาตรฐาน response แบบ ok/error
+// Standard ok/error API response shape.
 export type ApiResponse<T = unknown> = {
   ok: boolean;
   status?: string;

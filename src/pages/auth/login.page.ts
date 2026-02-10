@@ -2,7 +2,7 @@ import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '../base.page';
 import { routes } from '@config/constants';
 
-// POM สำหรับหน้า Login
+// Page object model for Login page.
 export class LoginPage extends BasePage {
   private readonly usernameInput: Locator;
   private readonly passwordInput: Locator;
@@ -23,17 +23,17 @@ export class LoginPage extends BasePage {
     );
   }
 
-  // เปิดหน้า login
+  // Open login page.
   async goto(): Promise<void> {
     await super.goto(routes.login);
   }
 
-  // login ด้วย username/password
+  // Log in with username/password credentials.
   async login(username: string, password: string): Promise<void> {
     await this.usernameInput.fill(username);
     await this.passwordInput.fill(password);
     await this.submitButton.click();
-    // รอจนเมนู account โผล่ (แปลว่า login สำเร็จ)
+    // Account menu visibility indicates successful login.
     await this.accountMenu.waitFor({ state: 'visible', timeout: 15000 });
   }
 

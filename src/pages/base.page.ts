@@ -1,6 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 
-// BasePage: Class แม่ของทุก Page Object
+// Base class shared by all Page Objects.
 
 export class BasePage {
   protected readonly page: Page;
@@ -9,42 +9,42 @@ export class BasePage {
     this.page = page;
   }
 
-  // ใช้สำหรับเปิด path ใดๆ พร้อมรอให้ DOM โหลด
+  // Navigate to any path and wait for DOM content to load.
   async goto(path: string): Promise<void> {
     await this.page.goto(path, { waitUntil: 'domcontentloaded' });
   }
 
-  // helper สำหรับหา element ด้วย data-testid
+  // Helper to find an element by data-testid.
   getByTestId(id: string): Locator {
     return this.page.getByTestId(id);
   }
 
-  // helper สำหรับหา element ด้วย selector ปกติ
+  // Helper to find an element with a regular selector.
   locator(selector: string): Locator {
     return this.page.locator(selector);
   }
 
-  // คลิก element โดยใช้ data-testid
+  // Click an element by data-testid.
   async clickByTestId(id: string): Promise<void> {
     await this.getByTestId(id).click();
   }
 
-  // พิมพ์ค่าใน input โดยใช้ data-testid
+  // Fill an input by data-testid.
   async fillByTestId(id: string, value: string): Promise<void> {
     await this.getByTestId(id).fill(value);
   }
 
-  // อ่านข้อความจาก element โดยใช้ data-testid
+  // Read text content by data-testid.
   async textByTestId(id: string): Promise<string> {
     return await this.getByTestId(id).innerText();
   }
 
-  // รอจนโหลดหน้า DOM เสร็จ
+  // Wait until DOM content is fully loaded.
   async waitForDomReady(): Promise<void> {
     await this.page.waitForLoadState('domcontentloaded');
   }
 
-  // รอจน network ว่าง (กรณีหน้าข้อมูลโหลดเยอะ)
+  // Wait until the network is idle (useful on data-heavy pages).
   async waitForNetworkIdle(): Promise<void> {
     await this.page.waitForLoadState('networkidle');
   }
@@ -64,7 +64,7 @@ export class BasePage {
       .catch(() => '');
   }
 
-  // รอ Toast (default: รอให้โผล่)
+  // Wait for a toast notification (default: wait for visible).
   async waitForToast(
     options: {
       testId?: string;
@@ -75,7 +75,7 @@ export class BasePage {
   ): Promise<void> {
     const {
       testId,
-      // UI จริงใน sandbox ใช้กล่องแจ้งเตือนเป็น .alert / .alert-success / .alert-error
+      // Sandbox UI uses .alert / .alert-success / .alert-error for notices.
       selector = '.alert, .alert-success, .alert-error',
       state = 'visible',
       timeout = 5000
@@ -85,7 +85,7 @@ export class BasePage {
     await target.first().waitFor({ state, timeout });
   }
 
-  // รอ Spinner (default: รอให้หายไป)
+  // Wait for spinner state (default: wait until hidden).
   async waitForSpinner(
     options: {
       testId?: string;
@@ -96,7 +96,7 @@ export class BasePage {
   ): Promise<void> {
     const {
       testId,
-      // UI จริงใน sandbox ใช้ spinner เป็น #spinner และมี class .spinner
+      // Sandbox UI uses #spinner and .spinner for loading indicators.
       selector = '#spinner, .spinner',
       state = 'hidden',
       timeout = 10000

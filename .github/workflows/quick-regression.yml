@@ -1,44 +1,47 @@
-name: UI Smoke (Safe, No AI)
+name: Quick Regression Gate
 
 on:
   pull_request:
     branches: [main, master]
     paths:
       - 'src/**'
-      - 'tests/e2e/**'
-      - 'tests/security/**'
-      - 'tests/a11y/**'
+      - 'tests/**'
+      - 'scripts/**'
       - 'playwright.config.ts'
       - 'package.json'
       - 'package-lock.json'
-      - '.github/workflows/ui-smoke.yml'
+      - '.github/workflows/quick-regression.yml'
   push:
     branches: [main, master]
     paths:
       - 'src/**'
-      - 'tests/e2e/**'
-      - 'tests/security/**'
-      - 'tests/a11y/**'
+      - 'tests/**'
+      - 'scripts/**'
       - 'playwright.config.ts'
       - 'package.json'
       - 'package-lock.json'
-      - '.github/workflows/ui-smoke.yml'
+      - '.github/workflows/quick-regression.yml'
   workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Optional BASE_URL override'
+        required: false
+        default: ''
 
 permissions:
   contents: read
 
 concurrency:
-  group: ui-smoke-${{ github.ref }}
+  group: quick-regression-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  smoke:
+  quick-regression:
     if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     env:
-      BASE_URL: ${{ vars.BASE_URL || 'https://robot-store-sandbox.onrender.com' }}
+      BASE_URL: ${{ github.event.inputs.base_url || vars.BASE_URL || 'https://robot-store-sandbox.onrender.com' }}
       DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgres://ci:ci@localhost:5432/ci' }}
       TEST_API_KEY: ${{ secrets.TEST_API_KEY || 'ci-placeholder' }}
       RESET_KEY: ${{ secrets.RESET_KEY || 'ci-placeholder' }}
@@ -69,33 +72,25 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Quality Gates (format, typecheck, lint)
-        run: npm run ci:quality
-
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run Safe Smoke Suite
-        run: >
-          npx playwright test tests/e2e tests/a11y tests/security
-          --project=chromium
-          --grep "@smoke|@safe"
-          --grep-invert "@chat|@ai|@stripe|@chaos|@destructive"
-          --max-failures=5
+      - name: Run quick regression gate (quality + tests)
+        run: npm run ci:quick
 
       - name: Generate Allure Report
         if: always()
         continue-on-error: true
         run: npm run report:allure
 
-      - name: Upload Playwright Artifacts
+      - name: Upload Quick Regression Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ui-smoke-artifacts
+          name: quick-regression-artifacts
           path: |
             playwright-report
             test-results
             allure-results
             allure-report
-          retention-days: 7
+          retention-days: 14

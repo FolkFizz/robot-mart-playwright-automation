@@ -2,7 +2,7 @@ import { Page, Locator } from '@playwright/test';
 import { BasePage } from '../base.page';
 import { routes } from '@config/constants';
 
-// POM สำหรับหน้า Admin Coupons
+// Page object model for Admin Coupons page.
 export class AdminCouponsPage extends BasePage {
   private readonly codeInput: Locator;
   private readonly discountInput: Locator;
@@ -17,12 +17,12 @@ export class AdminCouponsPage extends BasePage {
     this.submitButton = this.page.locator('button[type="submit"]');
   }
 
-  // เปิดหน้า coupons
+  // Open admin coupons page.
   async goto(): Promise<void> {
     await super.goto(routes.admin.coupons);
   }
 
-  // สร้างคูปองใหม่
+  // Create a new coupon.
   async createCoupon(code: string, discount: number, days: number): Promise<void> {
     await this.codeInput.fill(code);
     await this.discountInput.fill(String(discount));
@@ -31,12 +31,12 @@ export class AdminCouponsPage extends BasePage {
     await this.waitForNetworkIdle();
   }
 
-  // หา card ของคูปองตาม code
+  // Find coupon card by code.
   getCouponCard(code: string): Locator {
     return this.page.locator('.coupon-card', { hasText: code });
   }
 
-  // ลบคูปองตาม code
+  // Delete coupon by code.
   async deleteCoupon(code: string): Promise<void> {
     const card = this.getCouponCard(code);
     await card.locator('form button[type="submit"]').click();

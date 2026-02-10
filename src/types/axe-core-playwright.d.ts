@@ -1,4 +1,4 @@
-// type shim สำหรับกรณียังไม่ได้ติดตั้ง @axe-core/playwright
+// Type shim when @axe-core/playwright is not installed.
 declare module '@axe-core/playwright' {
   export class AxeBuilder {
     constructor(options: { page: unknown });

@@ -1,4 +1,4 @@
-// helper สุ่มค่าแบบต่าง ๆ
+// Random-data helper utilities.
 
 export const randomInt = (min: number, max: number) => {
   const low = Math.ceil(min);
@@ -21,7 +21,7 @@ export const randomEmail = (prefix = 'user') => {
   return `${prefix}.${randomString(6)}@${randomEmailDomain}`;
 };
 
-// --- เพิ่ม helper ใหม่ ---
+// Additional helper functions.
 
 export const randomUsername = (prefix = 'auto') => {
   return `${prefix}_${randomString(6)}`;
@@ -31,14 +31,14 @@ export const randomPassword = (length = 10) => {
   return randomString(length);
 };
 
-// สร้างคู่ password/confirm (mismatch ได้)
+// Create a password/confirm pair (optionally mismatched).
 export const randomPasswordPair = (mismatch = false) => {
   const password = randomPassword();
   const confirmPassword = mismatch ? randomPassword() : password;
   return { password, confirmPassword };
 };
 
-// สร้าง user สำหรับ register
+// Build a random user payload for registration tests.
 export const randomUser = (prefix = 'auto') => {
   const username = randomUsername(prefix);
   const email = randomEmail(prefix);

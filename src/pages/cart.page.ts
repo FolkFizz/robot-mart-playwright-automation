@@ -3,7 +3,7 @@ import { BasePage } from './base.page';
 import { routes } from '@config/constants';
 import { parseMoney } from '@utils/money';
 
-// POM สำหรับหน้า Cart
+// Page object model for Cart page.
 export class CartPage extends BasePage {
   private readonly couponInput: Locator;
   private readonly applyCouponButton: Locator;
@@ -36,12 +36,12 @@ export class CartPage extends BasePage {
       .first();
   }
 
-  // เปิดหน้า cart
+  // Open the cart page.
   async goto(): Promise<void> {
     await super.goto(routes.cart);
   }
 
-  // จำนวนสินค้าทั้งหมดใน cart (นับจาก row)
+  // Count total cart items (by item rows).
   async getItemCount(): Promise<number> {
     return await this.page.locator('tr[data-testid^="cart-item-"]').count();
   }
@@ -93,12 +93,12 @@ export class CartPage extends BasePage {
     return await this.getItemQuantity(id);
   }
 
-  // อ่าน subtotal
+  // Read subtotal text.
   async getSubtotal(): Promise<string> {
     return await this.subtotalLabel.innerText();
   }
 
-  // อ่าน grand total
+  // Read grand total text.
   async getGrandTotal(): Promise<string> {
     return await this.grandTotalLabel.innerText();
   }
@@ -111,7 +111,7 @@ export class CartPage extends BasePage {
     return parseMoney(await this.getGrandTotal());
   }
 
-  // อ่าน shipping
+  // Read shipping text.
   async getShippingText(): Promise<string> {
     return await this.shippingLabel.innerText();
   }
@@ -121,7 +121,7 @@ export class CartPage extends BasePage {
     return text.trim().toUpperCase() === 'FREE' ? 0 : parseMoney(text);
   }
 
-  // อ่าน discount
+  // Read discount text.
   async getDiscountText(): Promise<string> {
     return await this.discountLabel.innerText();
   }
@@ -130,59 +130,59 @@ export class CartPage extends BasePage {
     return parseMoney(await this.getDiscountText());
   }
 
-  // ตรวจว่ามี discount แสดงหรือไม่
+  // Check whether discount is visible.
   async isDiscountVisible(): Promise<boolean> {
     return await this.discountLabel.isVisible().catch(() => false);
   }
 
-  // ตรวจว่า coupon input แสดงหรือไม่
+  // Check whether coupon input is visible.
   async isCouponInputVisible(): Promise<boolean> {
     return await this.couponInput.isVisible().catch(() => false);
   }
 
-  // ตรวจว่าปุ่ม remove coupon แสดงหรือไม่
+  // Check whether remove-coupon button is visible.
   async isRemoveCouponVisible(): Promise<boolean> {
     return await this.removeCouponButton.isVisible().catch(() => false);
   }
 
-  // เพิ่มจำนวนสินค้าใน cart
+  // Increase item quantity in cart.
   async increaseQtyById(id: number | string): Promise<void> {
     await this.getByTestId(`cart-qty-increase-${id}`).click();
     await this.waitForNetworkIdle();
   }
 
-  // ลดจำนวนสินค้าใน cart
+  // Decrease item quantity in cart.
   async decreaseQtyById(id: number | string): Promise<void> {
     await this.getByTestId(`cart-qty-decrease-${id}`).click();
     await this.waitForNetworkIdle();
   }
 
-  // ลบสินค้าออกจาก cart
+  // Remove an item from cart.
   async removeItemById(id: number | string): Promise<void> {
     await this.getByTestId(`cart-remove-${id}`).click();
     await this.waitForNetworkIdle();
   }
 
-  // ใส่คูปอง
+  // Apply a coupon code.
   async applyCoupon(code: string): Promise<void> {
     await this.couponInput.fill(code);
     await this.applyCouponButton.click();
     await this.waitForNetworkIdle();
   }
 
-  // เอาคูปองออก
+  // Remove the applied coupon.
   async removeCoupon(): Promise<void> {
     await this.removeCouponButton.click();
     await this.waitForNetworkIdle();
   }
 
-  // เคลียร์ตะกร้าทั้งหมด
+  // Clear all cart items.
   async clearCart(): Promise<void> {
     await this.clearCartButton.click();
     await this.waitForNetworkIdle();
   }
 
-  // ไปหน้า checkout
+  // Proceed to checkout.
   async proceedToCheckout(): Promise<void> {
     await this.checkoutButton.click();
     await this.waitForNetworkIdle();

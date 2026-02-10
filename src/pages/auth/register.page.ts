@@ -2,7 +2,7 @@ import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '../base.page';
 import { routes } from '@config/constants';
 
-// POM สำหรับหน้า Register
+// Page object model for Register page.
 export class RegisterPage extends BasePage {
   private readonly usernameInput: Locator;
   private readonly emailInput: Locator;
@@ -21,20 +21,20 @@ export class RegisterPage extends BasePage {
     this.errorMessage = this.page.locator('.error, .alert-error');
   }
 
-  // เปิดหน้า register
+  // Open register page.
   async goto(): Promise<void> {
     await super.goto(routes.register);
   }
 
-  // สมัครสมาชิกใหม่
+  // Register a new user.
   async register(username: string, email: string, password: string): Promise<void> {
     await this.usernameInput.fill(username);
     await this.emailInput.fill(email);
     await this.passwordInput.fill(password);
     await this.confirmPasswordInput.fill(password);
     await this.submitButton.click();
-    // หลังสมัครสำเร็จจะ redirect ไป login หรือหน้าอื่น
-    // เลยใช้ wait network idle กันไว้
+    // Registration may redirect to login or another page.
+    // Wait for network idle to stabilize post-submit state.
     await this.waitForNetworkIdle();
   }
 

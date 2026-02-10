@@ -3,7 +3,7 @@ import { routes } from '@config/constants';
 
 type CartItemInput = { productId: number; quantity: number };
 
-// สร้าง Payment Intent (Stripe)
+// Create a Stripe Payment Intent.
 export const createPaymentIntent = async (ctx: APIRequestContext, items: CartItemInput[]) => {
   const res = await ctx.post(routes.api.orderCreateIntent, {
     data: { items },
@@ -14,7 +14,7 @@ export const createPaymentIntent = async (ctx: APIRequestContext, items: CartIte
   return res;
 };
 
-// สร้าง order หลังชำระเงินจริง (Stripe)
+// Create an order after real Stripe payment.
 export const createOrder = async (ctx: APIRequestContext) => {
   const res = await ctx.post(routes.api.orderCreate, {
     data: { items: [] },
@@ -25,7 +25,7 @@ export const createOrder = async (ctx: APIRequestContext) => {
   return res;
 };
 
-// จ่ายแบบ mock (PAYMENT_PROVIDER=mock)
+// Submit mock payment (PAYMENT_PROVIDER=mock).
 export const mockPay = async (ctx: APIRequestContext) => {
   const res = await ctx.post(routes.api.orderMockPay, {
     data: { items: [] },

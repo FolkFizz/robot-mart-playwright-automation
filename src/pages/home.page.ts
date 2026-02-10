@@ -3,7 +3,7 @@ import { BasePage } from './base.page';
 import { routes } from '@config/constants';
 import { parseMoney } from '@utils/money';
 
-// POM สำหรับหน้า Home / Catalog
+// Page object model for Home/Catalog page.
 export class HomePage extends BasePage {
   private readonly searchInput: Locator;
   private readonly sortSelect: Locator;
@@ -17,7 +17,7 @@ export class HomePage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    // ช่องค้นหาในหน้า home
+    // Search input on the home page.
     this.searchInput = this.page.getByPlaceholder('Search models...');
     // dropdown sort
     this.sortSelect = this.page.locator('.sort-select');
@@ -33,12 +33,12 @@ export class HomePage extends BasePage {
     this.headingAllProducts = this.page.getByRole('heading', { name: /All Products/i });
   }
 
-  // เปิดหน้า home
+  // Open the home page.
   async goto(): Promise<void> {
     await super.goto(routes.home);
   }
 
-  // เปิดหน้า home พร้อม query string
+  // Open the home page with an optional query string.
   async gotoWithQuery(query: string): Promise<void> {
     if (!query) {
       await this.goto();
@@ -48,42 +48,42 @@ export class HomePage extends BasePage {
     await super.goto(`${routes.home}${suffix}`);
   }
 
-  // locator ของ search input
+  // Search input locator.
   getSearchInput(): Locator {
     return this.searchInput;
   }
 
-  // locator ของ sort select
+  // Sort select locator.
   getSortSelect(): Locator {
     return this.sortSelect;
   }
 
-  // locator ของ category list
+  // Category list locator.
   getCategoryList(): Locator {
     return this.categoryList;
   }
 
-  // ค้นหาสินค้า
+  // Search products.
   async search(text: string): Promise<void> {
     await this.searchInput.fill(text);
     await this.searchInput.press('Enter');
     await this.waitForNetworkIdle();
   }
 
-  // เลือก category จาก sidebar (เช่น automation/hazardous/high_tech/companion)
+  // Select a category from the sidebar (for example: automation/hazardous/high_tech/companion).
   async selectCategory(category: string): Promise<void> {
     const link = this.page.locator(`a[href="/?category=${category}"]`);
     await link.click();
     await this.waitForNetworkIdle();
   }
 
-  // เลือก sort (newest | price_asc | price_desc | name_asc)
+  // Apply sort mode (newest | price_asc | price_desc | name_asc).
   async selectSort(sortValue: string): Promise<void> {
     await this.sortSelect.selectOption(sortValue);
     await this.waitForNetworkIdle();
   }
 
-  // กรองราคาตามช่วง
+  // Filter by price range.
   async applyPriceFilter(min: number | string, max: number | string): Promise<void> {
     await this.minPriceInput.fill(String(min));
     await this.maxPriceInput.fill(String(max));
@@ -91,14 +91,14 @@ export class HomePage extends BasePage {
     await this.waitForNetworkIdle();
   }
 
-  // คลิกสินค้าใน card ตามลำดับ (0 = ตัวแรก)
+  // Click a product card by index (0 = first).
   async clickProductByIndex(index: number): Promise<void> {
     const cards = this.page.locator('[data-testid^="product-card-"]');
     await cards.nth(index).click();
     await this.waitForNetworkIdle();
   }
 
-  // คลิกสินค้าโดยใช้ id (ถ้ารู้ id แล้ว)
+  // Click a product card by known id.
   async clickProductById(id: number | string): Promise<void> {
     await this.getByTestId(`product-card-${id}`).click();
     await this.waitForNetworkIdle();
@@ -150,13 +150,13 @@ export class HomePage extends BasePage {
     return text.includes('out of stock');
   }
 
-  // เช็คว่ามีสินค้าในหน้าไหม
+  // Check whether at least one product is shown.
   async hasProducts(): Promise<boolean> {
     const count = await this.page.locator('[data-testid^="product-card-"]').count();
     return count > 0;
   }
 
-  // จำนวนสินค้าในหน้า (ใช้ verify pagination ได้)
+  // Count visible products (useful for pagination checks).
   async getProductCount(): Promise<number> {
     return await this.page.locator('[data-testid^="product-card-"]').count();
   }
@@ -165,7 +165,7 @@ export class HomePage extends BasePage {
     return await this.navigation.isVisible().catch(() => false);
   }
 
-  // อ่านราคาสินค้าทั้งหมดที่แสดงอยู่
+  // Read all visible product price texts.
   async getVisibleProductPriceTexts(): Promise<string[]> {
     return await this.page.locator('[data-testid^="product-price-"]').allInnerTexts();
   }
@@ -175,22 +175,22 @@ export class HomePage extends BasePage {
     return texts.map((text) => parseMoney(text));
   }
 
-  // อ่านชื่อสินค้าทั้งหมดที่แสดงอยู่
+  // Read all visible product title texts.
   async getVisibleProductTitleTexts(): Promise<string[]> {
     return await this.page.locator('[data-testid^="product-title-"]').allInnerTexts();
   }
 
-  // อ่าน badge ตัวแรก (ช่วยเช็ค category)
+  // Read the first category badge (useful for category checks).
   async getFirstBadgeText(): Promise<string> {
     return await this.page.locator('.badge').first().innerText();
   }
 
-  // รอให้ empty state แสดง
+  // Wait for the empty state to appear.
   async waitForEmptyState(): Promise<void> {
     await this.emptyState.waitFor({ state: 'visible' });
   }
 
-  // เช็คว่า empty state แสดงหรือไม่
+  // Check whether empty state is visible.
   async isEmptyStateVisible(): Promise<boolean> {
     return await this.emptyState.isVisible().catch(() => false);
   }

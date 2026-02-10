@@ -2,7 +2,7 @@ import { Page, Locator } from '@playwright/test';
 import { BasePage } from '../base.page';
 import { routes } from '@config/constants';
 
-// POM สำหรับหน้า File Claim (/claim)
+// Page object model for File Claim page (/claim).
 export class ClaimsPage extends BasePage {
   private readonly invoiceInput: Locator;
   private readonly descriptionInput: Locator;
@@ -17,12 +17,12 @@ export class ClaimsPage extends BasePage {
     this.submitButton = this.page.locator('button[type="submit"]');
   }
 
-  // เปิดหน้าเคลม
+  // Open claim page.
   async goto(): Promise<void> {
     await super.goto(routes.claim);
   }
 
-  // ส่งเคลม
+  // Submit a claim form.
   async submitClaim(invoiceId: string, description: string, filePath?: string): Promise<void> {
     await this.invoiceInput.fill(invoiceId);
     await this.descriptionInput.fill(description);

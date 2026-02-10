@@ -1,7 +1,7 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import { routes } from '@config/constants';
 
-// เพิ่มสินค้าเข้าตะกร้า (JSON)
+// Add an item to the cart (JSON payload).
 export const addToCart = async (ctx: APIRequestContext, productId: number, quantity = 1) => {
   const res = await ctx.post(routes.api.cartAdd, {
     data: { productId, quantity },
@@ -12,7 +12,7 @@ export const addToCart = async (ctx: APIRequestContext, productId: number, quant
   return res;
 };
 
-// อัปเดตจำนวนสินค้าในตะกร้า
+// Update item quantity in the cart.
 export const updateCartItem = async (
   ctx: APIRequestContext,
   productId: number,
@@ -27,7 +27,7 @@ export const updateCartItem = async (
   return res;
 };
 
-// ลบสินค้าจากตะกร้า
+// Remove an item from the cart.
 export const removeCartItem = async (ctx: APIRequestContext, productId: number) => {
   const res = await ctx.post(routes.api.cartRemove, {
     data: { productId },
@@ -38,7 +38,7 @@ export const removeCartItem = async (ctx: APIRequestContext, productId: number) 
   return res;
 };
 
-// ดึง cart summary
+// Fetch cart summary.
 export const getCart = async (ctx: APIRequestContext) => {
   const res = await ctx.get(routes.api.cart, {
     headers: { Accept: 'application/json' }
@@ -47,7 +47,7 @@ export const getCart = async (ctx: APIRequestContext) => {
   return res;
 };
 
-// ล้างตะกร้าทั้งหมด
+// Clear the entire cart.
 export const clearCart = async (ctx: APIRequestContext) => {
   let res = await ctx.delete(routes.api.cartReset, {
     headers: { Accept: 'application/json' }
@@ -61,7 +61,7 @@ export const clearCart = async (ctx: APIRequestContext) => {
   return res;
 };
 
-// ใช้คูปอง
+// Apply a coupon.
 export const applyCoupon = async (ctx: APIRequestContext, code: string) => {
   const res = await ctx.post(routes.api.cartCoupons, {
     data: { code },
@@ -71,7 +71,7 @@ export const applyCoupon = async (ctx: APIRequestContext, code: string) => {
   return res;
 };
 
-// เอาคูปองออก
+// Remove an applied coupon.
 export const removeCoupon = async (ctx: APIRequestContext) => {
   const res = await ctx.delete(routes.api.cartCoupons, {
     headers: { Accept: 'application/json' }

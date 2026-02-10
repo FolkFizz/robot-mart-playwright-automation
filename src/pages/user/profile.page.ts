@@ -2,7 +2,7 @@ import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '../base.page';
 import { routes } from '@config/constants';
 
-// POM สำหรับหน้า Profile
+// Page object model for Profile page.
 export class ProfilePage extends BasePage {
   private readonly emailInput: Locator;
   private readonly phoneInput: Locator;
@@ -21,17 +21,17 @@ export class ProfilePage extends BasePage {
     this.noOrdersText = this.page.getByText(/No orders found/i);
   }
 
-  // เปิดหน้า profile (tab info เป็นค่า default)
+  // Open profile page (default tab is info).
   async goto(): Promise<void> {
     await super.goto(routes.profile);
   }
 
-  // เปิด tab เฉพาะ (info | orders | claims)
+  // Open a specific profile tab (info | orders | claims).
   async gotoTab(tab: 'info' | 'orders' | 'claims'): Promise<void> {
     await super.goto(`${routes.profile}?tab=${tab}`);
   }
 
-  // อัปเดตข้อมูลโปรไฟล์
+  // Update profile fields.
   async updateProfile(email?: string, phone?: string, address?: string): Promise<void> {
     if (email !== undefined) await this.emailInput.fill(email);
     if (phone !== undefined) await this.phoneInput.fill(phone);
@@ -40,7 +40,7 @@ export class ProfilePage extends BasePage {
     await this.waitForNetworkIdle();
   }
 
-  // นับจำนวน order ในหน้า (ใช้ตรวจเบื้องต้น)
+  // Count visible order cards (basic validation).
   async getOrderCount(): Promise<number> {
     return await this.orderCards.count();
   }

@@ -2,30 +2,30 @@ import { Page, Locator } from '@playwright/test';
 import { BasePage } from '../base.page';
 import { routes } from '@config/constants';
 
-// POM สำหรับหน้า Admin Claims
+// Page object model for Admin Claims page.
 export class AdminClaimsPage extends BasePage {
   constructor(page: Page) {
     super(page);
   }
 
-  // เปิดหน้า claims
+  // Open admin claims page.
   async goto(): Promise<void> {
     await super.goto(routes.admin.claims);
   }
 
-  // หา card ของ claim ด้วยเลข invoice
+  // Find claim card by invoice id.
   getClaimCard(invoiceId: string): Locator {
     return this.page.locator('.claim-card', { hasText: invoiceId });
   }
 
-  // อนุมัติ claim
+  // Approve claim by invoice id.
   async approveClaim(invoiceId: string): Promise<void> {
     const card = this.getClaimCard(invoiceId);
     await card.locator('.btn-approve').click();
     await this.waitForNetworkIdle();
   }
 
-  // ปฏิเสธ claim
+  // Reject claim by invoice id.
   async rejectClaim(invoiceId: string): Promise<void> {
     const card = this.getClaimCard(invoiceId);
     await card.locator('.btn-reject').click();

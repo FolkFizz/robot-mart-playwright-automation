@@ -1,15 +1,15 @@
 import { APIRequestContext, request } from '@playwright/test';
 import { env } from '@config/constants';
 
-// สร้าง request context กลางไว้ใช้ซ้ำ (สามารถเก็บ Cookies/Session ไว้ได้อัตโนมัติ)
+// Create a reusable API request context (cookies/session are handled automatically).
 export const createApiContext = async (): Promise<APIRequestContext> => {
   return await request.newContext({
-    // baseUrl ของ backend
+    // Backend base URL.
     baseURL: env.baseUrl
   });
 };
 
-// helper อ่าน body แบบ JSON (ป้องกันกรณีไม่ใช่ JSON)
+// Helper to read a JSON response body.
 export const readJson = async <T = unknown>(res: { json: () => Promise<T> }) => {
   return await res.json();
 };

@@ -3,7 +3,7 @@ import { BasePage } from './base.page';
 import { parseMoney } from '@utils/money';
 import { routes } from '@config/constants';
 
-// POM สำหรับหน้า Product Detail
+// Page object model for Product Detail page.
 export class ProductPage extends BasePage {
   private readonly qtyInput: Locator;
   private readonly addToCartButton: Locator;
@@ -11,7 +11,7 @@ export class ProductPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    // ช่องจำนวนสินค้า
+    // Quantity input field.
     this.qtyInput = this.getByTestId('product-qty');
     this.addToCartButton = this.getByTestId('product-add-to-cart');
     this.productImage = this.page
@@ -23,12 +23,12 @@ export class ProductPage extends BasePage {
     await super.goto(routes.productDetail(id));
   }
 
-  // อ่านชื่อสินค้า
+  // Read product title.
   async getTitle(): Promise<string> {
     return await this.getByTestId('product-title').innerText();
   }
 
-  // อ่านราคาสินค้า
+  // Read product price text.
   async getPrice(): Promise<string> {
     return await this.getByTestId('product-price').innerText();
   }
@@ -41,26 +41,26 @@ export class ProductPage extends BasePage {
     return await this.productImage.getAttribute('src');
   }
 
-  // ตั้งค่าจำนวนสินค้า (ใช้ fill)
+  // Set product quantity via input fill.
   async setQuantity(qty: number): Promise<void> {
     await this.qtyInput.fill(String(qty));
   }
 
-  // เพิ่มจำนวน (+)
+  // Increase quantity (+).
   async increaseQty(): Promise<void> {
     await this.clickByTestId('product-qty-increase');
   }
 
-  // ลดจำนวน (-)
+  // Decrease quantity (-).
   async decreaseQty(): Promise<void> {
     await this.clickByTestId('product-qty-decrease');
   }
 
-  // กดปุ่ม Add to Cart
+  // Click Add to Cart.
   async addToCart(): Promise<void> {
     await this.addToCartButton.click();
-    // ใน UI จริงมี data-status loading/idle + body data-loading
-    // รอให้หน้ากลับสู่สถานะ idle (ป้องกันคลิกซ้ำเร็ว)
+    // The sandbox UI exposes loading state through data attributes.
+    // Wait until page returns to idle to avoid rapid duplicate actions.
     await this.page.waitForFunction(() => document.body.getAttribute('data-loading') === 'false');
   }
 

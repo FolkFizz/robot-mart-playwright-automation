@@ -13,7 +13,7 @@ in one place, with reproducible evidence artifacts for portfolio and QA reportin
 
 ## Current Snapshot
 
-Verified on: `February 10, 2026`
+Verification status: run `npm run ci:quality` and `npm run ci:quick` on the current commit.
 
 - Playwright specs: `27`
   - `tests/e2e`: 10
@@ -27,6 +27,7 @@ Verified on: `February 10, 2026`
   - Gate: `performance/results/20260209-122753-gate/manifest.md`
 - CI status:
   - Active workflows under `.github/workflows/`:
+    - `quick-regression.yml`
     - `ui-smoke.yml`
     - `api.yml`
     - `a11y.yml`
@@ -113,7 +114,7 @@ Optional:
 
 - `SEED_DATA` (`false` to skip auto seed/reset)
 - `SEED_STOCK` (override stock value after seed)
-- `INIT_SQL_PATH` (custom path to `robot-store-sandbox/database/init.sql`)
+- `INIT_SQL_PATH` (custom path to fallback SQL file, e.g. `database/init.sql`)
 - `PERF_BASE_URL` (optional k6-only override target)
 - `REAL_URL` (legacy k6 override, keep empty in new setups)
 
@@ -159,6 +160,7 @@ Playwright:
 - `npm run test:api`
 - `npm run test:a11y`
 - `npm run test:prod`
+- `npm run test:quick-regression`
 
 Quality:
 
@@ -168,6 +170,7 @@ Quality:
 - `npm run lint`
 - `npm run lint:fix`
 - `npm run ci:quality`
+- `npm run ci:quick`
 
 Reporting:
 
@@ -218,6 +221,7 @@ General docs:
 
 - `docs/quick-guide.md`
 - `docs/environments.md`
+- `docs/test-architecture.md`
 - `docs/tagging-convention.md`
 - `docs/test-taxonomy.md`
 - `docs/a11y-guide.md`

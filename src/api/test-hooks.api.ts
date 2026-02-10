@@ -6,7 +6,7 @@ import path from 'path';
 import { Client } from 'pg';
 
 type SeedOptions = {
-  // à¸à¸³à¸«à¸™à¸” stock à¹ƒà¸«à¹‰à¸—à¸¸à¸à¸ªà¸´à¸™à¸„à¹‰à¸²à¸«à¸¥à¸±à¸‡ seed (à¹€à¸Šà¹ˆà¸™ 100 à¸ªà¸³à¸«à¸£à¸±à¸š load test)
+  // Override stock for all products after reset/seed.
   stockAll?: number;
 };
 
@@ -25,6 +25,19 @@ const resolveStockAll = (stockAll?: number) => {
   return 100;
 };
 
+const buildTestHookPayload = (stockAll?: number) => {
+  const payload: Record<string, unknown> = {};
+  if (stockAll !== undefined) {
+    payload.stockAll = stockAll;
+  }
+  return payload;
+};
+
+const buildTestHookHeaders = () => ({
+  Accept: 'application/json',
+  'X-TEST-API-KEY': env.testApiKey
+});
+
 const resolveInitSqlPath = (): { filePath: string; checked: string[] } => {
   const customPath = process.env.INIT_SQL_PATH;
   if (customPath) {
@@ -32,10 +45,7 @@ const resolveInitSqlPath = (): { filePath: string; checked: string[] } => {
     return { filePath, checked: [filePath] };
   }
 
-  const checked = [
-    path.resolve(process.cwd(), 'database', 'init.sql'),
-    path.resolve(process.cwd(), '..', 'robot-store-sandbox', 'database', 'init.sql')
-  ];
+  const checked = [path.resolve(process.cwd(), 'database', 'init.sql')];
 
   const filePath = checked.find((candidate) => fs.existsSync(candidate)) ?? checked[0];
   return { filePath, checked };
@@ -60,7 +70,8 @@ const seedFromInitSql = async (stockAll?: number) => {
   const { filePath, checked } = resolveInitSqlPath();
   if (!fs.existsSync(filePath)) {
     throw new Error(
-      `[test-hooks] init.sql not found. Checked: ${checked.join(', ')}. Set INIT_SQL_PATH to your web repo path.`
+      `[test-hooks] init.sql not found. Checked: ${checked.join(', ')}. ` +
+        `Provide database/init.sql in this repo or set INIT_SQL_PATH explicitly.`
     );
   }
 
@@ -88,27 +99,66 @@ const isProdBaseUrl = (value: string) => {
   }
 };
 
-// à¸¢à¸´à¸‡ /api/test/reset à¸«à¸£à¸·à¸­ /api/test/seed (factory reset)
-export const resetDb = async (_ctx: APIRequestContext, options: ResetOptions = {}) => {
+const shouldFallbackToSql = (status: number) => {
+  return status === 404 || status === 405 || status === 501 || status >= 500;
+};
+
+const runResetOrSeed = async (
+  ctx: APIRequestContext,
+  action: 'reset' | 'seed',
+  options: SeedOptions = {}
+) => {
+  const stockAll = resolveStockAll(options.stockAll);
+  const route = action === 'reset' ? routes.api.testReset : routes.api.testSeed;
+  const payload = buildTestHookPayload(stockAll);
+
+  const res = await ctx.post(route, {
+    data: payload,
+    headers: buildTestHookHeaders(),
+    maxRedirects: 0
+  });
+
+  if (res.ok()) {
+    return null;
+  }
+
+  const status = res.status();
+  if (shouldFallbackToSql(status)) {
+    console.warn(
+      `[test-hooks] ${route} returned ${status}. Falling back to local SQL seed strategy.`
+    );
+    await seedFromInitSql(stockAll);
+    return null;
+  }
+
+  const bodyText = await res.text().catch(() => '');
+  throw new Error(
+    `[test-hooks] ${route} failed with status ${status}. ` +
+      `Check TEST_API_KEY/RESET_KEY and backend hook permissions. Response: ${bodyText.slice(0, 500)}`
+  );
+};
+
+// Reset test data using API hook first, then SQL fallback if hook is unavailable.
+export const resetDb = async (ctx: APIRequestContext, options: ResetOptions = {}) => {
   if (isProdBaseUrl(env.baseUrl)) {
-    // à¸›à¹‰à¸­à¸‡à¸à¸±à¸™à¸à¸²à¸£à¸¥à¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ˆà¸£à¸´à¸‡à¹€à¸¡à¸·à¹ˆà¸­à¸¢à¸´à¸‡à¹„à¸› Production
+    // Protect production-like targets from destructive test hooks.
     console.warn(`[test-hooks] Skip reset/seed on production baseUrl: ${env.baseUrl}`);
     return null;
   }
 
-  await seedFromInitSql(options.stockAll);
+  await runResetOrSeed(ctx, 'reset', options);
   return null;
 };
 
-// à¸¢à¸´à¸‡ /api/test/seed (reset + seed) à¹à¸¥à¸°à¸£à¸­à¸‡à¸£à¸±à¸šà¸à¸²à¸£à¸›à¸£à¸±à¸š stock à¸«à¸¥à¸±à¸‡ seed
-export const seedDb = async (_ctx: APIRequestContext, options: SeedOptions = {}) => {
+// Seed test data using API hook first, then SQL fallback if hook is unavailable.
+export const seedDb = async (ctx: APIRequestContext, options: SeedOptions = {}) => {
   if (isProdBaseUrl(env.baseUrl)) {
-    // à¸›à¹‰à¸­à¸‡à¸à¸±à¸™à¸à¸²à¸£ seed à¹€à¸¡à¸·à¹ˆà¸­à¸¢à¸´à¸‡à¹„à¸› Production
+    // Protect production-like targets from destructive test hooks.
     console.warn(`[test-hooks] Skip seed on production baseUrl: ${env.baseUrl}`);
     return null;
   }
 
-  await seedFromInitSql(options.stockAll);
+  await runResetOrSeed(ctx, 'seed', options);
   return null;
 };
 

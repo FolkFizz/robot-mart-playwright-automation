@@ -124,7 +124,8 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     },
     { scope: 'worker', auto: true }
   ],
-  api: async (_args, use) => {
+  // eslint-disable-next-line no-empty-pattern
+  api: async ({}, use) => {
     const ctx = await createApiContext();
     await use(ctx);
     await ctx.dispose();
@@ -139,10 +140,12 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       await loginAsAdmin(api);
     });
   },
-  runA11y: async (_args, use) => {
+  // eslint-disable-next-line no-empty-pattern
+  runA11y: async ({}, use) => {
     await use(runA11y);
   },
-  expectNoA11yViolations: async (_args, use) => {
+  // eslint-disable-next-line no-empty-pattern
+  expectNoA11yViolations: async ({}, use) => {
     await use(expectNoA11yViolations);
   },
   // Main Page Objects

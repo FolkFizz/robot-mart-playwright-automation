@@ -1,7 +1,7 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from '../base.page';
 
-// POM สำหรับ Notifications (อยู่ใน navbar dropdown)
+// Page object model for Notifications (navbar dropdown).
 export class NotificationsPage extends BasePage {
   private readonly bellButton: Locator;
   private readonly dropdown: Locator;
@@ -16,18 +16,18 @@ export class NotificationsPage extends BasePage {
     this.markReadButton = this.page.locator('#markNotificationsRead');
   }
 
-  // เปิด dropdown แจ้งเตือน
+  // Open notifications dropdown.
   async open(): Promise<void> {
     await this.bellButton.click();
     await this.dropdown.waitFor({ state: 'visible' });
   }
 
-  // กด Mark all read
+  // Click "Mark all read".
   async markAllRead(): Promise<void> {
     await this.markReadButton.click();
   }
 
-  // จำนวนแจ้งเตือนทั้งหมด
+  // Count all notifications in the dropdown.
   async getNotificationCount(): Promise<number> {
     return await this.notifItems.count();
   }

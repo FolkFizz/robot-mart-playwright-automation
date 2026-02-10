@@ -1,4 +1,4 @@
-// type สำหรับ env configuration
+// Types for environment configuration.
 
 export type Credential = {
   username: string;

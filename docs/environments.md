@@ -44,9 +44,9 @@ These are expected by the test project:
 
 ## Seed source (important)
 
-- Local reset/seed uses the SQL script from the **web repo**: `robot-store-sandbox/database/init.sql`.
-- Default location: `../robot-store-sandbox/database/init.sql`
-- Override with `INIT_SQL_PATH` if your web repo lives elsewhere.
+- Reset/seed uses API test hooks first (`/api/test/reset`, `/api/test/seed`) with `TEST_API_KEY`.
+- If API hooks are unavailable, fallback uses `database/init.sql` in this repo.
+- Override fallback SQL location with `INIT_SQL_PATH`.
 
 ## Example .env
 
@@ -65,7 +65,7 @@ CHAOS_ENABLED=false
 PAYMENT_MOCK=mock
 SEED_DATA=true
 SEED_STOCK=100
-INIT_SQL_PATH=C:\QA-SANDBOX\robot-store-sandbox\database\init.sql
+INIT_SQL_PATH=C:\QA-SANDBOX\robot-store-playwright-automation\database\init.sql
 ```
 
 ## Safety notes

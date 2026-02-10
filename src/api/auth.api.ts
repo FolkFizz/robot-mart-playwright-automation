@@ -10,7 +10,7 @@ export const loginAsUser = async (ctx: APIRequestContext) => {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
   });
 
-  // ถ้า login สำเร็จจะ redirect (302)
+  // Successful login may redirect (302/303).
   const status = res.status();
   expect([200, 302, 303]).toContain(status);
   return res;

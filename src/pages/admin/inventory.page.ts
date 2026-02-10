@@ -2,7 +2,7 @@ import { Page, Locator } from '@playwright/test';
 import { BasePage } from '../base.page';
 import { routes } from '@config/constants';
 
-// POM สำหรับหน้า Admin Inventory
+// Page object model for Admin Inventory page.
 export class AdminInventoryPage extends BasePage {
   private readonly categorySelect: Locator;
   private readonly searchInput: Locator;
@@ -15,12 +15,12 @@ export class AdminInventoryPage extends BasePage {
     this.submitButton = this.page.locator('form.search-form button[type="submit"]');
   }
 
-  // เปิดหน้า inventory
+  // Open admin inventory page.
   async goto(): Promise<void> {
     await super.goto(routes.admin.inventory);
   }
 
-  // ฟิลเตอร์ตาม category และคำค้นหา
+  // Filter inventory by category and search keyword.
   async filter(category?: string, search?: string): Promise<void> {
     if (category) {
       await this.categorySelect.selectOption(category);
@@ -32,18 +32,18 @@ export class AdminInventoryPage extends BasePage {
     await this.waitForNetworkIdle();
   }
 
-  // หาแถวสินค้าโดยชื่อสินค้า
+  // Find product row by product name.
   getRowByProductName(name: string): Locator {
     return this.page.locator('table.data-table tbody tr', { hasText: name });
   }
 
-  // อ่านค่า stock badge ตามชื่อสินค้า
+  // Read stock badge text for a product.
   async getStockByProductName(name: string): Promise<string> {
     const row = this.getRowByProductName(name);
     return await row.locator('.stock-badge').innerText();
   }
 
-  // กดปุ่มแก้ไขสินค้าตามชื่อสินค้า
+  // Open edit action for a product by name.
   async openEditByProductName(name: string): Promise<void> {
     const row = this.getRowByProductName(name);
     await row.locator('.btn-edit').click();

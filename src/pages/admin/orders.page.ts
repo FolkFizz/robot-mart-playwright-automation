@@ -2,7 +2,7 @@ import { Page, Locator } from '@playwright/test';
 import { BasePage } from '../base.page';
 import { routes } from '@config/constants';
 
-// POM สำหรับหน้า Admin Orders
+// Page object model for Admin Orders page.
 export class AdminOrdersPage extends BasePage {
   private readonly table: Locator;
 
@@ -11,23 +11,23 @@ export class AdminOrdersPage extends BasePage {
     this.table = this.page.locator('table');
   }
 
-  // เปิดหน้า orders
+  // Open admin orders page.
   async goto(): Promise<void> {
     await super.goto(routes.admin.orders);
   }
 
-  // หาแถว order ตาม orderId
+  // Find order row by orderId.
   getOrderRow(orderId: string): Locator {
     return this.table.locator('tbody tr', { hasText: orderId });
   }
 
-  // เปิดดูรายการสินค้าใน order (กด summary)
+  // Expand order items section (summary element).
   async toggleItems(orderId: string): Promise<void> {
     const row = this.getOrderRow(orderId);
     await row.locator('summary').click();
   }
 
-  // จำนวน order ทั้งหมดในตาราง (ไม่นับแถว empty)
+  // Count orders in table (excluding empty rows).
   async getOrderCount(): Promise<number> {
     return await this.table.locator('tbody tr:not([data-empty])').count();
   }
