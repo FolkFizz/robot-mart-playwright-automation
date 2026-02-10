@@ -174,6 +174,7 @@ Quality:
 
 Reporting:
 
+- `npm run allure:clean`
 - `npm run report:allure`
 - `npm run report:open`
 
@@ -243,6 +244,7 @@ Performance docs:
 
 ## Notes
 
+- Playwright npm test commands auto-clean `allure-results` and `allure-report` before each run, so generated reports reflect the latest execution only.
 - Production protection is built into reset/seed hooks: destructive resets are skipped when `BASE_URL` points to `robot-store-sandbox.onrender.com`
 - Performance suites can fail by design when thresholds expose real bottlenecks; this is treated as evidence, not script failure
 
