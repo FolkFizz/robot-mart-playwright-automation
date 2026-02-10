@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.git/
+.github/
+.vscode/
+
+playwright-report/
+test-results/
+allure-results/
+allure-report/
+performance/results/
+
+.env
+*.log

@@ -2,6 +2,7 @@
 
 Date: `February 9, 2026`
 Evidence source:
+
 - `performance/results/20260209-121019-portfolio/manifest.md`
 - `performance/results/20260209-122753-gate/manifest.md`
 

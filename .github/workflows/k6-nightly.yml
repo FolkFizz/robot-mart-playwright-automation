@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       base_url:
-        description: 'Optional BASE_URL override'
+        description: 'Optional k6 target URL override (mapped to PERF_BASE_URL)'
         required: false
         default: ''
       profile:
@@ -30,8 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      BASE_URL: ${{ github.event.inputs.base_url || vars.BASE_URL || 'https://robot-store-sandbox.onrender.com' }}
-      REAL_URL: ${{ vars.REAL_URL || '' }}
+      BASE_URL: ${{ vars.BASE_URL || 'https://robot-store-sandbox.onrender.com' }}
+      PERF_BASE_URL: ${{ github.event.inputs.base_url || vars.PERF_BASE_URL || vars.REAL_URL || '' }}
+      REAL_URL: ''
       RESET_KEY: ${{ secrets.RESET_KEY || '' }}
       PERF_USER: ${{ vars.USER_USERNAME || 'user' }}
       PERF_PASSWORD: ${{ secrets.USER_PASSWORD || vars.USER_PASSWORD || 'user123' }}
@@ -49,6 +50,9 @@ jobs:
 
       - name: Install Dependencies
         run: npm ci
+
+      - name: Quality Gates (format, typecheck, lint)
+        run: npm run ci:quality
 
       - name: Setup k6
         uses: grafana/setup-k6-action@v1

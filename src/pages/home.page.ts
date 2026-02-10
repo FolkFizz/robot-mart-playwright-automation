@@ -113,14 +113,19 @@ export class HomePage extends BasePage {
   }
 
   async isProductCardVisible(id: number | string): Promise<boolean> {
-    return await this.productCardRoot(id).isVisible().catch(() => false);
+    return await this.productCardRoot(id)
+      .isVisible()
+      .catch(() => false);
   }
 
   async getProductCardTitle(id: number | string): Promise<string> {
     return await this.getByTestId(`product-title-${id}`).innerText();
   }
 
-  async expectProductCardTitleContains(id: number | string, pattern: string | RegExp): Promise<void> {
+  async expectProductCardTitleContains(
+    id: number | string,
+    pattern: string | RegExp
+  ): Promise<void> {
     await expect(this.getByTestId(`product-title-${id}`)).toContainText(pattern);
   }
 
@@ -214,7 +219,10 @@ export class HomePage extends BasePage {
   }
 
   async isFocusedElementVisible(): Promise<boolean> {
-    return await this.page.locator(':focus').isVisible().catch(() => false);
+    return await this.page
+      .locator(':focus')
+      .isVisible()
+      .catch(() => false);
   }
 
   async getFocusedElementTagName(): Promise<string> {
@@ -296,7 +304,11 @@ export class HomePage extends BasePage {
   }
 
   async isFirstCategoryLinkVisible(): Promise<boolean> {
-    return await this.page.locator('.category-list a[href*="category="]').first().isVisible().catch(() => false);
+    return await this.page
+      .locator('.category-list a[href*="category="]')
+      .first()
+      .isVisible()
+      .catch(() => false);
   }
 
   async isSortSelectVisible(): Promise<boolean> {

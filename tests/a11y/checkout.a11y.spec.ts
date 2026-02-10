@@ -8,7 +8,7 @@ import { CartPage, CheckoutPage } from '@pages';
  * =============================================================================
  * CHECKOUT PAGE ACCESSIBILITY TESTS
  * =============================================================================
- * 
+ *
  * Test Scenarios:
  * ---------------
  * 1. WCAG 2.1 AA Compliance for Checkout Form
@@ -16,7 +16,7 @@ import { CartPage, CheckoutPage } from '@pages';
  * 3. Stripe Element Integration Accessibility
  * 4. Form Validation & Error Announcements
  * 5. Navigation & Focus Management
- * 
+ *
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (6 tests):
@@ -26,15 +26,15 @@ import { CartPage, CheckoutPage } from '@pages';
  *   - A11Y-CHK-P04: order summary section screen reader friendly
  *   - A11Y-CHK-P05: keyboard tab order reaches checkout form controls
  *   - A11Y-CHK-P06: skip link functionality
- * 
+ *
  * NEGATIVE CASES (2 tests):
  *   - A11Y-CHK-N01: form validation errors announced to screen readers
  *   - A11Y-CHK-N02: empty checkout fields block submit with browser validation
- * 
+ *
  * EDGE CASES (2 tests):
  *   - A11Y-CHK-E01: payment loading states remain accessible
  *   - A11Y-CHK-E02: stripe payment element iframe accessibility
- * 
+ *
  * Business Rules Tested:
  * ----------------------
  * - Accessibility Standard: WCAG 2.1 Level AA
@@ -44,14 +44,18 @@ import { CartPage, CheckoutPage } from '@pages';
  * - Error Messages: Validation errors associated with inputs (aria-describedby)
  * - Submit Button: Disabled states communicated to assistive tech
  * - Mock vs Stripe: Both payment modes tested for accessibility
- * 
+ *
  * =============================================================================
  */
 
 test.use({ seedData: true });
 
 test.describe('checkout accessibility @a11y @checkout', () => {
-  const openCheckoutFromCart = async (page: Page, cartPage: CartPage, checkoutPage: CheckoutPage) => {
+  const openCheckoutFromCart = async (
+    page: Page,
+    cartPage: CartPage,
+    checkoutPage: CheckoutPage
+  ) => {
     await cartPage.goto();
     await cartPage.proceedToCheckoutWithFallback();
     await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout);
@@ -65,8 +69,13 @@ test.describe('checkout accessibility @a11y @checkout', () => {
   });
 
   test.describe('positive cases', () => {
-
-    test('A11Y-CHK-P01: checkout page has no critical violations @a11y @checkout @destructive', async ({ page, cartPage, checkoutPage, runA11y, expectNoA11yViolations }) => {
+    test('A11Y-CHK-P01: checkout page has no critical violations @a11y @checkout @destructive', async ({
+      page,
+      cartPage,
+      checkoutPage,
+      runA11y,
+      expectNoA11yViolations
+    }) => {
       // Arrange: Navigate to checkout
       await openCheckoutFromCart(page, cartPage, checkoutPage);
 
@@ -82,7 +91,11 @@ test.describe('checkout accessibility @a11y @checkout', () => {
       expectNoA11yViolations(results);
     });
 
-    test('A11Y-CHK-P02: address fields have proper autocomplete attributes @a11y @checkout @smoke', async ({ page, cartPage, checkoutPage }) => {
+    test('A11Y-CHK-P02: address fields have proper autocomplete attributes @a11y @checkout @smoke', async ({
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       // Arrange: Navigate to checkout
       await openCheckoutFromCart(page, cartPage, checkoutPage);
 
@@ -93,8 +106,12 @@ test.describe('checkout accessibility @a11y @checkout', () => {
       }
     });
 
-    test('A11Y-CHK-P03: payment method selection accessible @a11y @checkout @smoke', async ({ page, cartPage, checkoutPage }) => {
-      // Arrange: Navigate to checkout  
+    test('A11Y-CHK-P03: payment method selection accessible @a11y @checkout @smoke', async ({
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
+      // Arrange: Navigate to checkout
       await openCheckoutFromCart(page, cartPage, checkoutPage);
 
       // Assert: Payment elements should be accessible
@@ -103,7 +120,11 @@ test.describe('checkout accessibility @a11y @checkout', () => {
       expect(await checkoutPage.hasMockOrStripePaymentUi()).toBe(true);
     });
 
-    test('A11Y-CHK-P04: order summary section screen reader friendly @a11y @checkout @regression', async ({ page, cartPage, checkoutPage }) => {
+    test('A11Y-CHK-P04: order summary section screen reader friendly @a11y @checkout @regression', async ({
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       // Arrange: Navigate to checkout
       await openCheckoutFromCart(page, cartPage, checkoutPage);
 
@@ -114,7 +135,11 @@ test.describe('checkout accessibility @a11y @checkout', () => {
       }
     });
 
-    test('A11Y-CHK-P05: keyboard tab order reaches checkout form controls @a11y @checkout @smoke', async ({ page, cartPage, checkoutPage }) => {
+    test('A11Y-CHK-P05: keyboard tab order reaches checkout form controls @a11y @checkout @smoke', async ({
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       // Arrange: Navigate to checkout
       await openCheckoutFromCart(page, cartPage, checkoutPage);
 
@@ -124,7 +149,11 @@ test.describe('checkout accessibility @a11y @checkout', () => {
       expect(reachedNameInput).toBe(true);
     });
 
-    test('A11Y-CHK-P06: skip link functionality @a11y @checkout @regression', async ({ page, cartPage, checkoutPage }) => {
+    test('A11Y-CHK-P06: skip link functionality @a11y @checkout @regression', async ({
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       // Arrange: Navigate to checkout
       await openCheckoutFromCart(page, cartPage, checkoutPage);
 
@@ -140,8 +169,13 @@ test.describe('checkout accessibility @a11y @checkout', () => {
   });
 
   test.describe('negative cases', () => {
-
-    test('A11Y-CHK-N01: form validation errors announced to screen readers @a11y @checkout @regression', async ({ page, cartPage, checkoutPage, runA11y, expectNoA11yViolations }) => {
+    test('A11Y-CHK-N01: form validation errors announced to screen readers @a11y @checkout @regression', async ({
+      page,
+      cartPage,
+      checkoutPage,
+      runA11y,
+      expectNoA11yViolations
+    }) => {
       // Arrange: Navigate to checkout
       await openCheckoutFromCart(page, cartPage, checkoutPage);
 
@@ -157,7 +191,11 @@ test.describe('checkout accessibility @a11y @checkout', () => {
       expectNoA11yViolations(results);
     });
 
-    test('A11Y-CHK-N02: empty checkout fields block submit with browser validation @a11y @checkout @regression', async ({ page, cartPage, checkoutPage }) => {
+    test('A11Y-CHK-N02: empty checkout fields block submit with browser validation @a11y @checkout @regression', async ({
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       // Arrange: Navigate to checkout
       await openCheckoutFromCart(page, cartPage, checkoutPage);
 
@@ -181,8 +219,13 @@ test.describe('checkout accessibility @a11y @checkout', () => {
   });
 
   test.describe('edge cases', () => {
-
-    test('A11Y-CHK-E01: payment loading states remain accessible @a11y @checkout @regression', async ({ page, cartPage, checkoutPage, runA11y, expectNoA11yViolations }) => {
+    test('A11Y-CHK-E01: payment loading states remain accessible @a11y @checkout @regression', async ({
+      page,
+      cartPage,
+      checkoutPage,
+      runA11y,
+      expectNoA11yViolations
+    }) => {
       // Arrange: Navigate to checkout
       await openCheckoutFromCart(page, cartPage, checkoutPage);
 
@@ -198,7 +241,13 @@ test.describe('checkout accessibility @a11y @checkout', () => {
       expectNoA11yViolations(results);
     });
 
-    test('A11Y-CHK-E02: stripe payment element iframe accessibility @a11y @checkout @stripe @regression', async ({ page, cartPage, checkoutPage, runA11y, expectNoA11yViolations }) => {
+    test('A11Y-CHK-E02: stripe payment element iframe accessibility @a11y @checkout @stripe @regression', async ({
+      page,
+      cartPage,
+      checkoutPage,
+      runA11y,
+      expectNoA11yViolations
+    }) => {
       // Arrange: Navigate to checkout
       await openCheckoutFromCart(page, cartPage, checkoutPage);
 
@@ -218,6 +267,3 @@ test.describe('checkout accessibility @a11y @checkout', () => {
     });
   });
 });
-
-
-

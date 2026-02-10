@@ -1,4 +1,4 @@
-import type { APIRequestContext, Page } from '@playwright/test';
+import type { APIRequestContext } from '@playwright/test';
 import { test, expect, seedCart } from '@fixtures';
 import { disableChaos, loginAsAdmin, loginAsUser } from '@api';
 import { routes } from '@config';
@@ -87,7 +87,11 @@ test.describe('authorization security @security @authz', () => {
   });
 
   test.describe('positive cases', () => {
-    test('AUTHZ-P01: admin can access admin dashboard and admin notifications API @security @authz @smoke', async ({ api, page, adminDashboardPage }) => {
+    test('AUTHZ-P01: admin can access admin dashboard and admin notifications API @security @authz @smoke', async ({
+      api,
+      page,
+      adminDashboardPage
+    }) => {
       await loginAsAdmin(api);
       await syncSessionFromApi(api, page);
 
@@ -103,7 +107,11 @@ test.describe('authorization security @security @authz', () => {
       expect(page.url()).toContain(routes.admin.dashboard);
     });
 
-    test('AUTHZ-P02: authenticated user can access own protected resources @security @authz @regression', async ({ api, page, profilePage }) => {
+    test('AUTHZ-P02: authenticated user can access own protected resources @security @authz @regression', async ({
+      api,
+      page,
+      profilePage
+    }) => {
       await loginAsUser(api);
       await syncSessionFromApi(api, page);
 
@@ -116,19 +124,25 @@ test.describe('authorization security @security @authz', () => {
       expect(notificationsBody.status).toBe('success');
 
       await profilePage.gotoTab('orders');
-      await expect(page).toHaveURL((url) => `${url.pathname}${url.search}` === routes.profileOrders);
+      await expect(page).toHaveURL(
+        (url) => `${url.pathname}${url.search}` === routes.profileOrders
+      );
     });
   });
 
   test.describe('negative cases', () => {
-    test('AUTHZ-N01: anonymous is redirected from notifications API @security @authz @regression', async ({ api }) => {
+    test('AUTHZ-N01: anonymous is redirected from notifications API @security @authz @regression', async ({
+      api
+    }) => {
       const res = await api.get(routes.api.notifications, { maxRedirects: 0 });
 
       expect(res.status()).toBe(302);
       expect(res.headers()['location'] ?? '').toContain(routes.login);
     });
 
-    test('AUTHZ-N02: regular user is forbidden from admin notifications API @security @authz @regression', async ({ api }) => {
+    test('AUTHZ-N02: regular user is forbidden from admin notifications API @security @authz @regression', async ({
+      api
+    }) => {
       await loginAsUser(api);
 
       const res = await api.get(routes.api.adminNotifications, { maxRedirects: 0 });
@@ -138,7 +152,9 @@ test.describe('authorization security @security @authz', () => {
       expect(text).toContain('Admin Access Only');
     });
 
-    test('AUTHZ-N03: admin dashboard rejects anonymous and regular users @security @authz @regression', async ({ api }) => {
+    test('AUTHZ-N03: admin dashboard rejects anonymous and regular users @security @authz @regression', async ({
+      api
+    }) => {
       const anonRes = await api.get(routes.admin.dashboard, { maxRedirects: 0 });
       const anonText = await anonRes.text();
       expect(anonRes.status()).toBe(403);
@@ -151,7 +167,9 @@ test.describe('authorization security @security @authz', () => {
       expect(userText).toContain('Admin Access Only');
     });
 
-    test('AUTHZ-N04: admin is blocked from cart add API @security @authz @regression', async ({ api }) => {
+    test('AUTHZ-N04: admin is blocked from cart add API @security @authz @regression', async ({
+      api
+    }) => {
       await loginAsAdmin(api);
 
       const res = await api.post(routes.api.cartAdd, {
@@ -166,7 +184,9 @@ test.describe('authorization security @security @authz', () => {
       expect(body.message).toContain('Admin cannot shop');
     });
 
-    test('AUTHZ-N05: reset-stock endpoint rejects requests without reset key @security @authz @security @regression', async ({ api }) => {
+    test('AUTHZ-N05: reset-stock endpoint rejects requests without reset key @security @authz @security @regression', async ({
+      api
+    }) => {
       const res = await api.post(routes.api.resetStockSafe, { maxRedirects: 0 });
 
       expect(res.status()).toBe(403);
@@ -176,7 +196,9 @@ test.describe('authorization security @security @authz', () => {
       expect(body.message).toContain('Invalid or missing X-RESET-KEY');
     });
 
-    test('AUTHZ-N06: logout invalidates protected API access @security @authz @regression', async ({ api }) => {
+    test('AUTHZ-N06: logout invalidates protected API access @security @authz @regression', async ({
+      api
+    }) => {
       await loginAsUser(api);
 
       const beforeLogout = await api.get(routes.api.notifications, { maxRedirects: 0 });
@@ -190,7 +212,11 @@ test.describe('authorization security @security @authz', () => {
       expect(afterLogout.headers()['location'] ?? '').toContain(routes.login);
     });
 
-    test('AUTHZ-N07: anonymous cannot access profile orders page @security @authz @regression', async ({ page, profilePage, loginPage }) => {
+    test('AUTHZ-N07: anonymous cannot access profile orders page @security @authz @regression', async ({
+      page,
+      profilePage,
+      loginPage
+    }) => {
       await page.context().clearCookies();
       await profilePage.gotoTab('orders');
 
@@ -206,7 +232,9 @@ test.describe('authorization security @security @authz', () => {
       const otherCtx = await createIsolatedUserContext({ prefix: 'authz', label: 'other' });
 
       try {
-        const orderId = await createOrderForCurrentSession(ownerCtx, [{ id: seededProducts[0].id, quantity: 1 }]);
+        const orderId = await createOrderForCurrentSession(ownerCtx, [
+          { id: seededProducts[0].id, quantity: 1 }
+        ]);
 
         const ownerInvoice = await ownerCtx.get(routes.order.invoice(orderId), { maxRedirects: 0 });
         expect(ownerInvoice.status()).toBe(200);
@@ -220,7 +248,9 @@ test.describe('authorization security @security @authz', () => {
       }
     });
 
-    test('AUTHZ-E02: invalid invoice id returns 404 without stack trace leak @security @authz @regression', async ({ api }) => {
+    test('AUTHZ-E02: invalid invoice id returns 404 without stack trace leak @security @authz @regression', async ({
+      api
+    }) => {
       await loginAsUser(api);
 
       const res = await api.get(routes.order.invoice('INVALID_ORDER_999'), { maxRedirects: 0 });
@@ -231,7 +261,9 @@ test.describe('authorization security @security @authz', () => {
       expect(hasStackTraceSignature(text)).toBe(false);
     });
 
-    test('AUTHZ-E03: role switch in same API context updates authorization @security @authz @regression', async ({ api }) => {
+    test('AUTHZ-E03: role switch in same API context updates authorization @security @authz @regression', async ({
+      api
+    }) => {
       await loginAsUser(api);
 
       const before = await api.get(routes.api.adminNotifications, { maxRedirects: 0 });

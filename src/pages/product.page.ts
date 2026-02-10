@@ -61,9 +61,7 @@ export class ProductPage extends BasePage {
     await this.addToCartButton.click();
     // ใน UI จริงมี data-status loading/idle + body data-loading
     // รอให้หน้ากลับสู่สถานะ idle (ป้องกันคลิกซ้ำเร็ว)
-    await this.page.waitForFunction(
-      () => document.body.getAttribute('data-loading') === 'false'
-    );
+    await this.page.waitForFunction(() => document.body.getAttribute('data-loading') === 'false');
   }
 
   async isAddToCartVisible(): Promise<boolean> {

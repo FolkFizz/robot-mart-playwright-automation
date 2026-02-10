@@ -8,7 +8,7 @@ import { randomUser, randomPasswordPair } from '@utils';
  * =============================================================================
  * AUTHENTICATION E2E TESTS - Comprehensive Coverage
  * =============================================================================
- * 
+ *
  * Test Scenarios:
  * ---------------
  * 1. Login & Logout Operations
@@ -17,7 +17,7 @@ import { randomUser, randomPasswordPair } from '@utils';
  * 4. Token Security & Expiry Handling
  * 5. Cart Merge on Login (Session â†’ Database)
  * 6. Email Notification System
- * 
+ *
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (5 tests):
@@ -26,7 +26,7 @@ import { randomUser, randomPasswordPair } from '@utils';
  *   - AUTH-P03: register new user with unique credentials
  *   - AUTH-P05: request reset with valid email sends link
  *   - AUTH-P06: reset password with valid token succeeds
- * 
+ *
  * NEGATIVE CASES (8 tests):
  *   - AUTH-N02: login with wrong password fails
  *   - AUTH-N01: login with invalid username fails
@@ -36,11 +36,11 @@ import { randomUser, randomPasswordPair } from '@utils';
  *   - AUTH-N07: reset with expired token fails
  *   - AUTH-N08: reset with invalid token redirects to login
  *   - AUTH-N09: password mismatch during reset shows error
- * 
+ *
  * EDGE CASES (2 tests):
  *   - AUTH-E05: token cannot be reused after successful reset (security)
  *   - AUTH-E04: guest cart merges with DB cart on login
- * 
+ *
  * Business Rules Tested:
  * ----------------------
  * - Authentication: bcrypt password hashing, session management
@@ -49,20 +49,20 @@ import { randomUser, randomPasswordPair } from '@utils';
  * - Cart Persistence: Guest carts stored in session, authenticated in database
  * - Cart Merge: On login, session cart items merge with DB cart (respects stock limits)
  * - Security Best Practice: Don't reveal if email exists during reset request
- * 
+ *
  * =============================================================================
  */
 
 test.use({ seedData: true });
 
 test.describe('authentication comprehensive @e2e @auth', () => {
-
   // ========================================================================
   // POSITIVE TEST CASES - Login & Logout
   // ========================================================================
   test.describe('login and logout', () => {
-    
-    test('AUTH-P01: login with valid credentials succeeds @smoke @e2e @safe', async ({ loginPage }) => {
+    test('AUTH-P01: login with valid credentials succeeds @smoke @e2e @safe', async ({
+      loginPage
+    }) => {
       // Arrange & Act: Navigate to login and submit credentials
       await loginPage.goto();
       await loginPage.login(users.user.username, users.user.password);
@@ -88,8 +88,9 @@ test.describe('authentication comprehensive @e2e @auth', () => {
   // NEGATIVE TEST CASES - Login Failures
   // ========================================================================
   test.describe('login failures', () => {
-    
-    test('AUTH-N02: login with wrong password fails @e2e @regression @safe', async ({ loginPage }) => {
+    test('AUTH-N02: login with wrong password fails @e2e @regression @safe', async ({
+      loginPage
+    }) => {
       // Act: Submit with incorrect password
       await loginPage.goto();
       await loginPage.fillUsername(users.user.username);
@@ -100,7 +101,9 @@ test.describe('authentication comprehensive @e2e @auth', () => {
       await loginPage.expectErrorVisible();
     });
 
-    test('AUTH-N01: login with invalid username fails @e2e @regression @safe', async ({ loginPage }) => {
+    test('AUTH-N01: login with invalid username fails @e2e @regression @safe', async ({
+      loginPage
+    }) => {
       // Act: Submit with non-existent username
       await loginPage.goto();
       await loginPage.fillUsername(authInputs.wrongUsername);
@@ -116,8 +119,11 @@ test.describe('authentication comprehensive @e2e @auth', () => {
   // POSITIVE TEST CASES - Registration
   // ========================================================================
   test.describe('user registration', () => {
-    
-    test('AUTH-P03: register new user with unique credentials @e2e @regression @destructive', async ({ page, registerPage, loginPage }) => {
+    test('AUTH-P03: register new user with unique credentials @e2e @regression @destructive', async ({
+      page,
+      registerPage,
+      loginPage
+    }) => {
       // Arrange: Generate random user
       const user = randomUser('auto');
 
@@ -130,7 +136,9 @@ test.describe('authentication comprehensive @e2e @auth', () => {
       await expect(loginPage.getUsernameInput()).toBeVisible();
     });
 
-    test('AUTH-N04: register with password mismatch fails @e2e @regression @destructive', async ({ registerPage }) => {
+    test('AUTH-N04: register with password mismatch fails @e2e @regression @destructive', async ({
+      registerPage
+    }) => {
       // Arrange: Generate mismatched passwords
       const user = randomUser('auto');
       const { password, confirmPassword } = randomPasswordPair(true);
@@ -147,7 +155,9 @@ test.describe('authentication comprehensive @e2e @auth', () => {
       await registerPage.expectErrorContains(authErrors.passwordMismatch);
     });
 
-    test('AUTH-N03: register with duplicate username or email fails @e2e @regression @destructive', async ({ registerPage }) => {
+    test('AUTH-N03: register with duplicate username or email fails @e2e @regression @destructive', async ({
+      registerPage
+    }) => {
       // Act: Try to register with existing user's credentials
       await registerPage.goto();
       await registerPage.fillUsername(users.user.username);
@@ -162,11 +172,13 @@ test.describe('authentication comprehensive @e2e @auth', () => {
   });
 
   // ========================================================================
-  // POSITIVE TEST CASES - Password Reset Flow  
+  // POSITIVE TEST CASES - Password Reset Flow
   // ========================================================================
   test.describe('password reset flow', () => {
-    
-    test('AUTH-P05: request reset with valid email sends link @e2e @auth @regression @safe', async ({ forgotPasswordPage, inboxPage }) => {
+    test('AUTH-P05: request reset with valid email sends link @e2e @auth @regression @safe', async ({
+      forgotPasswordPage,
+      inboxPage
+    }) => {
       // Act: Request password reset
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
@@ -180,12 +192,18 @@ test.describe('authentication comprehensive @e2e @auth', () => {
       // Find reset password email
       await inboxPage.openEmailBySubject(inboxSubjects.resetPassword);
       const link = await inboxPage.getFirstEmailLinkHref();
-      
+
       expect(link ?? '').toContain(routes.resetPasswordBase);
       expect(link ?? '').toContain(`${routes.resetPasswordBase}/`);
     });
 
-    test('AUTH-P06: reset password with valid token succeeds @e2e @auth @regression @destructive', async ({ page, forgotPasswordPage, inboxPage, loginPage, resetPasswordPage }) => {
+    test('AUTH-P06: reset password with valid token succeeds @e2e @auth @regression @destructive', async ({
+      page,
+      forgotPasswordPage,
+      inboxPage,
+      loginPage,
+      resetPasswordPage
+    }) => {
       // Step 1: Request reset
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(users.user.email);
@@ -219,8 +237,9 @@ test.describe('authentication comprehensive @e2e @auth', () => {
   // NEGATIVE TEST CASES - Password Reset Failures
   // ========================================================================
   test.describe('password reset failures', () => {
-    
-    test('AUTH-N06: reset request with non-existent email shows generic message @e2e @auth @regression @safe', async ({ forgotPasswordPage }) => {
+    test('AUTH-N06: reset request with non-existent email shows generic message @e2e @auth @regression @safe', async ({
+      forgotPasswordPage
+    }) => {
       // Security best practice: don't reveal if email exists
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(authInputs.nonExistentEmail);
@@ -229,12 +248,15 @@ test.describe('authentication comprehensive @e2e @auth', () => {
       await forgotPasswordPage.expectMessageContains(/sent|email/i);
     });
 
-    test('AUTH-N07: reset with expired token fails @e2e @auth @regression @destructive', async ({ api, resetPasswordPage }) => {
+    test('AUTH-N07: reset with expired token fails @e2e @auth @regression @destructive', async ({
+      api,
+      resetPasswordPage
+    }) => {
       // Arrange: Create an expired token via test API
       const expiredTokenRes = await api.post(routes.api.testCreateExpiredResetToken, {
         data: { email: users.user.email }
       });
-      
+
       if (expiredTokenRes.status() === 200) {
         const { token } = await expiredTokenRes.json();
 
@@ -247,7 +269,9 @@ test.describe('authentication comprehensive @e2e @auth', () => {
       }
     });
 
-    test('AUTH-N08: reset with invalid token redirects to login @e2e @auth @regression @safe', async ({ resetPasswordPage }) => {
+    test('AUTH-N08: reset with invalid token redirects to login @e2e @auth @regression @safe', async ({
+      resetPasswordPage
+    }) => {
       // Act: Navigate with invalid token
       await resetPasswordPage.gotoByToken(authInputs.invalidResetToken);
 
@@ -256,7 +280,11 @@ test.describe('authentication comprehensive @e2e @auth', () => {
       await resetPasswordPage.expectAnyErrorVisible();
     });
 
-    test('AUTH-N09: password mismatch during reset shows error @e2e @auth @regression @destructive', async ({ forgotPasswordPage, inboxPage, resetPasswordPage }) => {
+    test('AUTH-N09: password mismatch during reset shows error @e2e @auth @regression @destructive', async ({
+      forgotPasswordPage,
+      inboxPage,
+      resetPasswordPage
+    }) => {
       // Arrange: Request reset and open reset link
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(users.user.email);
@@ -268,7 +296,10 @@ test.describe('authentication comprehensive @e2e @auth', () => {
       await resetPasswordPage.gotoByLink(link || '');
 
       // Act: Fill with mismatched passwords
-      await resetPasswordPage.resetPassword(resetTestData.newPassword, resetTestData.mismatchPassword);
+      await resetPasswordPage.resetPassword(
+        resetTestData.newPassword,
+        resetTestData.mismatchPassword
+      );
 
       // Assert: Mismatch error shown
       await resetPasswordPage.expectErrorContains(/match/i);
@@ -279,8 +310,11 @@ test.describe('authentication comprehensive @e2e @auth', () => {
   // EDGE CASES - Security & Special Scenarios
   // ========================================================================
   test.describe('edge cases', () => {
-    
-    test('AUTH-E05: token cannot be reused after successful reset (security) @e2e @auth @regression @destructive', async ({ forgotPasswordPage, inboxPage, resetPasswordPage }) => {
+    test('AUTH-E05: token cannot be reused after successful reset (security) @e2e @auth @regression @destructive', async ({
+      forgotPasswordPage,
+      inboxPage,
+      resetPasswordPage
+    }) => {
       // Step 1: Request reset and open token link
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(users.user.email);
@@ -290,7 +324,7 @@ test.describe('authentication comprehensive @e2e @auth', () => {
       const link = await inboxPage.getFirstEmailLinkHref();
       expect(link ?? '').toContain(routes.resetPasswordBase);
       await resetPasswordPage.gotoByLink(link || '');
-      
+
       const newPassword = users.user.password;
       await resetPasswordPage.resetPassword(newPassword, newPassword);
 
@@ -304,7 +338,13 @@ test.describe('authentication comprehensive @e2e @auth', () => {
       await resetPasswordPage.expectAnyErrorVisible();
     });
 
-    test('AUTH-E04: guest cart merges with DB cart on login @e2e @auth @cart @regression @destructive', async ({ api, homePage, productPage, loginPage, cartPage }) => {
+    test('AUTH-E04: guest cart merges with DB cart on login @e2e @auth @cart @regression @destructive', async ({
+      api,
+      homePage,
+      productPage,
+      loginPage,
+      cartPage
+    }) => {
       const firstProduct = seededProducts[0];
       const secondProduct = seededProducts[1];
 
@@ -334,4 +374,3 @@ test.describe('authentication comprehensive @e2e @auth', () => {
     });
   });
 });
-

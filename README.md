@@ -13,7 +13,7 @@ in one place, with reproducible evidence artifacts for portfolio and QA reportin
 
 ## Current Snapshot
 
-Verified on: `February 9, 2026`
+Verified on: `February 10, 2026`
 
 - Playwright specs: `27`
   - `tests/e2e`: 10
@@ -41,19 +41,27 @@ Verified on: `February 9, 2026`
 - k6 (performance tests)
 - Allure reporter (`allure-playwright`)
 - axe-core integration for accessibility
+- ESLint + Prettier (quality gates)
 - PostgreSQL client (`pg`) for reset/seed hooks
+- Docker / Docker Compose (portable local execution)
 
 ## Prerequisites
 
 1. Install dependencies
+
 ```bash
 npm install
 ```
+
 2. Configure `.env` (single source of truth)
 3. Ensure target application is reachable
+   - Local mode: run companion app repo `robot-store-sandbox` with `npm run dev`
+   - Hosted mode: point to deployed URL
 4. Optional for performance testing:
    - Install k6
    - Provide `RESET_KEY` for stock reset endpoint
+5. Optional for containerized execution:
+   - Docker Desktop (or Docker Engine + Compose v2)
 
 ## Required Environment Variables
 
@@ -66,24 +74,77 @@ npm install
 - `ADMIN_USERNAME`
 - `ADMIN_PASSWORD`
 
+## URL Strategy (Important)
+
+- Playwright target:
+  - Uses `BASE_URL` only
+  - Fallback: `http://localhost:3000`
+- k6 target (priority order):
+  1. `PERF_BASE_URL` (recommended)
+  2. `REAL_URL` (legacy alias)
+  3. `BASE_URL`
+  4. `http://localhost:3000`
+
+Quick check:
+
+```bash
+npm run env:targets
+```
+
+## Run Modes (Recommended)
+
+1. Quick Review Mode (no companion repo required)
+   - Use hosted target
+   - Example `.env`:
+     - `BASE_URL="https://robot-store-sandbox.onrender.com"`
+     - `PERF_BASE_URL="https://robot-store-sandbox.onrender.com"`
+   - Best for portfolio reviewers who want fast validation
+
+2. Local Dev Mode (with companion app repo)
+   - In `robot-store-sandbox` repo:
+     - `npm install`
+     - `npm run dev`
+   - In this repo `.env`:
+     - `BASE_URL="http://localhost:3000"`
+     - `PERF_BASE_URL` optional (set only if k6 should hit a different target)
+   - Best for debugging and development feedback loop
+
 Optional:
 
 - `SEED_DATA` (`false` to skip auto seed/reset)
 - `SEED_STOCK` (override stock value after seed)
 - `INIT_SQL_PATH` (custom path to `robot-store-sandbox/database/init.sql`)
+- `PERF_BASE_URL` (optional k6-only override target)
+- `REAL_URL` (legacy k6 override, keep empty in new setups)
 
 ## Quick Start
 
-1. Start the target web app (local or sandbox URL)
+1. Verify target URL resolution (recommended before running)
+
+```bash
+npm run env:targets
+```
+
 2. Run smoke tests
+
 ```bash
 npm run test:smoke
 ```
-3. Run full Playwright suite
+
+3. Run quality gates
+
+```bash
+npm run ci:quality
+```
+
+4. Run full Playwright suite
+
 ```bash
 npm run test
 ```
-4. Run production-safe suite
+
+5. Run production-safe suite
+
 ```bash
 npm run test:prod
 ```
@@ -99,10 +160,23 @@ Playwright:
 - `npm run test:a11y`
 - `npm run test:prod`
 
+Quality:
+
+- `npm run format`
+- `npm run format:check`
+- `npm run typecheck`
+- `npm run lint`
+- `npm run lint:fix`
+- `npm run ci:quality`
+
 Reporting:
 
 - `npm run report:allure`
 - `npm run report:open`
+
+Utilities:
+
+- `npm run env:targets`
 
 k6 performance:
 
@@ -120,6 +194,12 @@ k6 performance:
 - `npm run test:perf:breakpoint`
 - `npm run test:perf:suite`
 - `npm run test:perf:suite:gate`
+
+Docker:
+
+- `docker compose run --rm qa-playwright` (safe smoke via container)
+- `docker compose run --rm qa-k6` (k6 smoke via container)
+- For local app target from container, set `BASE_URL=http://host.docker.internal:3000`
 
 ## Project Structure
 
@@ -161,3 +241,9 @@ Performance docs:
 
 - Production protection is built into reset/seed hooks: destructive resets are skipped when `BASE_URL` points to `robot-store-sandbox.onrender.com`
 - Performance suites can fail by design when thresholds expose real bottlenecks; this is treated as evidence, not script failure
+
+## Known Limitations
+
+- `@chat/@ai` tests are excluded from routine CI by default because they can depend on external LLM availability/cost.
+- Some destructive tests (`@destructive`) are intentionally excluded from PR-safe smoke workflows.
+- k6 thresholds can fail on shared environments due to live network variance; this is expected signal, not framework instability.

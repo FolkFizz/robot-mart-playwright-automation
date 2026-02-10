@@ -21,10 +21,10 @@
  * - Useful for validating connectivity before heavier tests
  */
 export const smoke = {
-    executor: 'constant-vus',
-    vus: 1,
-    duration: '60s',
-    gracefulStop: '0s',
+  executor: 'constant-vus',
+  vus: 1,
+  duration: '60s',
+  gracefulStop: '0s'
 };
 
 /**
@@ -34,10 +34,10 @@ export const smoke = {
  * - All users hit endpoint at roughly the same time
  */
 export const concurrent = {
-    executor: 'shared-iterations',
-    vus: 20,
-    iterations: 20,
-    maxDuration: '30s',
+  executor: 'shared-iterations',
+  vus: 20,
+  iterations: 20,
+  maxDuration: '30s'
 };
 
 /**
@@ -46,10 +46,10 @@ export const concurrent = {
  * - 1 minute duration
  */
 export const constant = {
-    executor: 'constant-vus',
-    vus: 10,
-    duration: '1m',
-    gracefulStop: '30s',
+  executor: 'constant-vus',
+  vus: 10,
+  duration: '1m',
+  gracefulStop: '30s'
 };
 
 /**
@@ -60,14 +60,14 @@ export const constant = {
  * - Ramps down to 0 over 30s
  */
 export const ramping = {
-    executor: 'ramping-vus',
-    startVUs: 0,
-    stages: [
-        { duration: '30s', target: 5 },
-        { duration: '1m', target: 5 },
-        { duration: '30s', target: 0 },
-    ],
-    gracefulRampDown: '30s',
+  executor: 'ramping-vus',
+  startVUs: 0,
+  stages: [
+    { duration: '30s', target: 5 },
+    { duration: '1m', target: 5 },
+    { duration: '30s', target: 0 }
+  ],
+  gracefulRampDown: '30s'
 };
 
 /**
@@ -78,15 +78,15 @@ export const ramping = {
  * - Ramp down to 0
  */
 export const spike = {
-    executor: 'ramping-vus',
-    startVUs: 0,
-    stages: [
-        { duration: '10s', target: 0 },
-        { duration: '10s', target: 20 },
-        { duration: '1m', target: 20 },
-        { duration: '10s', target: 0 },
-    ],
-    gracefulRampDown: '30s',
+  executor: 'ramping-vus',
+  startVUs: 0,
+  stages: [
+    { duration: '10s', target: 0 },
+    { duration: '10s', target: 20 },
+    { duration: '1m', target: 20 },
+    { duration: '10s', target: 0 }
+  ],
+  gracefulRampDown: '30s'
 };
 
 /**
@@ -96,10 +96,10 @@ export const spike = {
  * - Useful for fast local validation
  */
 export const load = {
-    executor: 'constant-vus',
-    vus: 10,
-    duration: '30s',
-    gracefulStop: '10s',
+  executor: 'constant-vus',
+  vus: 10,
+  duration: '30s',
+  gracefulStop: '10s'
 };
 
 /**
@@ -109,14 +109,14 @@ export const load = {
  * - Ramp down: 20 -> 0 VUs (30s)
  */
 export const loadStrict = {
-    executor: 'ramping-vus',
-    startVUs: 0,
-    stages: [
-        { duration: '30s', target: 20 },
-        { duration: '1m', target: 20 },
-        { duration: '30s', target: 0 },
-    ],
-    gracefulRampDown: '10s',
+  executor: 'ramping-vus',
+  startVUs: 0,
+  stages: [
+    { duration: '30s', target: 20 },
+    { duration: '1m', target: 20 },
+    { duration: '30s', target: 0 }
+  ],
+  gracefulRampDown: '10s'
 };
 
 /**
@@ -125,15 +125,15 @@ export const loadStrict = {
  * - Total profile length: 9 minutes
  */
 export const stress = {
-    executor: 'ramping-vus',
-    startVUs: 0,
-    stages: [
-        { duration: '2m', target: 50 },
-        { duration: '3m', target: 100 },
-        { duration: '2m', target: 150 },
-        { duration: '2m', target: 0 },
-    ],
-    gracefulRampDown: '30s',
+  executor: 'ramping-vus',
+  startVUs: 0,
+  stages: [
+    { duration: '2m', target: 50 },
+    { duration: '3m', target: 100 },
+    { duration: '2m', target: 150 },
+    { duration: '2m', target: 0 }
+  ],
+  gracefulRampDown: '30s'
 };
 
 /**
@@ -142,10 +142,10 @@ export const stress = {
  * - 30 minutes duration
  */
 export const soak = {
-    executor: 'constant-vus',
-    vus: 10,
-    duration: '30m',
-    gracefulStop: '30s',
+  executor: 'constant-vus',
+  vus: 10,
+  duration: '30m',
+  gracefulStop: '30s'
 };
 
 /**
@@ -154,15 +154,15 @@ export const soak = {
  * - Increases from 10 to 300 requests/second
  */
 export const breakpoint = {
-    executor: 'ramping-arrival-rate',
-    startRate: 10,
-    timeUnit: '1s',
-    preAllocatedVUs: 50,
-    maxVUs: 200,
-    stages: [
-        { duration: '1m', target: 50 },
-        { duration: '1m', target: 100 },
-        { duration: '1m', target: 200 },
-        { duration: '1m', target: 300 },
-    ],
+  executor: 'ramping-arrival-rate',
+  startRate: 10,
+  timeUnit: '1s',
+  preAllocatedVUs: 50,
+  maxVUs: 200,
+  stages: [
+    { duration: '1m', target: 50 },
+    { duration: '1m', target: 100 },
+    { duration: '1m', target: 200 },
+    { duration: '1m', target: 300 }
+  ]
 };

@@ -17,7 +17,10 @@ export const defaultSecurityHeaders = [
   'content-security-policy'
 ];
 
-export const getMissingSecurityHeaders = (headers: HeaderMap, required = defaultSecurityHeaders) => {
+export const getMissingSecurityHeaders = (
+  headers: HeaderMap,
+  required = defaultSecurityHeaders
+) => {
   const normalized = normalizeHeaders(headers);
   return required.filter((header) => !normalized[header]);
 };

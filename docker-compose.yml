@@ -1,0 +1,39 @@
+services:
+  qa-playwright:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: robot-store-qa:local
+    env_file:
+      - .env
+    environment:
+      # Default to hosted sandbox for portability.
+      # If you want local app from container, use BASE_URL=http://host.docker.internal:3000
+      BASE_URL: ${BASE_URL:-https://robot-store-sandbox.onrender.com}
+      SEED_DATA: ${SEED_DATA:-false}
+      CI: "true"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: npm run test:smoke
+    volumes:
+      - ./playwright-report:/work/playwright-report
+      - ./test-results:/work/test-results
+
+  qa-k6:
+    image: grafana/k6:0.56.0
+    working_dir: /work
+    env_file:
+      - .env
+    environment:
+      # k6 target priority in scripts: PERF_BASE_URL -> REAL_URL (legacy) -> BASE_URL
+      BASE_URL: ${BASE_URL:-https://robot-store-sandbox.onrender.com}
+      PERF_BASE_URL: ${PERF_BASE_URL:-}
+      REAL_URL: ${REAL_URL:-}
+      RESET_KEY: ${RESET_KEY:-}
+      PERF_USER: ${USER_USERNAME:-user}
+      PERF_PASSWORD: ${USER_PASSWORD:-user123}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: ["run", "performance/scripts/smoke.k6.js"]
+    volumes:
+      - ./:/work

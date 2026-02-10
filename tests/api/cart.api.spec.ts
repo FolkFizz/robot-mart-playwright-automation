@@ -1,5 +1,15 @@
 ﻿import { test, expect } from '@fixtures';
-import { loginAsUser, loginAsAdmin, addToCart, applyCoupon, clearCart, getCart, removeCartItem, removeCoupon, updateCartItem } from '@api';
+import {
+  loginAsUser,
+  loginAsAdmin,
+  addToCart,
+  applyCoupon,
+  clearCart,
+  getCart,
+  removeCartItem,
+  removeCoupon,
+  updateCartItem
+} from '@api';
 import { routes } from '@config';
 import { seededProducts, coupons } from '@data';
 
@@ -7,49 +17,47 @@ import { seededProducts, coupons } from '@data';
  * =============================================================================
  * CART API TESTS - Comprehensive Coverage
  * =============================================================================
- * 
+ *
  * Test Scenarios:
  * ---------------
  * 1. Cart Item Management (Add, Update, Remove)
  * 2. Cart Retrieval (Get Current Cart State)
  * 3. Coupon Application via API
  * 4. Cart Clearing & Reset
- * 
+ *
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (2 tests):
  *   - CART-API-P01: add, update, remove cart item
  *   - CART-API-P02: apply and remove coupon
- * 
+ *
  * NEGATIVE CASES (3 tests):
  *   - CART-API-N01: add invalid product ID returns error
  *   - CART-API-N02: quantity exceeds stock limit fails gracefully
  *   - CART-API-N03: negative quantity rejected
- * 
+ *
  * EDGE CASES (2 tests):
  *   - CART-API-E01: admin user cannot add to cart
  *   - CART-API-E02: adding same product multiple times merges quantities
- * 
+ *
  * Business Rules Tested:
  * ----------------------
  * - Cart Storage: Database for authenticated users, session for guests
  * - API Endpoints: /api/cart/* (add, update, remove, get, apply-coupon)
- * - Add Response: JSON {ok: true, cart: [...]} 
+ * - Add Response: JSON {ok: true, cart: [...]}
  * - Update Quantity: POST /api/cart/update with productId & quantity
  * - Remove Item: Removes specific product from cart
  * - Coupon Application: Validates code, applies discount to cart total
  * - Admin Restriction: Admin users cannot add items to cart
  * - Cart Structure: Array of {id, name, price, quantity, image}
- * 
+ *
  * =============================================================================
  */
 
 test.use({ seedData: true });
 
 test.describe('cart api @api @cart', () => {
-
   test.describe('positive cases', () => {
-
     test('CART-API-P01: add, update, remove cart item @api @cart @regression', async ({ api }) => {
       const product = seededProducts[0];
 
@@ -101,8 +109,9 @@ test.describe('cart api @api @cart', () => {
   });
 
   test.describe('negative cases', () => {
-
-    test('CART-API-N01: add invalid product ID returns error @api @cart @regression', async ({ api }) => {
+    test('CART-API-N01: add invalid product ID returns error @api @cart @regression', async ({
+      api
+    }) => {
       // Arrange: Login and clear cart
       await loginAsUser(api);
       await clearCart(api);
@@ -121,7 +130,9 @@ test.describe('cart api @api @cart', () => {
       expect(body.message).toContain('Product not found');
     });
 
-    test('CART-API-N02: quantity exceeds stock limit fails gracefully @api @cart @regression', async ({ api }) => {
+    test('CART-API-N02: quantity exceeds stock limit fails gracefully @api @cart @regression', async ({
+      api
+    }) => {
       const product = seededProducts[0];
 
       // Arrange: Login and clear cart
@@ -166,8 +177,9 @@ test.describe('cart api @api @cart', () => {
   });
 
   test.describe('edge cases', () => {
-
-    test('CART-API-E01: admin user cannot add to cart @api @cart @security @regression', async ({ api }) => {
+    test('CART-API-E01: admin user cannot add to cart @api @cart @security @regression', async ({
+      api
+    }) => {
       const product = seededProducts[0];
 
       // Arrange: Login as admin
@@ -187,7 +199,9 @@ test.describe('cart api @api @cart', () => {
       expect(body.message).toContain('Admin cannot shop');
     });
 
-    test('CART-API-E02: adding same product multiple times merges quantities @api @cart @regression', async ({ api }) => {
+    test('CART-API-E02: adding same product multiple times merges quantities @api @cart @regression', async ({
+      api
+    }) => {
       const product = seededProducts[0];
 
       // Arrange: Login and clear cart

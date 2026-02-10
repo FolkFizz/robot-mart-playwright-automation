@@ -1,4 +1,3 @@
-import type { APIRequestContext } from '@playwright/test';
 import { Client } from 'pg';
 import { test, expect } from '@fixtures';
 import { authInputs, inboxSubjects, buildNonExistentEmail, resetTestData } from '@data';
@@ -68,9 +67,7 @@ const resolveSsl = (databaseUrl: string) => {
   try {
     const url = new URL(databaseUrl);
     const isLocal =
-      url.hostname === 'localhost' ||
-      url.hostname === '127.0.0.1' ||
-      url.hostname === '::1';
+      url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '::1';
     const sslMode = url.searchParams.get('sslmode');
     if (!isLocal || sslMode === 'require') {
       return { rejectUnauthorized: false };
@@ -142,7 +139,10 @@ test.describe('password reset integration @integration @auth', () => {
   });
 
   test.describe('positive cases', () => {
-    test('RESET-INT-P01: forgot password sends reset link to demo inbox @integration @auth @regression', async ({ forgotPasswordPage, inboxPage }) => {
+    test('RESET-INT-P01: forgot password sends reset link to demo inbox @integration @auth @regression', async ({
+      forgotPasswordPage,
+      inboxPage
+    }) => {
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
 
@@ -157,7 +157,10 @@ test.describe('password reset integration @integration @auth', () => {
       extractTokenFromLink(link ?? '');
     });
 
-    test('RESET-INT-P02: reset email has expected subject pattern @integration @auth @smoke', async ({ forgotPasswordPage, inboxPage }) => {
+    test('RESET-INT-P02: reset email has expected subject pattern @integration @auth @smoke', async ({
+      forgotPasswordPage,
+      inboxPage
+    }) => {
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
 
@@ -167,7 +170,10 @@ test.describe('password reset integration @integration @auth', () => {
       expect(subject).toContain('password');
     });
 
-    test('RESET-INT-P03: reset link uses valid URL and token format @integration @auth @regression', async ({ forgotPasswordPage, inboxPage }) => {
+    test('RESET-INT-P03: reset link uses valid URL and token format @integration @auth @regression', async ({
+      forgotPasswordPage,
+      inboxPage
+    }) => {
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
 
@@ -183,7 +189,9 @@ test.describe('password reset integration @integration @auth', () => {
   });
 
   test.describe('negative cases', () => {
-    test('RESET-INT-N01: non-existent email shows generic success message @integration @auth @security @regression', async ({ forgotPasswordPage }) => {
+    test('RESET-INT-N01: non-existent email shows generic success message @integration @auth @security @regression', async ({
+      forgotPasswordPage
+    }) => {
       const fakeEmail = buildNonExistentEmail(String(Date.now()));
 
       await forgotPasswordPage.goto();
@@ -195,7 +203,10 @@ test.describe('password reset integration @integration @auth', () => {
       await forgotPasswordPage.expectNoErrorText();
     });
 
-    test('RESET-INT-N02: invalid email format blocked by HTML5 validation @integration @auth @regression', async ({ page, forgotPasswordPage }) => {
+    test('RESET-INT-N02: invalid email format blocked by HTML5 validation @integration @auth @regression', async ({
+      page,
+      forgotPasswordPage
+    }) => {
       await forgotPasswordPage.goto();
 
       const emailInput = forgotPasswordPage.getEmailInput();
@@ -211,8 +222,16 @@ test.describe('password reset integration @integration @auth', () => {
       expect(message).toBe('');
     });
 
-    test('RESET-INT-N03: expired reset token is rejected @integration @auth @security @regression', async ({ api, forgotPasswordPage, resetPasswordPage, loginPage }, testInfo) => {
-      const user = await registerIsolatedUser(api, { prefix: 'reset', workerIndex: testInfo.workerIndex });
+    test('RESET-INT-N03: expired reset token is rejected @integration @auth @security @regression', async ({
+      api,
+      forgotPasswordPage,
+      resetPasswordPage,
+      loginPage
+    }, testInfo) => {
+      const user = await registerIsolatedUser(api, {
+        prefix: 'reset',
+        workerIndex: testInfo.workerIndex
+      });
 
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(user.email);
@@ -225,8 +244,16 @@ test.describe('password reset integration @integration @auth', () => {
       await resetPasswordPage.expectErrorContains(/invalid|expired/i);
     });
 
-    test('RESET-INT-N04: used reset token cannot be reused @integration @auth @security @regression', async ({ api, forgotPasswordPage, resetPasswordPage, loginPage }, testInfo) => {
-      const user = await registerIsolatedUser(api, { prefix: 'reset', workerIndex: testInfo.workerIndex });
+    test('RESET-INT-N04: used reset token cannot be reused @integration @auth @security @regression', async ({
+      api,
+      forgotPasswordPage,
+      resetPasswordPage,
+      loginPage
+    }, testInfo) => {
+      const user = await registerIsolatedUser(api, {
+        prefix: 'reset',
+        workerIndex: testInfo.workerIndex
+      });
 
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(user.email);
@@ -244,8 +271,14 @@ test.describe('password reset integration @integration @auth', () => {
   });
 
   test.describe('edge cases', () => {
-    test('RESET-INT-E01: repeated reset requests rotate token for same user @integration @auth @regression', async ({ api, forgotPasswordPage }, testInfo) => {
-      const user = await registerIsolatedUser(api, { prefix: 'reset', workerIndex: testInfo.workerIndex });
+    test('RESET-INT-E01: repeated reset requests rotate token for same user @integration @auth @regression', async ({
+      api,
+      forgotPasswordPage
+    }, testInfo) => {
+      const user = await registerIsolatedUser(api, {
+        prefix: 'reset',
+        workerIndex: testInfo.workerIndex
+      });
 
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(user.email);
@@ -260,7 +293,10 @@ test.describe('password reset integration @integration @auth', () => {
       expect(tokenSecond).not.toBe(tokenFirst);
     });
 
-    test('RESET-INT-E02: reset link contains hex token in route param @integration @auth @smoke', async ({ forgotPasswordPage, inboxPage }) => {
+    test('RESET-INT-E02: reset link contains hex token in route param @integration @auth @smoke', async ({
+      forgotPasswordPage,
+      inboxPage
+    }) => {
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
 
@@ -273,8 +309,15 @@ test.describe('password reset integration @integration @auth', () => {
       expect(token).toMatch(resetTokenPattern);
     });
 
-    test('RESET-INT-E03: reset link is usable from fresh browser context @integration @auth @regression', async ({ api, browser, forgotPasswordPage }, testInfo) => {
-      const user = await registerIsolatedUser(api, { prefix: 'reset', workerIndex: testInfo.workerIndex });
+    test('RESET-INT-E03: reset link is usable from fresh browser context @integration @auth @regression', async ({
+      api,
+      browser,
+      forgotPasswordPage
+    }, testInfo) => {
+      const user = await registerIsolatedUser(api, {
+        prefix: 'reset',
+        workerIndex: testInfo.workerIndex
+      });
 
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(user.email);
@@ -292,7 +335,10 @@ test.describe('password reset integration @integration @auth', () => {
       }
     });
 
-    test('RESET-INT-E04: reset email body includes reset instructions @integration @auth @regression', async ({ forgotPasswordPage, inboxPage }) => {
+    test('RESET-INT-E04: reset email body includes reset instructions @integration @auth @regression', async ({
+      forgotPasswordPage,
+      inboxPage
+    }) => {
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
 
@@ -304,7 +350,9 @@ test.describe('password reset integration @integration @auth', () => {
       expect(body).toContain("if you didn't ask for this");
     });
 
-    test('RESET-INT-E05: query-param token route is not accepted @integration @auth @security @regression', async ({ resetPasswordPage }) => {
+    test('RESET-INT-E05: query-param token route is not accepted @integration @auth @security @regression', async ({
+      resetPasswordPage
+    }) => {
       const invalidUrl = `${routes.resetPasswordBase}?token=INVALID_CHARS_!@#$%^`;
 
       const res = await resetPasswordPage.gotoByLinkWithResponse(invalidUrl);

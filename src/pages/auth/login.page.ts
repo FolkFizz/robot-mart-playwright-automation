@@ -18,7 +18,9 @@ export class LoginPage extends BasePage {
     this.submitButton = this.getByTestId('login-submit');
     this.accountMenu = this.getByTestId('nav-account-menu');
     this.errorMessage = this.page.locator('.error, .alert-error');
-    this.loginInputs = this.page.locator('input[name="username"], input[name="email"], [data-testid="login-username"]');
+    this.loginInputs = this.page.locator(
+      'input[name="username"], input[name="email"], [data-testid="login-username"]'
+    );
   }
 
   // เปิดหน้า login
@@ -69,6 +71,9 @@ export class LoginPage extends BasePage {
   }
 
   async isLoginLinkVisible(name: string): Promise<boolean> {
-    return await this.page.getByRole('link', { name }).isVisible().catch(() => false);
+    return await this.page
+      .getByRole('link', { name })
+      .isVisible()
+      .catch(() => false);
   }
 }

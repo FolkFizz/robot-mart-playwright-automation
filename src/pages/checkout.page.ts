@@ -35,8 +35,12 @@ export class CheckoutPage extends BasePage {
     this.successMessage = this.page.locator('.success, .alert-success, .message');
     this.errorMessage = this.page.locator('.error, .alert-error');
     this.stripeIframes = this.page.locator('iframe[name^="__privateStripeFrame"]');
-    this.addressInput = this.page.locator('input[name*="address" i], input[id*="address" i]').first();
-    this.orderSummary = this.page.locator('.order-summary, #order-summary, [aria-label*="summary" i]').first();
+    this.addressInput = this.page
+      .locator('input[name*="address" i], input[id*="address" i]')
+      .first();
+    this.orderSummary = this.page
+      .locator('.order-summary, #order-summary, [aria-label*="summary" i]')
+      .first();
     this.skipLink = this.page.locator('a[href="#main-content"], .skip-link').first();
     this.mainContent = this.page.locator('#main-content, [role="main"]').first();
   }
@@ -106,10 +110,14 @@ export class CheckoutPage extends BasePage {
     if (await this.isMockPayment()) return;
     await this.paymentElement.waitFor({ state: 'visible', timeout: 15000 });
     try {
-      await expect(this.paymentElement).toHaveAttribute('data-stripe-ready', 'true', { timeout: 15000 });
+      await expect(this.paymentElement).toHaveAttribute('data-stripe-ready', 'true', {
+        timeout: 15000
+      });
     } catch {
       // Fallback: บางครั้ง data-stripe-ready อัปเดตช้า ให้เช็คว่า input ใน iframe โผล่แทน
-      const frame = this.page.frameLocator('iframe[name^="__privateStripeFrame"]:not([aria-hidden="true"])');
+      const frame = this.page.frameLocator(
+        'iframe[name^="__privateStripeFrame"]:not([aria-hidden="true"])'
+      );
       await frame
         .locator('input[name="cardnumber"], input[name="number"]')
         .first()
@@ -117,8 +125,15 @@ export class CheckoutPage extends BasePage {
     }
   }
 
-  async fillStripeCard(card: { number: string; exp: string; cvc: string; postal?: string }): Promise<void> {
-    const frame = this.page.frameLocator('iframe[name^="__privateStripeFrame"]:not([aria-hidden="true"])');
+  async fillStripeCard(card: {
+    number: string;
+    exp: string;
+    cvc: string;
+    postal?: string;
+  }): Promise<void> {
+    const frame = this.page.frameLocator(
+      'iframe[name^="__privateStripeFrame"]:not([aria-hidden="true"])'
+    );
 
     const numberInput = frame.locator('input[name="cardnumber"], input[name="number"]').first();
     await numberInput.fill(card.number);
@@ -136,7 +151,9 @@ export class CheckoutPage extends BasePage {
   }
 
   async fillCardNumber(number: string): Promise<void> {
-    const frame = this.page.frameLocator('iframe[name^="__privateStripeFrame"]:not([aria-hidden="true"])');
+    const frame = this.page.frameLocator(
+      'iframe[name^="__privateStripeFrame"]:not([aria-hidden="true"])'
+    );
     const numberInput = frame.locator('input[name="cardnumber"], input[name="number"]').first();
     await numberInput.fill(number);
   }
@@ -145,9 +162,7 @@ export class CheckoutPage extends BasePage {
   async submitPayment(): Promise<void> {
     await this.submitButton.click();
     // รอให้ loading จบ (อาศัย body[data-loading])
-    await this.page.waitForFunction(
-      () => document.body.getAttribute('data-loading') === 'false'
-    );
+    await this.page.waitForFunction(() => document.body.getAttribute('data-loading') === 'false');
   }
 
   async clickSubmit(): Promise<void> {
@@ -159,10 +174,14 @@ export class CheckoutPage extends BasePage {
   }
 
   async isStripeSdkLoaded(): Promise<boolean> {
-    return await this.page.evaluate(() => typeof (window as { Stripe?: unknown }).Stripe !== 'undefined');
+    return await this.page.evaluate(
+      () => typeof (window as { Stripe?: unknown }).Stripe !== 'undefined'
+    );
   }
 
-  async waitForPaymentResult(timeoutMs = 30000): Promise<{ status: 'success' | 'error' | 'timeout'; sawLoading: boolean; message?: string }> {
+  async waitForPaymentResult(
+    timeoutMs = 30000
+  ): Promise<{ status: 'success' | 'error' | 'timeout'; sawLoading: boolean; message?: string }> {
     let sawLoading = false;
     let latestMessage = '';
 
@@ -202,7 +221,12 @@ export class CheckoutPage extends BasePage {
     return { status: 'error', sawLoading, message: latestMessage };
   }
 
-  async submitStripePayment(options: { name: string; email: string; card: { number: string; exp: string; cvc: string; postal?: string }; timeoutMs?: number }): Promise<{ status: 'success' | 'error' | 'timeout'; sawLoading: boolean; message?: string }> {
+  async submitStripePayment(options: {
+    name: string;
+    email: string;
+    card: { number: string; exp: string; cvc: string; postal?: string };
+    timeoutMs?: number;
+  }): Promise<{ status: 'success' | 'error' | 'timeout'; sawLoading: boolean; message?: string }> {
     await this.setName(options.name);
     await this.setEmail(options.email);
 
@@ -283,7 +307,10 @@ export class CheckoutPage extends BasePage {
 
   async isStripeFrameVisible(): Promise<boolean> {
     if ((await this.getStripeFrameCount()) === 0) return false;
-    return await this.stripeIframes.first().isVisible().catch(() => false);
+    return await this.stripeIframes
+      .first()
+      .isVisible()
+      .catch(() => false);
   }
 
   async hasEmptyCartGuard(messages: string[]): Promise<boolean> {

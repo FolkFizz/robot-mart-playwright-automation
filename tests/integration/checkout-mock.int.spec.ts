@@ -1,4 +1,4 @@
-import type { APIRequestContext, Page, TestInfo } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { test, expect, seedCart } from '@fixtures';
 import { seededProducts, coupons } from '@data';
 import { CartPage, CheckoutPage } from '@pages';
@@ -58,7 +58,11 @@ const emptyCartTextPatterns = [
   'go add some bots'
 ];
 
-const gotoCheckoutFromCart = async (page: Page, cartPage: CartPage, checkoutPage: CheckoutPage): Promise<void> => {
+const gotoCheckoutFromCart = async (
+  page: Page,
+  cartPage: CartPage,
+  checkoutPage: CheckoutPage
+): Promise<void> => {
   await cartPage.goto();
   await cartPage.proceedToCheckoutWithFallback();
 
@@ -66,7 +70,9 @@ const gotoCheckoutFromCart = async (page: Page, cartPage: CartPage, checkoutPage
     await checkoutPage.goto();
   }
 
-  await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place);
+  await expect(page).toHaveURL(
+    (url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place
+  );
 };
 
 const waitForCheckoutReady = async (checkoutPage: CheckoutPage): Promise<'mock' | 'stripe'> => {
@@ -110,7 +116,11 @@ test.describe('checkout integration @integration @checkout', () => {
   });
 
   test.describe('positive cases', () => {
-    test('CHK-INT-P01: checkout total matches cart grand total @integration @checkout @regression', async ({ page, cartPage, checkoutPage }) => {
+    test('CHK-INT-P01: checkout total matches cart grand total @integration @checkout @regression', async ({
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       await cartPage.goto();
       const cartGrandTotal = await cartPage.getGrandTotalValue();
 
@@ -121,7 +131,11 @@ test.describe('checkout integration @integration @checkout', () => {
       expect(checkoutTotal).toBeCloseTo(cartGrandTotal, 2);
     });
 
-    test('CHK-INT-P02: checkout initializes payment UI for active provider @integration @checkout @smoke', async ({ page, cartPage, checkoutPage }) => {
+    test('CHK-INT-P02: checkout initializes payment UI for active provider @integration @checkout @smoke', async ({
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       await gotoCheckoutFromCart(page, cartPage, checkoutPage);
 
       const providerMode = await waitForCheckoutReady(checkoutPage);
@@ -133,7 +147,11 @@ test.describe('checkout integration @integration @checkout', () => {
   });
 
   test.describe('negative cases', () => {
-    test('CHK-INT-N01: checkout blocks empty cart access @integration @checkout @smoke', async ({ api, page, checkoutPage }) => {
+    test('CHK-INT-N01: checkout blocks empty cart access @integration @checkout @smoke', async ({
+      api,
+      page,
+      checkoutPage
+    }) => {
       await clearCart(api);
       await syncSessionFromApi(api, page);
 
@@ -148,7 +166,12 @@ test.describe('checkout integration @integration @checkout', () => {
       expect(redirectedToCart || (stayedOnCheckout && (guarded || hasPaymentGuard))).toBe(true);
     });
 
-    test('CHK-INT-N02: cart cleared during checkout is blocked on refresh @integration @checkout @regression', async ({ api, page, cartPage, checkoutPage }) => {
+    test('CHK-INT-N02: cart cleared during checkout is blocked on refresh @integration @checkout @regression', async ({
+      api,
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       await gotoCheckoutFromCart(page, cartPage, checkoutPage);
       await waitForCheckoutReady(checkoutPage);
 
@@ -164,7 +187,12 @@ test.describe('checkout integration @integration @checkout', () => {
       expect(redirectedToCart || (stayedOnCheckout && guarded)).toBe(true);
     });
 
-    test('CHK-INT-N03: expired coupon does not change checkout total @integration @checkout @regression', async ({ api, page, cartPage, checkoutPage }) => {
+    test('CHK-INT-N03: expired coupon does not change checkout total @integration @checkout @regression', async ({
+      api,
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       await cartPage.goto();
       const totalBeforeCoupon = await cartPage.getGrandTotalValue();
 
@@ -195,7 +223,12 @@ test.describe('checkout integration @integration @checkout', () => {
   });
 
   test.describe('edge cases', () => {
-    test('CHK-INT-E01: below-threshold order keeps shipping fee in checkout @integration @checkout @regression', async ({ api, page, cartPage, checkoutPage }) => {
+    test('CHK-INT-E01: below-threshold order keeps shipping fee in checkout @integration @checkout @regression', async ({
+      api,
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       await seedCart(api, [{ id: firstProduct.id, quantity: 1 }]);
       await syncSessionFromApi(api, page);
 
@@ -216,7 +249,12 @@ test.describe('checkout integration @integration @checkout', () => {
       expect(checkoutTotal).toBeCloseTo(cartTotal, 2);
     });
 
-    test('CHK-INT-E02: high-value order keeps free shipping in checkout @integration @checkout @regression', async ({ api, page, cartPage, checkoutPage }) => {
+    test('CHK-INT-E02: high-value order keeps free shipping in checkout @integration @checkout @regression', async ({
+      api,
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       await seedCart(api, [{ id: thirdProduct.id, quantity: 2 }]);
       await syncSessionFromApi(api, page);
 
@@ -237,7 +275,12 @@ test.describe('checkout integration @integration @checkout', () => {
       expect(checkoutTotal).toBeCloseTo(cartTotal, 2);
     });
 
-    test('CHK-INT-E03: valid coupon discount persists from cart to checkout @integration @checkout @regression', async ({ api, page, cartPage, checkoutPage }) => {
+    test('CHK-INT-E03: valid coupon discount persists from cart to checkout @integration @checkout @regression', async ({
+      api,
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       await seedCart(api, [{ id: firstProduct.id }, { id: secondProduct.id }]);
       await applyCoupon(api, coupons.welcome10.code);
       await syncSessionFromApi(api, page);
@@ -258,7 +301,12 @@ test.describe('checkout integration @integration @checkout', () => {
       expect(checkoutTotal).toBeCloseTo(cartTotal, 1);
     });
 
-    test('CHK-INT-E04: cart quantity updates propagate to checkout total @integration @checkout @regression', async ({ api, page, cartPage, checkoutPage }) => {
+    test('CHK-INT-E04: cart quantity updates propagate to checkout total @integration @checkout @regression', async ({
+      api,
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       await seedCart(api, [{ id: firstProduct.id }, { id: secondProduct.id }]);
       await syncSessionFromApi(api, page);
 
@@ -279,7 +327,11 @@ test.describe('checkout integration @integration @checkout', () => {
       expect(checkoutTotal).toBeCloseTo(totalAfterUpdate, 2);
     });
 
-    test('CHK-INT-E05: session expiry redirects away from checkout @integration @checkout @regression', async ({ page, cartPage, checkoutPage }) => {
+    test('CHK-INT-E05: session expiry redirects away from checkout @integration @checkout @regression', async ({
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       await gotoCheckoutFromCart(page, cartPage, checkoutPage);
       await waitForCheckoutReady(checkoutPage);
 

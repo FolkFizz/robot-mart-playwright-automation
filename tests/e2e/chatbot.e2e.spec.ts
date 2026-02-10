@@ -71,7 +71,9 @@ test.describe('chatbot e2e @e2e @chat', () => {
   });
 
   test.describe('positive cases', () => {
-    test('CHAT-E2E-P01: chat widget opens and closes from home page @e2e @chat @smoke', async ({ chatWidgetPage }, testInfo) => {
+    test('CHAT-E2E-P01: chat widget opens and closes from home page @e2e @chat @smoke', async ({
+      chatWidgetPage
+    }, testInfo) => {
       const input = 'widget-open-close';
       let output = '';
       let traceStatus: 'pass' | 'fail' = 'fail';
@@ -90,7 +92,9 @@ test.describe('chatbot e2e @e2e @chat', () => {
       }
     });
 
-    test('CHAT-E2E-P02: sending a message renders user and bot messages @e2e @chat @regression', async ({ chatWidgetPage }, testInfo) => {
+    test('CHAT-E2E-P02: sending a message renders user and bot messages @e2e @chat @regression', async ({
+      chatWidgetPage
+    }, testInfo) => {
       const input = 'Can you recommend a starter robot?';
       let output = '';
       let latencyMs = 0;
@@ -110,7 +114,9 @@ test.describe('chatbot e2e @e2e @chat', () => {
       }
     });
 
-    test('CHAT-E2E-P03: pressing Enter submits chat message @e2e @chat @regression', async ({ chatWidgetPage }, testInfo) => {
+    test('CHAT-E2E-P03: pressing Enter submits chat message @e2e @chat @regression', async ({
+      chatWidgetPage
+    }, testInfo) => {
       const input = 'Testing submit by Enter key';
       let output = '';
       let latencyMs = 0;
@@ -132,7 +138,9 @@ test.describe('chatbot e2e @e2e @chat', () => {
   });
 
   test.describe('negative cases', () => {
-    test('CHAT-E2E-N01: whitespace-only input is ignored @e2e @chat @regression', async ({ chatWidgetPage }, testInfo) => {
+    test('CHAT-E2E-N01: whitespace-only input is ignored @e2e @chat @regression', async ({
+      chatWidgetPage
+    }, testInfo) => {
       const input = '   ';
       let output = '';
       let traceStatus: 'pass' | 'fail' = 'fail';
@@ -154,7 +162,10 @@ test.describe('chatbot e2e @e2e @chat', () => {
       }
     });
 
-    test('CHAT-E2E-N02: network abort shows fallback error message @e2e @chat @regression', async ({ page, chatWidgetPage }, testInfo) => {
+    test('CHAT-E2E-N02: network abort shows fallback error message @e2e @chat @regression', async ({
+      page,
+      chatWidgetPage
+    }, testInfo) => {
       const input = 'Will fail due to network abort';
       let output = '';
       let traceStatus: 'pass' | 'fail' = 'fail';
@@ -172,11 +183,16 @@ test.describe('chatbot e2e @e2e @chat', () => {
         traceStatus = 'pass';
       } finally {
         await page.unroute(routes.api.chat);
-        await traceCase(testInfo, traceStatus, input, output, undefined, { failureMode: 'network-abort' });
+        await traceCase(testInfo, traceStatus, input, output, undefined, {
+          failureMode: 'network-abort'
+        });
       }
     });
 
-    test('CHAT-E2E-N03: malformed server response shows fallback error message @e2e @chat @regression', async ({ page, chatWidgetPage }, testInfo) => {
+    test('CHAT-E2E-N03: malformed server response shows fallback error message @e2e @chat @regression', async ({
+      page,
+      chatWidgetPage
+    }, testInfo) => {
       const input = 'Will fail due to malformed response';
       let output = '';
       let traceStatus: 'pass' | 'fail' = 'fail';
@@ -198,13 +214,17 @@ test.describe('chatbot e2e @e2e @chat', () => {
         traceStatus = 'pass';
       } finally {
         await page.unroute(routes.api.chat);
-        await traceCase(testInfo, traceStatus, input, output, undefined, { failureMode: 'malformed-json' });
+        await traceCase(testInfo, traceStatus, input, output, undefined, {
+          failureMode: 'malformed-json'
+        });
       }
     });
   });
 
   test.describe('edge cases', () => {
-    test('CHAT-E2E-E01: long user message is rendered and input is cleared @e2e @chat @regression', async ({ chatWidgetPage }, testInfo) => {
+    test('CHAT-E2E-E01: long user message is rendered and input is cleared @e2e @chat @regression', async ({
+      chatWidgetPage
+    }, testInfo) => {
       const input = `Need advice: ${'robot '.repeat(80)}`.trim();
       let output = '';
       let traceStatus: 'pass' | 'fail' = 'fail';
@@ -217,11 +237,15 @@ test.describe('chatbot e2e @e2e @chat', () => {
         await chatWidgetPage.expectInputCleared();
         traceStatus = 'pass';
       } finally {
-        await traceCase(testInfo, traceStatus, 'long-message', output, undefined, { inputLength: input.length });
+        await traceCase(testInfo, traceStatus, 'long-message', output, undefined, {
+          inputLength: input.length
+        });
       }
     });
 
-    test('CHAT-E2E-E02: multi-turn conversation keeps message history @e2e @chat @regression', async ({ chatWidgetPage }, testInfo) => {
+    test('CHAT-E2E-E02: multi-turn conversation keeps message history @e2e @chat @regression', async ({
+      chatWidgetPage
+    }, testInfo) => {
       const firstInput = 'First question: do you have starter bots?';
       const secondInput = 'Second question: and maybe low maintenance?';
       let output = '';
@@ -246,7 +270,10 @@ test.describe('chatbot e2e @e2e @chat', () => {
       }
     });
 
-    test('CHAT-E2E-E03: widget remains available after page navigation @e2e @chat @regression', async ({ productPage, chatWidgetPage }, testInfo) => {
+    test('CHAT-E2E-E03: widget remains available after page navigation @e2e @chat @regression', async ({
+      productPage,
+      chatWidgetPage
+    }, testInfo) => {
       const input = 'navigation-availability';
       let output = '';
       let traceStatus: 'pass' | 'fail' = 'fail';
@@ -261,7 +288,9 @@ test.describe('chatbot e2e @e2e @chat', () => {
         output = 'chat-widget-visible-on-product-page';
         traceStatus = 'pass';
       } finally {
-        await traceCase(testInfo, traceStatus, input, output, undefined, { navigatedTo: routes.productDetail(seededProducts[0].id) });
+        await traceCase(testInfo, traceStatus, input, output, undefined, {
+          navigatedTo: routes.productDetail(seededProducts[0].id)
+        });
       }
     });
   });

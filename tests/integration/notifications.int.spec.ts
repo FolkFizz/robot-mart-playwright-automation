@@ -1,4 +1,4 @@
-import type { APIRequestContext, Page } from '@playwright/test';
+import type { APIRequestContext } from '@playwright/test';
 import { test, expect, loginAndSyncSession } from '@fixtures';
 import { disableChaos } from '@api';
 import { routes } from '@config';
@@ -88,7 +88,11 @@ test.describe('notifications integration @integration @notifications', () => {
   });
 
   test.describe('positive cases', () => {
-    test('NOTIF-INT-P01: dropdown count aligns with notifications list API @integration @notifications @regression', async ({ api, homePage, notificationsPage }) => {
+    test('NOTIF-INT-P01: dropdown count aligns with notifications list API @integration @notifications @regression', async ({
+      api,
+      homePage,
+      notificationsPage
+    }) => {
       await homePage.goto();
       await notificationsPage.open();
       const uiCount = await notificationsPage.getNotificationCount();
@@ -97,7 +101,10 @@ test.describe('notifications integration @integration @notifications', () => {
       expect(uiCount).toBeLessThanOrEqual(body.notifications.length);
     });
 
-    test('NOTIF-INT-P02: notifications API returns expected response structure @integration @notifications @smoke', async ({ api, homePage }) => {
+    test('NOTIF-INT-P02: notifications API returns expected response structure @integration @notifications @smoke', async ({
+      api,
+      homePage
+    }) => {
       await homePage.goto();
 
       const body = await fetchNotifications(api);
@@ -106,7 +113,10 @@ test.describe('notifications integration @integration @notifications', () => {
       expect(body).toHaveProperty('unreadCount');
     });
 
-    test('NOTIF-INT-P03: each notification object has required fields @integration @notifications @regression', async ({ api, homePage }) => {
+    test('NOTIF-INT-P03: each notification object has required fields @integration @notifications @regression', async ({
+      api,
+      homePage
+    }) => {
       await homePage.goto();
       const body = await fetchNotifications(api);
 
@@ -121,14 +131,18 @@ test.describe('notifications integration @integration @notifications', () => {
   });
 
   test.describe('negative cases', () => {
-    test('NOTIF-INT-N01: invalid notification read endpoint returns not found @integration @notifications @regression', async ({ api }) => {
+    test('NOTIF-INT-N01: invalid notification read endpoint returns not found @integration @notifications @regression', async ({
+      api
+    }) => {
       const res = await api.post(`${routes.api.notifications}/invalid-id-999/read`, {
         maxRedirects: 0
       });
       expect(res.status()).toBe(404);
     });
 
-    test('NOTIF-INT-N02: unauthorized notifications API access is blocked @integration @notifications @security @regression', async ({ request }) => {
+    test('NOTIF-INT-N02: unauthorized notifications API access is blocked @integration @notifications @security @regression', async ({
+      request
+    }) => {
       const res = await request.get(routes.api.notifications, {
         maxRedirects: 0
       });
@@ -138,7 +152,11 @@ test.describe('notifications integration @integration @notifications', () => {
   });
 
   test.describe('edge cases', () => {
-    test('NOTIF-INT-E01: mark-all-read action updates unread count from API @integration @notifications @regression', async ({ api, homePage, notificationsPage }) => {
+    test('NOTIF-INT-E01: mark-all-read action updates unread count from API @integration @notifications @regression', async ({
+      api,
+      homePage,
+      notificationsPage
+    }) => {
       await homePage.goto();
       await notificationsPage.open();
       await notificationsPage.markAllRead();
@@ -148,7 +166,11 @@ test.describe('notifications integration @integration @notifications', () => {
         .toBe(0);
     });
 
-    test('NOTIF-INT-E02: UI handles bounded notification list size @integration @notifications @regression', async ({ api, homePage, notificationsPage }) => {
+    test('NOTIF-INT-E02: UI handles bounded notification list size @integration @notifications @regression', async ({
+      api,
+      homePage,
+      notificationsPage
+    }) => {
       await homePage.goto();
       await notificationsPage.open();
       const uiCount = await notificationsPage.getNotificationCount();
@@ -160,7 +182,11 @@ test.describe('notifications integration @integration @notifications', () => {
       expect(uiCount).toBeLessThanOrEqual(body.notifications.length);
     });
 
-    test('NOTIF-INT-E03: rendered dropdown item count matches API list length @integration @notifications @smoke', async ({ api, homePage, notificationsPage }) => {
+    test('NOTIF-INT-E03: rendered dropdown item count matches API list length @integration @notifications @smoke', async ({
+      api,
+      homePage,
+      notificationsPage
+    }) => {
       await homePage.goto();
       await notificationsPage.open();
       const uiCount = await notificationsPage.getNotificationCount();
@@ -169,7 +195,12 @@ test.describe('notifications integration @integration @notifications', () => {
       expect(uiCount).toBe(body.notifications.length);
     });
 
-    test('NOTIF-INT-E04: notifications count stays consistent across tabs @integration @notifications @regression', async ({ browser, api, homePage, notificationsPage }) => {
+    test('NOTIF-INT-E04: notifications count stays consistent across tabs @integration @notifications @regression', async ({
+      browser,
+      api,
+      homePage,
+      notificationsPage
+    }) => {
       await homePage.goto();
 
       const contextB = await browser.newContext();
@@ -192,7 +223,9 @@ test.describe('notifications integration @integration @notifications', () => {
       }
     });
 
-    test('NOTIF-INT-E05: notification timestamps are valid and not stale @integration @notifications @regression', async ({ api }) => {
+    test('NOTIF-INT-E05: notification timestamps are valid and not stale @integration @notifications @regression', async ({
+      api
+    }) => {
       const body = await fetchNotifications(api);
       if (body.notifications.length === 0) return;
 
@@ -205,7 +238,9 @@ test.describe('notifications integration @integration @notifications', () => {
       expect(ageDays).toBeLessThan(365);
     });
 
-    test('NOTIF-INT-E06: pagination query keeps response contract stable @integration @notifications @regression', async ({ api }) => {
+    test('NOTIF-INT-E06: pagination query keeps response contract stable @integration @notifications @regression', async ({
+      api
+    }) => {
       const res = await api.get(`${routes.api.notifications}?page=2`, {
         headers: { Accept: 'application/json' }
       });

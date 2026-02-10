@@ -7,13 +7,13 @@ import { securityTestData } from '@data';
  * =============================================================================
  * ADMIN API TESTS - Comprehensive Coverage
  * =============================================================================
- * 
+ *
  * Test Scenarios:
  * ---------------
  * 1. Stock Management (Reset Stock Levels)
  * 2. Admin Notifications Retrieval
  * 3. Admin-Only Endpoint Access Control
- * 
+ *
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (4 tests):
@@ -21,16 +21,16 @@ import { securityTestData } from '@data';
  *   - ADMIN-API-P02: admin notifications list returns data
  *   - ADMIN-API-P03: products API returns current stock levels
  *   - ADMIN-API-P04: stock reset returns confirmation
- * 
+ *
  * NEGATIVE CASES (3 tests):
  *   - ADMIN-API-N01: regular user cannot access admin endpoints
  *   - ADMIN-API-N02: unauthenticated access to admin API rejected
  *   - ADMIN-API-N03: invalid reset key rejected by reset API
- * 
+ *
  * EDGE CASES (2 tests):
  *   - ADMIN-API-E01: admin notifications pagination handles large dataset
  *   - ADMIN-API-E02: concurrent stock resets handled gracefully
- * 
+ *
  * Business Rules Tested:
  * ----------------------
  * - Admin Notifications Endpoint: Requires admin role authentication
@@ -39,16 +39,14 @@ import { securityTestData } from '@data';
  * - Admin Notifications API: /admin/notifications/list (admin-only)
  * - Notifications Response: JSON {status: 'success', notifications: [...]}
  * - Products Response: JSON {ok: true, products: [...]}
- * 
+ *
  * =============================================================================
  */
 
 test.use({ seedData: true });
 
 test.describe('admin api @api @admin', () => {
-
   test.describe('positive cases', () => {
-
     test('ADMIN-API-P01: reset stock safely via API @api @admin @regression', async ({ api }) => {
       // Act: Reset stock levels to defaults
       const res = await resetStockSafe(api);
@@ -57,7 +55,9 @@ test.describe('admin api @api @admin', () => {
       expect(res.ok()).toBeTruthy();
     });
 
-    test('ADMIN-API-P02: admin notifications list returns data @api @admin @smoke', async ({ api }) => {
+    test('ADMIN-API-P02: admin notifications list returns data @api @admin @smoke', async ({
+      api
+    }) => {
       // Arrange: Login as admin
       await loginAsAdmin(api);
 
@@ -70,7 +70,9 @@ test.describe('admin api @api @admin', () => {
       expect(Array.isArray(body.notifications)).toBe(true);
     });
 
-    test('ADMIN-API-P03: products API returns current stock levels @api @admin @regression', async ({ api }) => {
+    test('ADMIN-API-P03: products API returns current stock levels @api @admin @regression', async ({
+      api
+    }) => {
       // Arrange: Login as admin
       await loginAsAdmin(api);
 
@@ -100,8 +102,9 @@ test.describe('admin api @api @admin', () => {
   });
 
   test.describe('negative cases', () => {
-
-    test('ADMIN-API-N01: regular user cannot access admin endpoints @api @admin @security @regression', async ({ api }) => {
+    test('ADMIN-API-N01: regular user cannot access admin endpoints @api @admin @security @regression', async ({
+      api
+    }) => {
       // Arrange: Login as regular user (default loginAsUser)
       await loginAsUser(api);
 
@@ -114,7 +117,9 @@ test.describe('admin api @api @admin', () => {
       expect(text).toContain('Admin Access Only');
     });
 
-    test('ADMIN-API-N02: unauthenticated access to admin API rejected @api @admin @security @smoke', async ({ api }) => {
+    test('ADMIN-API-N02: unauthenticated access to admin API rejected @api @admin @security @smoke', async ({
+      api
+    }) => {
       // Act: Try to access admin notifications without login
       const res = await api.get(routes.api.adminNotifications);
       const text = await res.text();
@@ -124,7 +129,9 @@ test.describe('admin api @api @admin', () => {
       expect(text).toContain('Admin Access Only');
     });
 
-    test('ADMIN-API-N03: invalid reset key rejected by reset API @api @admin @regression', async ({ api }) => {
+    test('ADMIN-API-N03: invalid reset key rejected by reset API @api @admin @regression', async ({
+      api
+    }) => {
       // Act: Try to reset stock with invalid reset key
       const res = await api.post(routes.api.resetStockSafe, {
         headers: { 'X-RESET-KEY': securityTestData.invalidResetKey }
@@ -140,8 +147,9 @@ test.describe('admin api @api @admin', () => {
   });
 
   test.describe('edge cases', () => {
-
-    test('ADMIN-API-E01: admin notifications pagination handles large dataset @api @admin @regression', async ({ api }) => {
+    test('ADMIN-API-E01: admin notifications pagination handles large dataset @api @admin @regression', async ({
+      api
+    }) => {
       // Arrange: Login as admin
       await loginAsAdmin(api);
 
@@ -156,21 +164,18 @@ test.describe('admin api @api @admin', () => {
       expect(body.notifications.length).toBeGreaterThanOrEqual(0);
     });
 
-    test('ADMIN-API-E02: concurrent stock resets handled gracefully @api @admin @regression', async ({ api }) => {
+    test('ADMIN-API-E02: concurrent stock resets handled gracefully @api @admin @regression', async ({
+      api
+    }) => {
       // Act: Trigger multiple reset requests concurrently
-      const promises = [
-        resetStockSafe(api),
-        resetStockSafe(api),
-        resetStockSafe(api)
-      ];
-      
+      const promises = [resetStockSafe(api), resetStockSafe(api), resetStockSafe(api)];
+
       const results = await Promise.all(promises);
 
       // Assert: All requests complete successfully
-      results.forEach(res => {
+      results.forEach((res) => {
         expect(res.ok()).toBeTruthy();
       });
     });
   });
 });
-

@@ -31,7 +31,9 @@ export class CartPage extends BasePage {
     this.checkoutLinkFallback = this.page
       .locator(`a[href="${routes.order.place}"], a[href="${routes.order.checkout}"]`)
       .first();
-    this.alertError = this.page.locator('.alert-error, .error, [role="alert"], [aria-live]').first();
+    this.alertError = this.page
+      .locator('.alert-error, .error, [role="alert"], [aria-live]')
+      .first();
   }
 
   // เปิดหน้า cart
@@ -49,7 +51,9 @@ export class CartPage extends BasePage {
   }
 
   async isItemVisible(id: number | string): Promise<boolean> {
-    return await this.cartItemRow(id).isVisible().catch(() => false);
+    return await this.cartItemRow(id)
+      .isVisible()
+      .catch(() => false);
   }
 
   async getItemName(id: number | string): Promise<string> {
@@ -78,7 +82,11 @@ export class CartPage extends BasePage {
     return Number.isNaN(value) ? 0 : value;
   }
 
-  async waitForItemQuantityAtLeast(id: number | string, minQuantity: number, timeoutMs = 5_000): Promise<number> {
+  async waitForItemQuantityAtLeast(
+    id: number | string,
+    minQuantity: number,
+    timeoutMs = 5_000
+  ): Promise<number> {
     await expect
       .poll(async () => await this.getItemQuantity(id), { timeout: timeoutMs })
       .toBeGreaterThanOrEqual(minQuantity);
@@ -212,7 +220,10 @@ export class CartPage extends BasePage {
   }
 
   async isEmptyMessageVisible(text: string): Promise<boolean> {
-    return await this.page.getByText(text).isVisible().catch(() => false);
+    return await this.page
+      .getByText(text)
+      .isVisible()
+      .catch(() => false);
   }
 
   async expectEmptyMessageVisible(text: string): Promise<void> {
@@ -234,7 +245,11 @@ export class CartPage extends BasePage {
     return await control.evaluate((el) => el === document.activeElement);
   }
 
-  async getFirstRemoveButtonA11yMeta(): Promise<{ ariaLabel: string | null; title: string | null; text: string }> {
+  async getFirstRemoveButtonA11yMeta(): Promise<{
+    ariaLabel: string | null;
+    title: string | null;
+    text: string;
+  }> {
     const removeButton = this.page.locator('[data-testid^="cart-remove-"]').first();
     return {
       ariaLabel: await removeButton.getAttribute('aria-label'),
@@ -243,8 +258,17 @@ export class CartPage extends BasePage {
     };
   }
 
-  async getCouponInputA11yMeta(): Promise<{ ariaLabel: string | null; placeholder: string | null; id: string | null; hasLabelByFor: boolean }> {
-    const couponInput = this.page.locator('input[name="coupon"], input[placeholder*="coupon" i], input[aria-label*="coupon" i]').first();
+  async getCouponInputA11yMeta(): Promise<{
+    ariaLabel: string | null;
+    placeholder: string | null;
+    id: string | null;
+    hasLabelByFor: boolean;
+  }> {
+    const couponInput = this.page
+      .locator(
+        'input[name="coupon"], input[placeholder*="coupon" i], input[aria-label*="coupon" i]'
+      )
+      .first();
     const id = await couponInput.getAttribute('id');
     const hasLabelByFor = id ? (await this.page.locator(`label[for="${id}"]`).count()) > 0 : false;
 
@@ -282,14 +306,18 @@ export class CartPage extends BasePage {
   }
 
   async setFirstQuantityInput(value: string): Promise<boolean> {
-    const input = this.page.locator('input[type="number"], input[aria-label*="quantity" i]').first();
+    const input = this.page
+      .locator('input[type="number"], input[aria-label*="quantity" i]')
+      .first();
     if ((await input.count()) === 0) return false;
     await input.fill(value);
     return true;
   }
 
   async applyInvalidCouponAndReadError(code: string): Promise<string> {
-    const couponInput = this.page.locator('input[name="coupon"], input[placeholder*="coupon" i]').first();
+    const couponInput = this.page
+      .locator('input[name="coupon"], input[placeholder*="coupon" i]')
+      .first();
     const applyButton = this.page.locator('button:has-text("apply")').first();
     if ((await couponInput.count()) === 0 || (await applyButton.count()) === 0) return '';
 

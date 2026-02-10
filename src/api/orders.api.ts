@@ -4,10 +4,7 @@ import { routes } from '@config/constants';
 type CartItemInput = { productId: number; quantity: number };
 
 // สร้าง Payment Intent (Stripe)
-export const createPaymentIntent = async (
-  ctx: APIRequestContext,
-  items: CartItemInput[]
-) => {
+export const createPaymentIntent = async (ctx: APIRequestContext, items: CartItemInput[]) => {
   const res = await ctx.post(routes.api.orderCreateIntent, {
     data: { items },
     headers: { Accept: 'application/json' }

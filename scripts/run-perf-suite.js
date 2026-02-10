@@ -16,24 +16,24 @@ const PROFILES = {
     {
       id: 'checkout-acceptance',
       script: 'performance/scripts/checkout.k6.js',
-      env: { ...RESET_STOCK_ENV, CHECKOUT_MODE: 'acceptance' },
+      env: { ...RESET_STOCK_ENV, CHECKOUT_MODE: 'acceptance' }
     },
     {
       id: 'load-acceptance',
       script: 'performance/scripts/load.k6.js',
-      env: { ...RESET_STOCK_ENV, TEST_MODE: 'acceptance' },
+      env: { ...RESET_STOCK_ENV, TEST_MODE: 'acceptance' }
     },
     {
       id: 'stress-quick',
       script: 'performance/scripts/stress.k6.js',
-      env: { ...RESET_STOCK_ENV, STRESS_QUICK: 'true' },
+      env: { ...RESET_STOCK_ENV, STRESS_QUICK: 'true' }
     },
     {
       id: 'soak-quick',
       script: 'performance/scripts/soak.k6.js',
-      env: { ...RESET_STOCK_ENV, SOAK_QUICK: 'true' },
+      env: { ...RESET_STOCK_ENV, SOAK_QUICK: 'true' }
     },
-    { id: 'breakpoint', script: 'performance/scripts/breakpoint.k6.js' },
+    { id: 'breakpoint', script: 'performance/scripts/breakpoint.k6.js' }
   ],
   gate: [
     { id: 'smoke', script: 'performance/scripts/smoke.k6.js' },
@@ -41,20 +41,24 @@ const PROFILES = {
     { id: 'browse', script: 'performance/scripts/browse.k6.js' },
     { id: 'cart', script: 'performance/scripts/cart.k6.js', env: { ...RESET_STOCK_ENV } },
     { id: 'race', script: 'performance/scripts/race-condition.k6.js', env: { ...RESET_STOCK_ENV } },
-    { id: 'checkout-strict', script: 'performance/scripts/checkout.k6.js', env: { ...RESET_STOCK_ENV } },
+    {
+      id: 'checkout-strict',
+      script: 'performance/scripts/checkout.k6.js',
+      env: { ...RESET_STOCK_ENV }
+    },
     { id: 'load-balanced', script: 'performance/scripts/load.k6.js', env: { ...RESET_STOCK_ENV } },
     {
       id: 'stress-quick',
       script: 'performance/scripts/stress.k6.js',
-      env: { ...RESET_STOCK_ENV, STRESS_QUICK: 'true' },
+      env: { ...RESET_STOCK_ENV, STRESS_QUICK: 'true' }
     },
     {
       id: 'soak-quick',
       script: 'performance/scripts/soak.k6.js',
-      env: { ...RESET_STOCK_ENV, SOAK_QUICK: 'true' },
+      env: { ...RESET_STOCK_ENV, SOAK_QUICK: 'true' }
     },
-    { id: 'breakpoint', script: 'performance/scripts/breakpoint.k6.js' },
-  ],
+    { id: 'breakpoint', script: 'performance/scripts/breakpoint.k6.js' }
+  ]
 };
 
 function parseArgs(argv) {
@@ -105,33 +109,36 @@ function extractSummaryMetrics(summary) {
       httpReqDurationP95: null,
       iterations: null,
       requests: null,
-      checkFailCount: null,
+      checkFailCount: null
     };
   }
 
   const metrics = summary.metrics;
-  const httpReqFailedRate = metrics.http_req_failed && typeof metrics.http_req_failed.value === 'number'
-    ? metrics.http_req_failed.value
-    : null;
-  const httpReqDurationP95 = metrics.http_req_duration && typeof metrics.http_req_duration['p(95)'] === 'number'
-    ? metrics.http_req_duration['p(95)']
-    : null;
-  const iterations = metrics.iterations && typeof metrics.iterations.count === 'number'
-    ? metrics.iterations.count
-    : null;
-  const requests = metrics.http_reqs && typeof metrics.http_reqs.count === 'number'
-    ? metrics.http_reqs.count
-    : null;
-  const checkFailCount = metrics.checks && typeof metrics.checks.fails === 'number'
-    ? metrics.checks.fails
-    : null;
+  const httpReqFailedRate =
+    metrics.http_req_failed && typeof metrics.http_req_failed.value === 'number'
+      ? metrics.http_req_failed.value
+      : null;
+  const httpReqDurationP95 =
+    metrics.http_req_duration && typeof metrics.http_req_duration['p(95)'] === 'number'
+      ? metrics.http_req_duration['p(95)']
+      : null;
+  const iterations =
+    metrics.iterations && typeof metrics.iterations.count === 'number'
+      ? metrics.iterations.count
+      : null;
+  const requests =
+    metrics.http_reqs && typeof metrics.http_reqs.count === 'number'
+      ? metrics.http_reqs.count
+      : null;
+  const checkFailCount =
+    metrics.checks && typeof metrics.checks.fails === 'number' ? metrics.checks.fails : null;
 
   return {
     httpReqFailedRate,
     httpReqDurationP95,
     iterations,
     requests,
-    checkFailCount,
+    checkFailCount
   };
 }
 
@@ -146,7 +153,9 @@ function writeManifestMarkdown(outputPath, manifest) {
   lines.push(`- Failed runs: \`${manifest.failedRuns}\``);
   lines.push(`- Result: \`${manifest.failedRuns === 0 ? 'PASS' : 'FAIL'}\``);
   lines.push('');
-  lines.push('| Run | Status | Exit | Duration (s) | http_req_failed | http_req_duration p95 (ms) | Iterations | Requests |');
+  lines.push(
+    '| Run | Status | Exit | Duration (s) | http_req_failed | http_req_duration p95 (ms) | Iterations | Requests |'
+  );
   lines.push('| --- | --- | --- | --- | --- | --- | --- | --- |');
 
   for (const run of manifest.runs) {
@@ -162,9 +171,7 @@ function writeManifestMarkdown(outputPath, manifest) {
   lines.push('## Files');
   lines.push('');
   for (const run of manifest.runs) {
-    lines.push(
-      `- ${run.id}: \`${run.summaryFile}\` | \`${run.logFile}\``
-    );
+    lines.push(`- ${run.id}: \`${run.summaryFile}\` | \`${run.logFile}\``);
   }
   lines.push('');
 
@@ -194,7 +201,7 @@ function runOne(test, index, total, resultDir) {
     const child = spawn(process.execPath, args, {
       cwd: ROOT,
       env,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ['ignore', 'pipe', 'pipe']
     });
 
     child.stdout.on('data', (chunk) => {
@@ -225,7 +232,7 @@ function runOne(test, index, total, resultDir) {
         durationMs,
         summaryFile: summaryFileName,
         logFile: logFileName,
-        metrics: extractSummaryMetrics(summary),
+        metrics: extractSummaryMetrics(summary)
       });
     });
   });
@@ -236,7 +243,9 @@ async function main() {
   const tests = PROFILES[args.profile];
 
   if (!tests) {
-    console.error(`Unknown profile "${args.profile}". Available: ${Object.keys(PROFILES).join(', ')}`);
+    console.error(
+      `Unknown profile "${args.profile}". Available: ${Object.keys(PROFILES).join(', ')}`
+    );
     process.exit(1);
   }
 
@@ -263,7 +272,7 @@ async function main() {
     finishedAt: new Date().toISOString(),
     totalRuns: runs.length,
     failedRuns,
-    runs,
+    runs
   };
 
   const manifestJsonPath = path.join(resultDir, 'manifest.json');

@@ -6,13 +6,13 @@ import { headers } from '../lib/http.js';
 import { stress } from '../scenarios/index.js';
 import { stressThresholds } from '../thresholds/index.js';
 import {
-    toPositiveInt,
-    createProductPool,
-    fetchTargetProductIds,
-    resetStockIfNeeded,
-    isAuthFailureResponse,
-    isStockLimitResponse,
-    getLocation,
+  toPositiveInt,
+  createProductPool,
+  fetchTargetProductIds,
+  resetStockIfNeeded,
+  isAuthFailureResponse,
+  isStockLimitResponse,
+  getLocation
 } from '../lib/perf-helpers.js';
 
 /**
@@ -38,19 +38,19 @@ const RESET_KEY = __ENV.RESET_KEY || __ENV.PERF_RESET_KEY || '';
 const DEBUG_UNEXPECTED = String(__ENV.PERF_DEBUG_UNEXPECTED || 'false').toLowerCase() === 'true';
 
 const QUICK_SCENARIO = {
-    executor: 'ramping-vus',
-    startVUs: 0,
-    stages: [
-        { duration: '20s', target: 20 },
-        { duration: '30s', target: 40 },
-        { duration: '20s', target: 0 },
-    ],
-    gracefulRampDown: '10s',
+  executor: 'ramping-vus',
+  startVUs: 0,
+  stages: [
+    { duration: '20s', target: 20 },
+    { duration: '30s', target: 40 },
+    { duration: '20s', target: 0 }
+  ],
+  gracefulRampDown: '10s'
 };
 
 const TEST_USER = {
-    username: perfAuth.username,
-    password: perfAuth.password,
+  username: perfAuth.username,
+  password: perfAuth.password
 };
 
 const MAX_DEBUG_LOGS = toPositiveInt(__ENV.PERF_DEBUG_MAX_LOGS, 10);
@@ -58,9 +58,9 @@ const PRODUCT_MIN = toPositiveInt(__ENV.PERF_STRESS_PRODUCT_MIN, 1);
 const PRODUCT_MAX = Math.max(PRODUCT_MIN, toPositiveInt(__ENV.PERF_STRESS_PRODUCT_MAX, 9));
 
 const productPool = createProductPool({
-    sharedArrayName: 'stress_product_ids_from_csv',
-    productMin: PRODUCT_MIN,
-    productMax: PRODUCT_MAX,
+  sharedArrayName: 'stress_product_ids_from_csv',
+  productMin: PRODUCT_MIN,
+  productMax: PRODUCT_MAX
 });
 
 // Custom metrics to track degradation and failure type
@@ -79,279 +79,281 @@ let isAuthenticated = false;
 let unexpectedLogCount = 0;
 
 const stressCustomThresholds = {
-    ...stressThresholds,
-    checkout_attempts: ['count>0'],
+  ...stressThresholds,
+  checkout_attempts: ['count>0']
 };
 
 export const options = {
-    scenarios: {
-        stress_test: QUICK_MODE ? QUICK_SCENARIO : stress,
-    },
-    thresholds: stressCustomThresholds,
-    tags: { run_mode: QUICK_MODE ? 'quick' : 'full' },
+  scenarios: {
+    stress_test: QUICK_MODE ? QUICK_SCENARIO : stress
+  },
+  thresholds: stressCustomThresholds,
+  tags: { run_mode: QUICK_MODE ? 'quick' : 'full' }
 };
 
 export function setup() {
-    const productSource = productPool.getSourceLabel();
+  const productSource = productPool.getSourceLabel();
 
-    console.log(`[Setup] Stress Test - Target: ${app.baseURL} (mode=${QUICK_MODE ? 'quick' : 'full'})`);
-    console.log('[Setup] Ramping load to find breaking point...');
-    console.log(`[Setup] Product source: ${productSource}`);
-    console.log('[Setup] Mix: browse(50%), cart(30%), checkout(20%)');
-    console.log('[Setup] Watch for: performance degradation, error spikes, timeouts');
+  console.log(
+    `[Setup] Stress Test - Target: ${app.baseURL} (mode=${QUICK_MODE ? 'quick' : 'full'})`
+  );
+  console.log('[Setup] Ramping load to find breaking point...');
+  console.log(`[Setup] Product source: ${productSource}`);
+  console.log('[Setup] Mix: browse(50%), cart(30%), checkout(20%)');
+  console.log('[Setup] Watch for: performance degradation, error spikes, timeouts');
 
-    resetStockIfNeeded({ enabled: RESET_STOCK, resetKey: RESET_KEY });
+  resetStockIfNeeded({ enabled: RESET_STOCK, resetKey: RESET_KEY });
 
-    const selectedProductIds = fetchTargetProductIds(productPool.preferredIds);
-    console.log(`[Setup] In-stock target pool: ${selectedProductIds.length}`);
-    if (selectedProductIds.length === 0) {
-        console.warn('[Setup] No in-stock product IDs found. Stress cart path may be mostly rejections.');
-    }
+  const selectedProductIds = fetchTargetProductIds(productPool.preferredIds);
+  console.log(`[Setup] In-stock target pool: ${selectedProductIds.length}`);
+  if (selectedProductIds.length === 0) {
+    console.warn(
+      '[Setup] No in-stock product IDs found. Stress cart path may be mostly rejections.'
+    );
+  }
 
-    return { selectedProductIds };
+  return { selectedProductIds };
 }
 
 function logUnexpected(endpoint, res) {
-    if (!DEBUG_UNEXPECTED || unexpectedLogCount >= MAX_DEBUG_LOGS) {
-        return;
-    }
+  if (!DEBUG_UNEXPECTED || unexpectedLogCount >= MAX_DEBUG_LOGS) {
+    return;
+  }
 
-    unexpectedLogCount += 1;
-    console.warn(
-        `[stress][${endpoint}] status=${res ? res.status : 'none'} location=${getLocation(res)} body=${String((res && res.body) || '').slice(0, 180)}`
-    );
+  unexpectedLogCount += 1;
+  console.warn(
+    `[stress][${endpoint}] status=${res ? res.status : 'none'} location=${getLocation(res)} body=${String((res && res.body) || '').slice(0, 180)}`
+  );
 }
 
 function markError(res) {
-    errorsByStage.add(1);
-    if (isAuthFailureResponse(res)) {
-        isAuthenticated = false;
-    }
+  errorsByStage.add(1);
+  if (isAuthFailureResponse(res)) {
+    isAuthenticated = false;
+  }
 }
 
 function withReauthRetry(requestFn) {
-    let res = requestFn();
-    if (isAuthFailureResponse(res)) {
-        isAuthenticated = false;
-        if (ensureAuthenticated()) {
-            res = requestFn();
-        }
+  let res = requestFn();
+  if (isAuthFailureResponse(res)) {
+    isAuthenticated = false;
+    if (ensureAuthenticated()) {
+      res = requestFn();
     }
-    return res;
+  }
+  return res;
 }
 
 function ensureAuthenticated() {
-    if (isAuthenticated) {
-        return true;
-    }
-
-    authAttempts.add(1);
-
-    const loginRes = http.post(
-        `${app.baseURL}/login`,
-        {
-            username: TEST_USER.username,
-            password: TEST_USER.password,
-        },
-        {
-            headers: headers.form,
-            redirects: 0,
-            tags: { endpoint: 'auth_login' },
-        }
-    );
-
-    const redirectLocation = String(loginRes.headers.Location || loginRes.headers.location || '');
-    const loginOk = check(loginRes, {
-        'stress login status is 200/302/303': (r) =>
-            r.status === 200 || r.status === 302 || r.status === 303,
-        'stress login not redirected to /login': () =>
-            loginRes.status === 200 || !redirectLocation.includes('/login'),
-    });
-
-    if (!loginOk) {
-        authFailures.add(1);
-        markError(loginRes);
-        return false;
-    }
-
-    const profileRes = http.get(`${app.baseURL}/profile`, {
-        redirects: 0,
-        tags: { endpoint: 'auth_profile' },
-    });
-    const profileOk = check(profileRes, {
-        'stress profile is accessible': (r) => r.status === 200,
-    });
-
-    if (!profileOk) {
-        authFailures.add(1);
-        markError(profileRes);
-        return false;
-    }
-
-    isAuthenticated = true;
+  if (isAuthenticated) {
     return true;
+  }
+
+  authAttempts.add(1);
+
+  const loginRes = http.post(
+    `${app.baseURL}/login`,
+    {
+      username: TEST_USER.username,
+      password: TEST_USER.password
+    },
+    {
+      headers: headers.form,
+      redirects: 0,
+      tags: { endpoint: 'auth_login' }
+    }
+  );
+
+  const redirectLocation = String(loginRes.headers.Location || loginRes.headers.location || '');
+  const loginOk = check(loginRes, {
+    'stress login status is 200/302/303': (r) =>
+      r.status === 200 || r.status === 302 || r.status === 303,
+    'stress login not redirected to /login': () =>
+      loginRes.status === 200 || !redirectLocation.includes('/login')
+  });
+
+  if (!loginOk) {
+    authFailures.add(1);
+    markError(loginRes);
+    return false;
+  }
+
+  const profileRes = http.get(`${app.baseURL}/profile`, {
+    redirects: 0,
+    tags: { endpoint: 'auth_profile' }
+  });
+  const profileOk = check(profileRes, {
+    'stress profile is accessible': (r) => r.status === 200
+  });
+
+  if (!profileOk) {
+    authFailures.add(1);
+    markError(profileRes);
+    return false;
+  }
+
+  isAuthenticated = true;
+  return true;
 }
 
 export default function (data) {
-    if (!ensureAuthenticated()) {
-        sleep(0.5);
-        return;
-    }
+  if (!ensureAuthenticated()) {
+    sleep(0.5);
+    return;
+  }
 
-    const selectedProductIds = data && Array.isArray(data.selectedProductIds)
-        ? data.selectedProductIds
-        : null;
+  const selectedProductIds =
+    data && Array.isArray(data.selectedProductIds) ? data.selectedProductIds : null;
 
-    // Weighted operation mix
-    const rand = Math.random();
-    if (rand < 0.5) {
-        browseProducts();
-    } else if (rand < 0.8) {
-        addToCart(selectedProductIds);
-    } else {
-        checkout();
-    }
+  // Weighted operation mix
+  const rand = Math.random();
+  if (rand < 0.5) {
+    browseProducts();
+  } else if (rand < 0.8) {
+    addToCart(selectedProductIds);
+  } else {
+    checkout();
+  }
 
-    sleep(0.3 + Math.random() * 0.3);
+  sleep(0.3 + Math.random() * 0.3);
 }
 
 function browseProducts() {
-    group('Browse', () => {
-        const startTime = Date.now();
-        const res = withReauthRetry(() =>
-            http.get(`${app.baseURL}/api/products`, {
-                redirects: 0,
-                tags: { endpoint: 'browse_products' },
-            })
-        );
-        const duration = Date.now() - startTime;
+  group('Browse', () => {
+    const startTime = Date.now();
+    const res = withReauthRetry(() =>
+      http.get(`${app.baseURL}/api/products`, {
+        redirects: 0,
+        tags: { endpoint: 'browse_products' }
+      })
+    );
+    const duration = Date.now() - startTime;
 
-        performanceScore.add(duration);
+    performanceScore.add(duration);
 
-        const success = check(res, {
-            'browse successful': (r) => r.status === 200,
-            'browse returns json': (r) =>
-                String(r.headers['Content-Type'] || r.headers['content-type'] || '').includes('application/json'),
-        });
-
-        if (!success) {
-            logUnexpected('browse_products', res);
-            markError(res);
-        }
+    const success = check(res, {
+      'browse successful': (r) => r.status === 200,
+      'browse returns json': (r) =>
+        String(r.headers['Content-Type'] || r.headers['content-type'] || '').includes(
+          'application/json'
+        )
     });
+
+    if (!success) {
+      logUnexpected('browse_products', res);
+      markError(res);
+    }
+  });
 }
 
 function addToCart(selectedProductIds) {
-    group('Cart', () => {
-        const startTime = Date.now();
-        const res = withReauthRetry(() =>
-            http.post(
-                    `${app.baseURL}/api/cart/add`,
-                    JSON.stringify({
-                    productId: productPool.pickProductIdFrom(selectedProductIds),
-                        quantity: 1,
-                    }),
-                {
-                    headers: headers.json,
-                    redirects: 0,
-                    tags: { endpoint: 'cart_add' },
-                    responseCallback: http.expectedStatuses(200, 302, 303, 400),
-                }
-            )
-        );
-        const duration = Date.now() - startTime;
-
-        performanceScore.add(duration);
-
-        check(res, {
-            'cart add handled': (r) => r.status === 200 || isStockLimitResponse(r),
-            'cart add no 5xx': (r) => r.status < 500,
-        });
-
-        if (res.status === 200) {
-            cartSuccess.add(1);
-            return;
+  group('Cart', () => {
+    const startTime = Date.now();
+    const res = withReauthRetry(() =>
+      http.post(
+        `${app.baseURL}/api/cart/add`,
+        JSON.stringify({
+          productId: productPool.pickProductIdFrom(selectedProductIds),
+          quantity: 1
+        }),
+        {
+          headers: headers.json,
+          redirects: 0,
+          tags: { endpoint: 'cart_add' },
+          responseCallback: http.expectedStatuses(200, 302, 303, 400)
         }
+      )
+    );
+    const duration = Date.now() - startTime;
 
-        if (isStockLimitResponse(res)) {
-            cartRejected.add(1);
-            return;
-        }
+    performanceScore.add(duration);
 
-        cartUnexpected.add(1);
-        logUnexpected('cart_add', res);
-        markError(res);
+    check(res, {
+      'cart add handled': (r) => r.status === 200 || isStockLimitResponse(r),
+      'cart add no 5xx': (r) => r.status < 500
     });
+
+    if (res.status === 200) {
+      cartSuccess.add(1);
+      return;
+    }
+
+    if (isStockLimitResponse(res)) {
+      cartRejected.add(1);
+      return;
+    }
+
+    cartUnexpected.add(1);
+    logUnexpected('cart_add', res);
+    markError(res);
+  });
 }
 
 function checkout() {
-    group('Checkout', () => {
-        const startTime = Date.now();
-        checkoutAttempts.add(1);
-        const res = withReauthRetry(() =>
-            http.post(
-                `${app.baseURL}/order/api/mock-pay`,
-                JSON.stringify({}),
-                {
-                    headers: headers.json,
-                    redirects: 0,
-                    tags: { endpoint: 'checkout_mock_pay' },
-                    responseCallback: http.expectedStatuses(200, 302, 303, 400),
-                }
-            )
-        );
-        const duration = Date.now() - startTime;
+  group('Checkout', () => {
+    const startTime = Date.now();
+    checkoutAttempts.add(1);
+    const res = withReauthRetry(() =>
+      http.post(`${app.baseURL}/order/api/mock-pay`, JSON.stringify({}), {
+        headers: headers.json,
+        redirects: 0,
+        tags: { endpoint: 'checkout_mock_pay' },
+        responseCallback: http.expectedStatuses(200, 302, 303, 400)
+      })
+    );
+    const duration = Date.now() - startTime;
 
-        performanceScore.add(duration);
+    performanceScore.add(duration);
 
-        const handled = check(res, {
-            'checkout status is handled': (r) => r.status === 200 || r.status === 400 || isCartRedirect(r),
-            'checkout no 5xx': (r) => r.status < 500,
-        });
-
-        if (!handled) {
-            checkoutUnexpected.add(1);
-            logUnexpected('checkout_mock_pay', res);
-            markError(res);
-            return;
-        }
-
-        if (res.status === 400 || isCartRedirect(res)) {
-            checkoutRejected.add(1);
-            return;
-        }
-
-        try {
-            const body = res.json();
-            const payloadOk = check(res, {
-                'checkout success has orderId': () => Boolean(body && body.orderId),
-            });
-            if (!payloadOk) {
-                checkoutUnexpected.add(1);
-                logUnexpected('checkout_mock_pay', res);
-                markError(res);
-            }
-        } catch (_error) {
-            checkoutUnexpected.add(1);
-            logUnexpected('checkout_mock_pay', res);
-            markError(res);
-        }
+    const handled = check(res, {
+      'checkout status is handled': (r) =>
+        r.status === 200 || r.status === 400 || isCartRedirect(r),
+      'checkout no 5xx': (r) => r.status < 500
     });
+
+    if (!handled) {
+      checkoutUnexpected.add(1);
+      logUnexpected('checkout_mock_pay', res);
+      markError(res);
+      return;
+    }
+
+    if (res.status === 400 || isCartRedirect(res)) {
+      checkoutRejected.add(1);
+      return;
+    }
+
+    try {
+      const body = res.json();
+      const payloadOk = check(res, {
+        'checkout success has orderId': () => Boolean(body && body.orderId)
+      });
+      if (!payloadOk) {
+        checkoutUnexpected.add(1);
+        logUnexpected('checkout_mock_pay', res);
+        markError(res);
+      }
+    } catch (_error) {
+      checkoutUnexpected.add(1);
+      logUnexpected('checkout_mock_pay', res);
+      markError(res);
+    }
+  });
 }
 
 export function teardown() {
-    console.log('\n========================================');
-    console.log('STRESS TEST ANALYSIS');
-    console.log('========================================');
-    console.log(`Test Type: Breaking Point Discovery (${QUICK_MODE ? 'quick' : 'full'} mode)`);
-    console.log('\nAnalysis Points:');
-    console.log('   1. At what VU count did errors start?');
-    console.log('   2. At what VU count did response time degrade?');
-    console.log('   3. Did the system recover gracefully?');
-    console.log('   4. Which endpoints failed first?');
-    console.log('\nNext Steps:');
-    console.log('   - Review error_rate trend in results');
-    console.log('   - Check performance_score degradation');
-    console.log('   - Set auto-scaling threshold before breaking point');
-    console.log('========================================\n');
+  console.log('\n========================================');
+  console.log('STRESS TEST ANALYSIS');
+  console.log('========================================');
+  console.log(`Test Type: Breaking Point Discovery (${QUICK_MODE ? 'quick' : 'full'} mode)`);
+  console.log('\nAnalysis Points:');
+  console.log('   1. At what VU count did errors start?');
+  console.log('   2. At what VU count did response time degrade?');
+  console.log('   3. Did the system recover gracefully?');
+  console.log('   4. Which endpoints failed first?');
+  console.log('\nNext Steps:');
+  console.log('   - Review error_rate trend in results');
+  console.log('   - Check performance_score degradation');
+  console.log('   - Set auto-scaling threshold before breaking point');
+  console.log('========================================\n');
 }

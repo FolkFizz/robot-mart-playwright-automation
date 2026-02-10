@@ -16,14 +16,15 @@ Target: `https://robot-store-sandbox.onrender.com`
 
 ## Run Summary
 
-| Profile | Run ID | Result | Failed Runs |
-| --- | --- | --- | --- |
-| portfolio | `20260209-121019-portfolio` | FAIL | `2/10` |
-| gate | `20260209-122753-gate` | FAIL | `3/10` |
+| Profile   | Run ID                      | Result | Failed Runs |
+| --------- | --------------------------- | ------ | ----------- |
+| portfolio | `20260209-121019-portfolio` | FAIL   | `2/10`      |
+| gate      | `20260209-122753-gate`      | FAIL   | `3/10`      |
 
 ## Failing Scenarios
 
 1. `checkout-strict` (gate)
+
 - Threshold breaches:
   - `checkout_unexpected count=9` (expected `count==0`)
   - `http_req_duration{endpoint:checkout_mock_pay} p(95)=5.28s` (expected `<1.0s`)
@@ -31,6 +32,7 @@ Target: `https://robot-store-sandbox.onrender.com`
 - Source: `performance/results/20260209-122753-gate/checkout-strict.log.txt`
 
 2. `stress-quick` (portfolio and gate)
+
 - Threshold breach:
   - portfolio: `http_req_duration p(95)=3.9s` (expected `<3.0s`)
   - gate: `http_req_duration p(95)=4.01s` (expected `<3.0s`)
@@ -39,6 +41,7 @@ Target: `https://robot-store-sandbox.onrender.com`
   - `performance/results/20260209-122753-gate/stress-quick.log.txt`
 
 3. `soak-quick` (portfolio and gate)
+
 - Threshold breach:
   - portfolio: `http_req_duration p(95)=1.53s` (expected `<1.5s`)
   - gate: `http_req_duration p(95)=1.82s` (expected `<1.5s`)

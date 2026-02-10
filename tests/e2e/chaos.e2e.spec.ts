@@ -79,14 +79,15 @@ const gotoWithRetries = async (page: Page, url: string, attempts = 5): Promise<b
   return false;
 };
 
-const isCheckoutUrl = (url: string) => url.includes(routes.order.checkout) || url.includes(routes.order.place);
+const isCheckoutUrl = (url: string) =>
+  url.includes(routes.order.checkout) || url.includes(routes.order.place);
 const checkoutPaths = [routes.order.checkout, routes.order.place];
 const waitForCheckoutUrl = async (page: Page, timeoutMs = 2_500): Promise<boolean> => {
   try {
-    await page.waitForURL(
-      (url) => isCheckoutUrl(url.toString()),
-      { timeout: timeoutMs, waitUntil: 'domcontentloaded' }
-    );
+    await page.waitForURL((url) => isCheckoutUrl(url.toString()), {
+      timeout: timeoutMs,
+      waitUntil: 'domcontentloaded'
+    });
     return true;
   } catch {
     return isCheckoutUrl(page.url());
@@ -152,7 +153,9 @@ test.describe('chaos comprehensive @e2e @chaos', () => {
   });
 
   test.describe('positive cases', () => {
-    test('CHAOS-P01: chaos lab renders all toggle controls @e2e @chaos @smoke', async ({ chaosPage }) => {
+    test('CHAOS-P01: chaos lab renders all toggle controls @e2e @chaos @smoke', async ({
+      chaosPage
+    }) => {
       await chaosPage.goto();
 
       for (const toggle of allChaosToggles) {
@@ -162,7 +165,9 @@ test.describe('chaos comprehensive @e2e @chaos', () => {
       expect(await chaosPage.getStatusText()).toBe(chaosStatusText.normal);
     });
 
-    test('CHAOS-P02: enabling layout-shift via UI persists after reload @e2e @chaos @regression', async ({ chaosPage }) => {
+    test('CHAOS-P02: enabling layout-shift via UI persists after reload @e2e @chaos @regression', async ({
+      chaosPage
+    }) => {
       await chaosPage.goto();
       await chaosPage.setToggle(chaosToggles.layoutShift, true);
       await chaosPage.applyChanges();
@@ -172,7 +177,9 @@ test.describe('chaos comprehensive @e2e @chaos', () => {
       expect(await chaosPage.getStatusText()).toBe(chaosStatusText.active);
     });
 
-    test('CHAOS-P03: latency chaos slows product API but stays available @e2e @chaos @regression', async ({ api }) => {
+    test('CHAOS-P03: latency chaos slows product API but stays available @e2e @chaos @regression', async ({
+      api
+    }) => {
       await setChaosConfig({ latency: true });
 
       const t1 = Date.now();
@@ -188,7 +195,11 @@ test.describe('chaos comprehensive @e2e @chaos', () => {
       expect(Math.max(d1, d2)).toBeGreaterThanOrEqual(1200);
     });
 
-    test('CHAOS-P04: customer can still browse product page under latency+layout shift @e2e @chaos @regression', async ({ page, homePage, productPage }) => {
+    test('CHAOS-P04: customer can still browse product page under latency+layout shift @e2e @chaos @regression', async ({
+      page,
+      homePage,
+      productPage
+    }) => {
       await setChaosConfig({ latency: true, layoutShift: true });
 
       await homePage.goto();
@@ -201,7 +212,9 @@ test.describe('chaos comprehensive @e2e @chaos', () => {
   });
 
   test.describe('negative cases', () => {
-    test('CHAOS-N01: random 500 chaos causes intermittent failures, not total outage @e2e @chaos @regression', async ({ api }) => {
+    test('CHAOS-N01: random 500 chaos causes intermittent failures, not total outage @e2e @chaos @regression', async ({
+      api
+    }) => {
       await setChaosConfig({ randomErrors: true });
 
       let successCount = 0;
@@ -217,7 +230,9 @@ test.describe('chaos comprehensive @e2e @chaos', () => {
       expect(successCount).toBeGreaterThan(0);
     });
 
-    test('CHAOS-N02: invalid chaos payload is ignored safely @e2e @chaos @regression', async ({ api }) => {
+    test('CHAOS-N02: invalid chaos payload is ignored safely @e2e @chaos @regression', async ({
+      api
+    }) => {
       const res = await api.post(routes.api.chaosConfig, {
         data: { __invalidToggle__: true, enabled: false },
         maxRedirects: 0
@@ -230,7 +245,9 @@ test.describe('chaos comprehensive @e2e @chaos', () => {
       expect(body.config.__invalidToggle__).toBeUndefined();
     });
 
-    test('CHAOS-N03: reset clears all active chaos toggles @e2e @chaos @regression', async ({ chaosPage }) => {
+    test('CHAOS-N03: reset clears all active chaos toggles @e2e @chaos @regression', async ({
+      chaosPage
+    }) => {
       await setChaosConfig({
         layoutShift: true,
         latency: true,
@@ -248,7 +265,10 @@ test.describe('chaos comprehensive @e2e @chaos', () => {
   });
 
   test.describe('edge cases', () => {
-    test('CHAOS-E01: all chaos toggles together still allow recovery path @e2e @chaos @regression', async ({ page, chaosPage }) => {
+    test('CHAOS-E01: all chaos toggles together still allow recovery path @e2e @chaos @regression', async ({
+      page,
+      chaosPage
+    }) => {
       await setChaosConfig({
         dynamicIds: true,
         flakyElements: true,
@@ -270,7 +290,9 @@ test.describe('chaos comprehensive @e2e @chaos', () => {
       expect(await chaosPage.getStatusText()).toBe(chaosStatusText.normal);
     });
 
-    test('CHAOS-E02: rapid config updates follow last-write-wins behavior @e2e @chaos @regression', async ({ chaosPage }) => {
+    test('CHAOS-E02: rapid config updates follow last-write-wins behavior @e2e @chaos @regression', async ({
+      chaosPage
+    }) => {
       await setChaosConfig({ layoutShift: true, latency: true });
       await setChaosConfig({ layoutShift: false, latency: false, brokenAssets: true });
 
@@ -281,7 +303,9 @@ test.describe('chaos comprehensive @e2e @chaos', () => {
       expect(await chaosPage.getStatusText()).toBe(chaosStatusText.active);
     });
 
-    test('CHAOS-E03: chaos control endpoint remains fast while app endpoint is delayed @e2e @chaos @regression', async ({ api }) => {
+    test('CHAOS-E03: chaos control endpoint remains fast while app endpoint is delayed @e2e @chaos @regression', async ({
+      api
+    }) => {
       await setChaosConfig({ latency: true });
 
       const appStart = Date.now();
@@ -306,18 +330,53 @@ test.describe('chaos comprehensive @e2e @chaos', () => {
       toggle: (typeof allChaosToggles)[number];
       title: string;
     }> = [
-      { id: 'CHAOS-E04', toggle: chaosToggles.dynamicIds, title: 'purchase flow reaches checkout under dynamicIds chaos' },
-      { id: 'CHAOS-E05', toggle: chaosToggles.flakyElements, title: 'purchase flow reaches checkout under flakyElements chaos' },
-      { id: 'CHAOS-E06', toggle: chaosToggles.layoutShift, title: 'purchase flow remains recoverable under layoutShift chaos' },
-      { id: 'CHAOS-E07', toggle: chaosToggles.zombieClicks, title: 'purchase flow reaches checkout under zombieClicks chaos' },
-      { id: 'CHAOS-E08', toggle: chaosToggles.textScramble, title: 'purchase flow reaches checkout under textScramble chaos' },
-      { id: 'CHAOS-E09', toggle: chaosToggles.latency, title: 'purchase flow reaches checkout under latency chaos' },
-      { id: 'CHAOS-E10', toggle: chaosToggles.randomErrors, title: 'purchase flow reaches checkout under randomErrors chaos' },
-      { id: 'CHAOS-E11', toggle: chaosToggles.brokenAssets, title: 'purchase flow reaches checkout under brokenAssets chaos' }
+      {
+        id: 'CHAOS-E04',
+        toggle: chaosToggles.dynamicIds,
+        title: 'purchase flow reaches checkout under dynamicIds chaos'
+      },
+      {
+        id: 'CHAOS-E05',
+        toggle: chaosToggles.flakyElements,
+        title: 'purchase flow reaches checkout under flakyElements chaos'
+      },
+      {
+        id: 'CHAOS-E06',
+        toggle: chaosToggles.layoutShift,
+        title: 'purchase flow remains recoverable under layoutShift chaos'
+      },
+      {
+        id: 'CHAOS-E07',
+        toggle: chaosToggles.zombieClicks,
+        title: 'purchase flow reaches checkout under zombieClicks chaos'
+      },
+      {
+        id: 'CHAOS-E08',
+        toggle: chaosToggles.textScramble,
+        title: 'purchase flow reaches checkout under textScramble chaos'
+      },
+      {
+        id: 'CHAOS-E09',
+        toggle: chaosToggles.latency,
+        title: 'purchase flow reaches checkout under latency chaos'
+      },
+      {
+        id: 'CHAOS-E10',
+        toggle: chaosToggles.randomErrors,
+        title: 'purchase flow reaches checkout under randomErrors chaos'
+      },
+      {
+        id: 'CHAOS-E11',
+        toggle: chaosToggles.brokenAssets,
+        title: 'purchase flow reaches checkout under brokenAssets chaos'
+      }
     ];
 
     for (const modeCase of purchaseModeCases) {
-      test(`${modeCase.id}: ${modeCase.title} @e2e @chaos @regression @destructive`, async ({ api, page }) => {
+      test(`${modeCase.id}: ${modeCase.title} @e2e @chaos @regression @destructive`, async ({
+        api,
+        page
+      }) => {
         const slowMode =
           modeCase.toggle === chaosToggles.layoutShift ||
           modeCase.toggle === chaosToggles.latency ||
@@ -329,9 +388,13 @@ test.describe('chaos comprehensive @e2e @chaos', () => {
 
         await setChaosConfig(chaosConfigForSingleToggle(modeCase.toggle));
         const attempts =
-          modeCase.toggle === chaosToggles.randomErrors ? 14 :
-          modeCase.toggle === chaosToggles.layoutShift ? 12 :
-          modeCase.toggle === chaosToggles.latency ? 12 : 8;
+          modeCase.toggle === chaosToggles.randomErrors
+            ? 14
+            : modeCase.toggle === chaosToggles.layoutShift
+              ? 12
+              : modeCase.toggle === chaosToggles.latency
+                ? 12
+                : 8;
         let reached = await reachCheckoutFromSeededCart(page, attempts);
 
         if (!reached && modeCase.toggle === chaosToggles.layoutShift) {
@@ -344,7 +407,10 @@ test.describe('chaos comprehensive @e2e @chaos', () => {
       });
     }
 
-    test('CHAOS-E12: purchase flow remains recoverable with all chaos toggles enabled @e2e @chaos @regression @destructive', async ({ api, page }) => {
+    test('CHAOS-E12: purchase flow remains recoverable with all chaos toggles enabled @e2e @chaos @regression @destructive', async ({
+      api,
+      page
+    }) => {
       test.setTimeout(120_000);
 
       await loginAndSyncSession(api, page);
@@ -368,7 +434,8 @@ test.describe('chaos comprehensive @e2e @chaos', () => {
         await resetChaos();
       }
 
-      const reachedAfterRecovery = reachedUnderFullChaos || (await reachCheckoutFromSeededCart(page, 8));
+      const reachedAfterRecovery =
+        reachedUnderFullChaos || (await reachCheckoutFromSeededCart(page, 8));
       expect(reachedAfterRecovery).toBe(true);
     });
   });

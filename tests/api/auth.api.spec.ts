@@ -8,14 +8,14 @@ import { authInputs, authErrors } from '@data';
  * =============================================================================
  * AUTHENTICATION API TESTS - Comprehensive Coverage
  * =============================================================================
- * 
+ *
  * Test Scenarios:
  * ---------------
  * 1. User Login API (Session Cookie Management)
  * 2. Admin Login API (Elevated privileges)
  * 3. Login Failure Handling (Invalid Credentials)
  * 4. Session Persistence & Validation
- * 
+ *
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (4 tests):
@@ -23,16 +23,16 @@ import { authInputs, authErrors } from '@data';
  *   - AUTH-API-P02: admin login creates authenticated session
  *   - AUTH-API-P03: authenticated user session persists across requests
  *   - AUTH-API-P04: session cookie includes expected security attributes
- * 
+ *
  * NEGATIVE CASES (3 tests):
  *   - AUTH-API-N01: invalid credentials return error
  *   - AUTH-API-N02: empty credentials are rejected and remain unauthenticated
  *   - AUTH-API-N03: regular user session cannot access admin endpoint
- * 
+ *
  * EDGE CASES (2 tests):
  *   - AUTH-API-E01: re-authentication switches role in same session context
  *   - AUTH-API-E02: repeated failed logins recover with later valid login
- * 
+ *
  * Business Rules Tested:
  * ----------------------
  * - Authentication Method: Session-based with HTTP-only cookies
@@ -40,7 +40,7 @@ import { authInputs, authErrors } from '@data';
  * - Success Response: 200/redirect and session persisted in request context
  * - Failure Response: 200 OK with error message in HTML (legacy behavior)
  * - Session Cookie: HttpOnly, Secure (in production), SameSite attribute present
- * 
+ *
  * =============================================================================
  */
 
@@ -53,8 +53,9 @@ test.describe('authentication api @api @auth', () => {
   };
 
   test.describe('positive cases', () => {
-
-    test('AUTH-API-P01: user login creates authenticated session @api @auth @smoke', async ({ api }) => {
+    test('AUTH-API-P01: user login creates authenticated session @api @auth @smoke', async ({
+      api
+    }) => {
       // Act: Login as regular user
       await loginAsUser(api);
 
@@ -69,7 +70,9 @@ test.describe('authentication api @api @auth', () => {
       expect(notificationsBody.status).toBe('success');
     });
 
-    test('AUTH-API-P02: admin login creates authenticated session @api @auth @regression', async ({ api }) => {
+    test('AUTH-API-P02: admin login creates authenticated session @api @auth @regression', async ({
+      api
+    }) => {
       // Act: Login as admin user
       await loginAsAdmin(api);
 
@@ -84,7 +87,9 @@ test.describe('authentication api @api @auth', () => {
       expect(adminNotificationsBody.status).toBe('success');
     });
 
-    test('AUTH-API-P03: authenticated user session persists across requests @api @auth @regression', async ({ api }) => {
+    test('AUTH-API-P03: authenticated user session persists across requests @api @auth @regression', async ({
+      api
+    }) => {
       // Arrange: Login as regular user
       await loginAsUser(api);
 
@@ -98,7 +103,9 @@ test.describe('authentication api @api @auth', () => {
       }
     });
 
-    test('AUTH-API-P04: session cookie includes expected security attributes @api @auth @regression', async ({ api }) => {
+    test('AUTH-API-P04: session cookie includes expected security attributes @api @auth @regression', async ({
+      api
+    }) => {
       // Arrange: Login as user
       await loginAsUser(api);
 
@@ -113,8 +120,9 @@ test.describe('authentication api @api @auth', () => {
   });
 
   test.describe('negative cases', () => {
-
-    test('AUTH-API-N01: invalid credentials return error @api @auth @regression', async ({ api }) => {
+    test('AUTH-API-N01: invalid credentials return error @api @auth @regression', async ({
+      api
+    }) => {
       // Act: Attempt login with wrong credentials
       const res = await api.post(routes.login, {
         form: {
@@ -135,7 +143,9 @@ test.describe('authentication api @api @auth', () => {
       expect(notificationsRes.headers()['location']).toContain(routes.login);
     });
 
-    test('AUTH-API-N02: empty credentials are rejected and remain unauthenticated @api @auth @regression', async ({ api }) => {
+    test('AUTH-API-N02: empty credentials are rejected and remain unauthenticated @api @auth @regression', async ({
+      api
+    }) => {
       // Act: Attempt login with empty credentials
       const res = await api.post(routes.login, {
         form: {
@@ -156,7 +166,9 @@ test.describe('authentication api @api @auth', () => {
       expect(notificationsRes.headers()['location']).toContain(routes.login);
     });
 
-    test('AUTH-API-N03: regular user session cannot access admin endpoint @api @auth @security @regression', async ({ api }) => {
+    test('AUTH-API-N03: regular user session cannot access admin endpoint @api @auth @security @regression', async ({
+      api
+    }) => {
       // Arrange: Login as regular user
       await loginAsUser(api);
 
@@ -171,8 +183,9 @@ test.describe('authentication api @api @auth', () => {
   });
 
   test.describe('edge cases', () => {
-
-    test('AUTH-API-E01: re-authentication switches role in same session context @api @auth @regression', async ({ api }) => {
+    test('AUTH-API-E01: re-authentication switches role in same session context @api @auth @regression', async ({
+      api
+    }) => {
       // Arrange: Start as regular user
       await loginAsUser(api);
       const adminBefore = await api.get(routes.api.adminNotifications, { maxRedirects: 0 });
@@ -188,7 +201,9 @@ test.describe('authentication api @api @auth', () => {
       expect(adminBody.status).toBe('success');
     });
 
-    test('AUTH-API-E02: repeated failed logins recover with later valid login @api @auth @regression', async ({ api }) => {
+    test('AUTH-API-E02: repeated failed logins recover with later valid login @api @auth @regression', async ({
+      api
+    }) => {
       // Arrange & Act: Multiple failed login attempts
       for (let i = 0; i < 3; i += 1) {
         const badRes = await api.post(routes.login, {
@@ -219,4 +234,3 @@ test.describe('authentication api @api @auth', () => {
     });
   });
 });
-

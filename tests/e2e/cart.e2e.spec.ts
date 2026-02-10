@@ -7,7 +7,7 @@ import { seededProducts, coupons, uiMessages } from '@data';
  * =============================================================================
  * CART E2E TESTS - Comprehensive Coverage
  * =============================================================================
- * 
+ *
  * Test Scenarios:
  * ---------------
  * 1. Basic Cart Operations (Add, Update, Remove, Clear)
@@ -16,7 +16,7 @@ import { seededProducts, coupons, uiMessages } from '@data';
  * 4. Coupon Application & Validation
  * 5. Shipping Calculation (Free shipping threshold)
  * 6. Cart Persistence (Session vs Database)
- * 
+ *
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (9 tests):
@@ -29,7 +29,7 @@ import { seededProducts, coupons, uiMessages } from '@data';
  *   - CART-P07: clear cart empties all items
  *   - CART-P08: cannot decrease quantity below 1
  *   - COUP-P02: coupon code is case-insensitive
- * 
+ *
  * NEGATIVE CASES (9 tests):
  *   - CART-N01: cannot add quantity exceeding stock limit
  *   - CART-N02: admin cannot add items to cart via API (security)
@@ -40,13 +40,13 @@ import { seededProducts, coupons, uiMessages } from '@data';
  *   - CART-N07: update cart when empty returns error
  *   - COUP-N01: invalid coupon code shows error
  *   - COUP-N02: expired coupon rejected with error
- * 
+ *
  * EDGE CASES (4 tests):
  *   - CART-E01: add at exact stock limit succeeds, adding one more fails
  *   - COUP-E01: coupon code with whitespace is trimmed
  *   - COUP-E05: coupon cleared when cart is cleared
  *   - COUP-N04: empty coupon code rejected
- * 
+ *
  * Business Rules Tested:
  * ----------------------
  * - Stock Validation: Cannot add/update beyond available stock
@@ -55,16 +55,15 @@ import { seededProducts, coupons, uiMessages } from '@data';
  * - Coupon Calculation: Discount applied to subtotal BEFORE shipping
  * - Cart Formula: Grand Total = Subtotal + Discount + Shipping
  * - Case Sensitivity: Coupon codes are case-insensitive (converted to uppercase)
- * 
+ *
  * =============================================================================
  */
 
 test.use({ seedData: true });
 
 test.describe('cart comprehensive @e2e @cart', () => {
-  const firstProduct = seededProducts[0];   // Rusty-Bot 101: THB 299.99
-  const secondProduct = seededProducts[1];  // Helper-X: THB 450.00
-  const thirdProduct = seededProducts[2];   // Cortex-99: THB 2500.00
+  const firstProduct = seededProducts[0]; // Rusty-Bot 101: THB 299.99
+  const secondProduct = seededProducts[1]; // Helper-X: THB 450.00
 
   test.beforeEach(async ({ api, page }) => {
     await loginAndSyncSession(api, page);
@@ -74,8 +73,12 @@ test.describe('cart comprehensive @e2e @cart', () => {
   // POSITIVE TEST CASES - Happy Path Scenarios
   // ========================================================================
   test.describe('positive cases', () => {
-    
-    test('CART-P01: add first product to empty cart @smoke @e2e @cart @destructive', async ({ api, page, homePage, productPage, cartPage }) => {
+    test('CART-P01: add first product to empty cart @smoke @e2e @cart @destructive', async ({
+      api,
+      homePage,
+      productPage,
+      cartPage
+    }) => {
       // Arrange: Start with empty cart
       await seedCart(api, []);
 
@@ -97,7 +100,12 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(await cartPage.getCartCount()).toBe(1);
     });
 
-    test('CART-P02: add second product and verify subtotal calculation @e2e @cart @regression @destructive', async ({ api, homePage, productPage, cartPage }) => {
+    test('CART-P02: add second product and verify subtotal calculation @e2e @cart @regression @destructive', async ({
+      api,
+      homePage,
+      productPage,
+      cartPage
+    }) => {
       // Arrange: Cart has first product already
       await seedCart(api, [{ id: firstProduct.id }]);
 
@@ -110,7 +118,10 @@ test.describe('cart comprehensive @e2e @cart', () => {
       await cartPage.goto();
       expect(await cartPage.isItemVisible(secondProduct.id)).toBe(true);
       expect(await cartPage.getItemName(secondProduct.id)).toContain(secondProduct.name);
-      expect(await cartPage.getItemPriceValue(secondProduct.id)).toBeCloseTo(secondProduct.price, 2);
+      expect(await cartPage.getItemPriceValue(secondProduct.id)).toBeCloseTo(
+        secondProduct.price,
+        2
+      );
 
       const subtotal = await cartPage.getSubtotalValue();
       const expectedSubtotal = firstProduct.price + secondProduct.price;
@@ -122,7 +133,10 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(shippingValue).toBe(SHIPPING.fee);
     });
 
-    test('CART-P03: increase quantity updates totals and enables free shipping @e2e @cart @regression @destructive', async ({ api, cartPage }) => {
+    test('CART-P03: increase quantity updates totals and enables free shipping @e2e @cart @regression @destructive', async ({
+      api,
+      cartPage
+    }) => {
       // Arrange: Cart with 2 items (total is below THB 1000 initially)
       await seedCart(api, [{ id: firstProduct.id }, { id: secondProduct.id }]);
 
@@ -149,7 +163,10 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(shippingValue).toBe(0);
     });
 
-    test('CART-P04: apply valid coupon reduces grand total @e2e @cart @regression @destructive', async ({ api, cartPage }) => {
+    test('CART-P04: apply valid coupon reduces grand total @e2e @cart @regression @destructive', async ({
+      api,
+      cartPage
+    }) => {
       // Arrange: Cart with 2 products
       await seedCart(api, [{ id: firstProduct.id }, { id: secondProduct.id }]);
 
@@ -162,7 +179,10 @@ test.describe('cart comprehensive @e2e @cart', () => {
       // Assert: Discount rendered as signed negative value, grand total reduced
       const discountValue = await cartPage.getDiscountValue();
       expect(discountValue).toBeLessThan(0);
-      expect(Math.abs(discountValue)).toBeCloseTo(subtotal * (coupons.robot99.discountPercent / 100), 1);
+      expect(Math.abs(discountValue)).toBeCloseTo(
+        subtotal * (coupons.robot99.discountPercent / 100),
+        1
+      );
 
       const shippingValue = await cartPage.getShippingValue();
       const grandTotal = await cartPage.getGrandTotalValue();
@@ -172,7 +192,10 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(grandTotal).toBeCloseTo(expectedTotal, 1);
     });
 
-    test('CART-P05: remove coupon restores original totals @e2e @cart @regression @destructive', async ({ api, cartPage }) => {
+    test('CART-P05: remove coupon restores original totals @e2e @cart @regression @destructive', async ({
+      api,
+      cartPage
+    }) => {
       // Arrange: Cart with coupon applied
       await seedCart(api, [{ id: firstProduct.id }, { id: secondProduct.id }]);
 
@@ -192,7 +215,10 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(grandTotal).toBeCloseTo(subtotal + shippingValue, 2);
     });
 
-    test('CART-P06: remove product from cart updates totals @e2e @cart @regression @destructive', async ({ api, cartPage }) => {
+    test('CART-P06: remove product from cart updates totals @e2e @cart @regression @destructive', async ({
+      api,
+      cartPage
+    }) => {
       // Arrange: Cart with 2 products
       await seedCart(api, [{ id: firstProduct.id }, { id: secondProduct.id }]);
 
@@ -211,7 +237,10 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(await cartPage.getCartCount()).toBe(qty);
     });
 
-    test('CART-P07: clear cart empties all items @e2e @cart @regression @destructive', async ({ api, cartPage }) => {
+    test('CART-P07: clear cart empties all items @e2e @cart @regression @destructive', async ({
+      api,
+      cartPage
+    }) => {
       // Arrange: Cart with product
       await seedCart(api, [{ id: firstProduct.id }]);
 
@@ -226,7 +255,10 @@ test.describe('cart comprehensive @e2e @cart', () => {
       await cartPage.expectEmptyMessageVisible(uiMessages.cartEmpty);
     });
 
-    test('CART-P08: cannot decrease quantity below 1 @e2e @cart @regression @destructive', async ({ api, cartPage }) => {
+    test('CART-P08: cannot decrease quantity below 1 @e2e @cart @regression @destructive', async ({
+      api,
+      cartPage
+    }) => {
       // Arrange: Cart with 1 product at quantity 1
       await seedCart(api, [{ id: firstProduct.id }]);
 
@@ -240,7 +272,10 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(qty).toBe(1);
     });
 
-    test('COUP-P02: coupon code is case-insensitive @e2e @cart @regression @destructive', async ({ api, cartPage }) => {
+    test('COUP-P02: coupon code is case-insensitive @e2e @cart @regression @destructive', async ({
+      api,
+      cartPage
+    }) => {
       // Arrange: Cart with product
       await seedCart(api, [{ id: firstProduct.id }]);
 
@@ -259,8 +294,9 @@ test.describe('cart comprehensive @e2e @cart', () => {
   // NEGATIVE TEST CASES - Error Handling & Validation
   // ========================================================================
   test.describe('negative cases', () => {
-    
-    test('CART-N01: cannot add quantity exceeding stock limit @e2e @cart @regression @destructive', async ({ api }) => {
+    test('CART-N01: cannot add quantity exceeding stock limit @e2e @cart @regression @destructive', async ({
+      api
+    }) => {
       // Arrange: Empty cart
       await seedCart(api, []);
 
@@ -270,7 +306,7 @@ test.describe('cart comprehensive @e2e @cart', () => {
         headers: { Accept: 'application/json' },
         maxRedirects: 0
       });
-      
+
       // Assert: Request rejected with 400 error
       expect(res.status()).toBe(400);
       const body = await res.json();
@@ -278,18 +314,20 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(body.message.toLowerCase()).toContain('stock');
     });
 
-    test('CART-N02: admin cannot add items to cart via API (security) @e2e @cart @security @regression @destructive', async ({ api }) => {
+    test('CART-N02: admin cannot add items to cart via API (security) @e2e @cart @security @regression @destructive', async ({
+      api
+    }) => {
       // CRITICAL SECURITY TEST
       // Arrange: Login as admin
       await loginAsAdmin(api);
-      
+
       // Act: Try to add product to cart
       const res = await api.post(routes.api.cartAdd, {
         data: { productId: firstProduct.id, quantity: 1 },
         headers: { Accept: 'application/json' },
         maxRedirects: 0
       });
-      
+
       // Assert: Request forbidden (403)
       expect(res.status()).toBe(403);
       const body = await res.json();
@@ -297,7 +335,12 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(body.message).toBe('Admin cannot shop');
     });
 
-    test('CART-N02-UI: admin cannot add items to cart via UI @e2e @cart @security @regression @destructive', async ({ api, page, homePage, productPage }) => {
+    test('CART-N02-UI: admin cannot add items to cart via UI @e2e @cart @security @regression @destructive', async ({
+      api,
+      page,
+      homePage,
+      productPage
+    }) => {
       // Arrange: Login as admin and sync admin session to browser context
       await loginAsAdmin(api);
       const storage = await api.storageState();
@@ -311,21 +354,23 @@ test.describe('cart comprehensive @e2e @cart', () => {
       if (addButtonVisible) {
         expect(await productPage.isAddToCartDisabled()).toBe(true);
       }
-      
+
       // Assert: Admin cannot complete shopping action
       await expect(page).not.toHaveURL((url) => url.pathname === routes.cart);
       expect(addButtonVisible).toBe(false);
       expect(await homePage.getCartCount()).toBe(0);
     });
 
-    test('CART-N03: add non-existent product returns 404 @e2e @cart @regression @destructive', async ({ api }) => {
+    test('CART-N03: add non-existent product returns 404 @e2e @cart @regression @destructive', async ({
+      api
+    }) => {
       // Act: Try to add product with invalid ID
       const res = await api.post(routes.api.cartAdd, {
         data: { productId: 99999, quantity: 1 },
         headers: { Accept: 'application/json' },
         maxRedirects: 0
       });
-      
+
       // Assert: Not found error
       expect(res.status()).toBe(404);
       const body = await res.json();
@@ -333,7 +378,9 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(body.message).toBe('Product not found');
     });
 
-    test('CART-N04: cannot update quantity to 0 (minimum is 1) @e2e @cart @regression @destructive', async ({ api }) => {
+    test('CART-N04: cannot update quantity to 0 (minimum is 1) @e2e @cart @regression @destructive', async ({
+      api
+    }) => {
       // Arrange: Cart with product at quantity 2
       await seedCart(api, [{ id: firstProduct.id, quantity: 2 }]);
 
@@ -343,7 +390,7 @@ test.describe('cart comprehensive @e2e @cart', () => {
         headers: { Accept: 'application/json' },
         maxRedirects: 0
       });
-      
+
       // Assert: Validation error
       expect(res.status()).toBe(400);
       const body = await res.json();
@@ -351,7 +398,9 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(body.message).toBe('Quantity must be at least 1');
     });
 
-    test('CART-N05: cannot update cart item beyond available stock @e2e @cart @regression @destructive', async ({ api }) => {
+    test('CART-N05: cannot update cart item beyond available stock @e2e @cart @regression @destructive', async ({
+      api
+    }) => {
       // Arrange: Cart with 1 item
       await seedCart(api, [{ id: firstProduct.id, quantity: 1 }]);
 
@@ -361,7 +410,7 @@ test.describe('cart comprehensive @e2e @cart', () => {
         headers: { Accept: 'application/json' },
         maxRedirects: 0
       });
-      
+
       // Assert: Stock limit error
       expect(res.status()).toBe(400);
       const body = await res.json();
@@ -369,7 +418,9 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(body.message).toContain('Stock limit reached');
     });
 
-    test('CART-N07: update cart when empty returns error @e2e @cart @regression @destructive', async ({ api }) => {
+    test('CART-N07: update cart when empty returns error @e2e @cart @regression @destructive', async ({
+      api
+    }) => {
       // Arrange: Empty cart
       await seedCart(api, []);
 
@@ -379,7 +430,7 @@ test.describe('cart comprehensive @e2e @cart', () => {
         headers: { Accept: 'application/json' },
         maxRedirects: 0
       });
-      
+
       // Assert: Cart empty error
       expect(res.status()).toBe(400);
       const body = await res.json();
@@ -387,7 +438,10 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(body.message).toBe('Cart is empty');
     });
 
-    test('COUP-N01: invalid coupon code shows error @e2e @cart @regression @destructive', async ({ api, cartPage }) => {
+    test('COUP-N01: invalid coupon code shows error @e2e @cart @regression @destructive', async ({
+      api,
+      cartPage
+    }) => {
       // Arrange: Cart with product
       await seedCart(api, [{ id: firstProduct.id }]);
 
@@ -400,7 +454,10 @@ test.describe('cart comprehensive @e2e @cart', () => {
       await cartPage.expectAlertContains('Invalid coupon code');
     });
 
-    test('COUP-N02: expired coupon rejected with error @e2e @cart @regression @destructive', async ({ api, cartPage }) => {
+    test('COUP-N02: expired coupon rejected with error @e2e @cart @regression @destructive', async ({
+      api,
+      cartPage
+    }) => {
       // Arrange: Cart with product
       await seedCart(api, [{ id: firstProduct.id }]);
 
@@ -418,15 +475,16 @@ test.describe('cart comprehensive @e2e @cart', () => {
   // EDGE CASES - Boundary Conditions & Special Scenarios
   // ========================================================================
   test.describe('edge cases', () => {
-    
-    test('CART-E01: add at exact stock limit succeeds, adding one more fails @e2e @cart @regression @destructive', async ({ api }) => {
+    test('CART-E01: add at exact stock limit succeeds, adding one more fails @e2e @cart @regression @destructive', async ({
+      api
+    }) => {
       // Arrange: Empty cart
       await seedCart(api, []);
-      
+
       // Get current stock for product
       const productRes = await api.get(routes.api.productDetail(firstProduct.id));
       expect(productRes.status()).toBe(200);
-      
+
       const product = await productRes.json();
       const currentStock = product.stock;
 
@@ -437,7 +495,7 @@ test.describe('cart comprehensive @e2e @cart', () => {
           headers: { Accept: 'application/json' },
           maxRedirects: 0
         });
-        
+
         expect(res.status()).toBe(200);
         const body = await res.json();
         expect(body.status).toBe('success');
@@ -449,7 +507,7 @@ test.describe('cart comprehensive @e2e @cart', () => {
           headers: { Accept: 'application/json' },
           maxRedirects: 0
         });
-        
+
         expect(res2.status()).toBe(400);
         const body2 = await res2.json();
         expect(body2.status).toBe('error');
@@ -457,12 +515,15 @@ test.describe('cart comprehensive @e2e @cart', () => {
       }
     });
 
-    test('COUP-E01: coupon code with whitespace is trimmed @e2e @cart @regression @destructive', async ({ api, cartPage }) => {
+    test('COUP-E01: coupon code with whitespace is trimmed @e2e @cart @regression @destructive', async ({
+      api,
+      cartPage
+    }) => {
       // Arrange: Cart with product
       await seedCart(api, [{ id: firstProduct.id }]);
 
       await cartPage.goto();
-      
+
       // Act: Apply coupon with leading/trailing spaces
       await cartPage.applyCoupon(`  ${coupons.robot99.code}  `);
 
@@ -471,28 +532,33 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(discountValue).toBeLessThan(0);
     });
 
-    test('COUP-E05: coupon cleared when cart is cleared @e2e @cart @regression @destructive', async ({ api, cartPage }) => {
+    test('COUP-E05: coupon cleared when cart is cleared @e2e @cart @regression @destructive', async ({
+      api,
+      cartPage
+    }) => {
       // Arrange: Cart with product and coupon applied
       await seedCart(api, [{ id: firstProduct.id }]);
 
       await cartPage.goto();
       await cartPage.applyCoupon(coupons.robot99.code);
-      
+
       // Verify coupon applied
       expect(await cartPage.isDiscountVisible()).toBe(true);
 
       // Act: Clear cart
       await cartPage.clearCart();
-      
+
       // Re-add item
       await seedCart(api, [{ id: firstProduct.id }]);
       await cartPage.goto();
-      
+
       // Assert: Coupon no longer applied
       expect(await cartPage.isDiscountVisible()).toBe(false);
     });
 
-    test('COUP-N04: empty coupon code rejected @e2e @cart @regression @destructive', async ({ api }) => {
+    test('COUP-N04: empty coupon code rejected @e2e @cart @regression @destructive', async ({
+      api
+    }) => {
       // Arrange: Cart with product
       await seedCart(api, [{ id: firstProduct.id }]);
 
@@ -502,7 +568,7 @@ test.describe('cart comprehensive @e2e @cart', () => {
         headers: { Accept: 'application/json' },
         maxRedirects: 0
       });
-      
+
       // Assert: Validation error
       expect(res.status()).toBe(200);
       const body = await res.json();

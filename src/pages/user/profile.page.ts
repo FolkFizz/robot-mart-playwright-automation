@@ -74,14 +74,20 @@ export class ProfilePage extends BasePage {
   }
 
   async clickInvoiceLinkByOrderId(orderId: string): Promise<void> {
-    await this.orderCardByOrderId(orderId).getByRole('link', { name: /View Invoice/i }).click();
+    await this.orderCardByOrderId(orderId)
+      .getByRole('link', { name: /View Invoice/i })
+      .click();
   }
 
   async getInvoiceHrefByOrderId(orderId: string): Promise<string | null> {
-    return await this.orderCardByOrderId(orderId).getByRole('link', { name: /View Invoice/i }).getAttribute('href');
+    return await this.orderCardByOrderId(orderId)
+      .getByRole('link', { name: /View Invoice/i })
+      .getAttribute('href');
   }
 
   async expectInvoiceHrefByOrderId(orderId: string, pattern: string | RegExp): Promise<void> {
-    await expect(this.orderCardByOrderId(orderId).getByRole('link', { name: /View Invoice/i })).toHaveAttribute('href', pattern);
+    await expect(
+      this.orderCardByOrderId(orderId).getByRole('link', { name: /View Invoice/i })
+    ).toHaveAttribute('href', pattern);
   }
 }

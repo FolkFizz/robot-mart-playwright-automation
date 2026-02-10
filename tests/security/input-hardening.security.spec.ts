@@ -35,11 +35,7 @@ import { routes } from '@config';
  * =============================================================================
  */
 
-const maliciousLoginPayloads = [
-  "' OR '1'='1",
-  "admin' --",
-  '<script>alert(1)</script>'
-] as const;
+const maliciousLoginPayloads = ["' OR '1'='1", "admin' --", '<script>alert(1)</script>'] as const;
 
 const malformedInvoiceIds = [
   '%2e%2e%2f%2e%2e%2fetc%2fpasswd',
@@ -56,7 +52,9 @@ test.use({ seedData: true });
 
 test.describe('input hardening security @security @hardening', () => {
   test.describe('positive cases', () => {
-    test('SEC-INP-P01: valid login still works after failed malicious attempts @security @hardening @smoke', async ({ api }) => {
+    test('SEC-INP-P01: valid login still works after failed malicious attempts @security @hardening @smoke', async ({
+      api
+    }) => {
       await api.get(routes.logout, { maxRedirects: 0 }).catch(() => undefined);
 
       for (const payload of maliciousLoginPayloads) {
@@ -77,7 +75,9 @@ test.describe('input hardening security @security @hardening', () => {
   });
 
   test.describe('negative cases', () => {
-    test('SEC-INP-N01: SQL/XSS-like login payloads are rejected @security @hardening @regression', async ({ api }) => {
+    test('SEC-INP-N01: SQL/XSS-like login payloads are rejected @security @hardening @regression', async ({
+      api
+    }) => {
       await api.get(routes.logout, { maxRedirects: 0 }).catch(() => undefined);
 
       for (const payload of maliciousLoginPayloads) {
@@ -97,7 +97,9 @@ test.describe('input hardening security @security @hardening', () => {
       }
     });
 
-    test('SEC-INP-N02: admin endpoint query tampering does not bypass role checks @security @hardening @regression', async ({ api }) => {
+    test('SEC-INP-N02: admin endpoint query tampering does not bypass role checks @security @hardening @regression', async ({
+      api
+    }) => {
       await loginAsUser(api);
 
       const res = await api.get(`${routes.api.adminNotifications}?role=admin%27--&debug=true`, {
@@ -109,7 +111,9 @@ test.describe('input hardening security @security @hardening', () => {
       expect(text).toContain('Admin Access Only');
     });
 
-    test('SEC-INP-N03: anonymous query tampering does not bypass protected API auth @security @hardening @regression', async ({ api }) => {
+    test('SEC-INP-N03: anonymous query tampering does not bypass protected API auth @security @hardening @regression', async ({
+      api
+    }) => {
       const res = await api.get(`${routes.api.notifications}?user_id=1&isAdmin=true`, {
         maxRedirects: 0
       });
@@ -120,7 +124,9 @@ test.describe('input hardening security @security @hardening', () => {
   });
 
   test.describe('edge cases', () => {
-    test('SEC-INP-E01: malformed invoice ids return controlled 4xx without stack leaks @security @hardening @regression', async ({ api }) => {
+    test('SEC-INP-E01: malformed invoice ids return controlled 4xx without stack leaks @security @hardening @regression', async ({
+      api
+    }) => {
       await loginAsUser(api);
 
       for (const id of malformedInvoiceIds) {

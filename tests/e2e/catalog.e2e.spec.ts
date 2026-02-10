@@ -1,11 +1,11 @@
-﻿import {test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { seededProducts, catalogSearch, catalogCategories, catalogSort, catalogPrice } from '@data';
 
 /**
  * =============================================================================
  * CATALOG & PRODUCT DISCOVERY TESTS - Comprehensive Coverage
  * =============================================================================
- * 
+ *
  * Test Scenarios:
  * ---------------
  * 1. Product Search (Keywords, Partial Terms, Case-Insensitive)
@@ -16,7 +16,7 @@ import { seededProducts, catalogSearch, catalogCategories, catalogSort, catalogP
  * 6. Empty State Handling (No Results)
  * 7. URL Query Parameter Management
  * 8. Boundary and malformed query handling
- * 
+ *
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (15 tests):
@@ -35,7 +35,7 @@ import { seededProducts, catalogSearch, catalogCategories, catalogSort, catalogP
  *   - CAT-P13: sort by name asc
  *   - CAT-P14: open product detail by clicking card
  *   - CAT-P15: product card displays correct price
- * 
+ *
  * NEGATIVE CASES (8 tests):
  *   - CAT-N01: search with no results shows empty state
  *   - CAT-N02: invalid category shows empty state
@@ -45,13 +45,13 @@ import { seededProducts, catalogSearch, catalogCategories, catalogSort, catalogP
  *   - CAT-N06: invalid sort query does not break catalog rendering
  *   - CAT-N07: non-numeric price query falls back gracefully
  *   - CAT-N08: whitespace-padded search term returns no results
- * 
+ *
  * EDGE CASES (4 tests):
  *   - CAT-E01: exact price boundary (min=max) is inclusive
  *   - CAT-E02: deep-link with combined filters resolves deterministically
  *   - CAT-E03: repeated same search remains idempotent
  *   - CAT-E04: filter+sort combination preserves both constraints
- * 
+ *
  * Business Rules Tested:
  * ----------------------
  * - Search: Case-insensitive, partial term matching, searches name and description
@@ -60,7 +60,7 @@ import { seededProducts, catalogSearch, catalogCategories, catalogSort, catalogP
  * - Sort: Client-side or server-side sorting by price/name
  * - URL State: All filters reflected in URL query params (shareable links)
  * - Empty State: User-friendly message when no products match criteria
- * 
+ *
  * =============================================================================
  */
 
@@ -211,7 +211,10 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
       expect(normalized).toEqual(sorted);
     });
 
-    test('CAT-P14: open product detail by clicking card @e2e @destructive', async ({ homePage, productPage }) => {
+    test('CAT-P14: open product detail by clicking card @e2e @destructive', async ({
+      homePage,
+      productPage
+    }) => {
       const target = seededProducts[0];
 
       // Act: Click product card
@@ -239,7 +242,9 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
   });
 
   test.describe('negative cases', () => {
-    test('CAT-N01: search with no results shows empty state @e2e @regression @safe', async ({ homePage }) => {
+    test('CAT-N01: search with no results shows empty state @e2e @regression @safe', async ({
+      homePage
+    }) => {
       // Act: Search for non-existent product
       await homePage.goto();
       await homePage.search(catalogSearch.noResults);
@@ -248,7 +253,9 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
       await homePage.waitForEmptyState();
     });
 
-    test('CAT-N02: invalid category shows empty state @e2e @regression @safe', async ({ homePage }) => {
+    test('CAT-N02: invalid category shows empty state @e2e @regression @safe', async ({
+      homePage
+    }) => {
       // Act: Navigate to invalid category
       await homePage.gotoWithQuery(`category=${catalogCategories.unknown}`);
 
@@ -256,7 +263,9 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
       await homePage.waitForEmptyState();
     });
 
-    test('CAT-N03: price range min > max shows empty state @e2e @regression @destructive', async ({ homePage }) => {
+    test('CAT-N03: price range min > max shows empty state @e2e @regression @destructive', async ({
+      homePage
+    }) => {
       // Act: Apply invalid price range
       await homePage.goto();
       await homePage.applyPriceFilter(catalogPrice.invalidMin, catalogPrice.invalidMax);
@@ -265,7 +274,9 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
       await homePage.waitForEmptyState();
     });
 
-    test('CAT-N04: search + category mismatch shows empty state @e2e @regression @destructive', async ({ homePage }) => {
+    test('CAT-N04: search + category mismatch shows empty state @e2e @regression @destructive', async ({
+      homePage
+    }) => {
       // Act: Combine incompatible filters
       await homePage.goto();
       await homePage.selectCategory(catalogCategories.highTech);
@@ -275,7 +286,9 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
       await homePage.waitForEmptyState();
     });
 
-    test('CAT-N05: search with special chars shows empty state @e2e @regression @destructive', async ({ homePage }) => {
+    test('CAT-N05: search with special chars shows empty state @e2e @regression @destructive', async ({
+      homePage
+    }) => {
       // Act: Search with special characters
       await homePage.goto();
       await homePage.search(catalogSearch.specialChars);
@@ -284,7 +297,9 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
       await homePage.waitForEmptyState();
     });
 
-    test('CAT-N06: invalid sort query does not break catalog rendering @e2e @regression @destructive', async ({ homePage }) => {
+    test('CAT-N06: invalid sort query does not break catalog rendering @e2e @regression @destructive', async ({
+      homePage
+    }) => {
       // Act: Open catalog with unsupported sort option
       await homePage.gotoWithQuery('sort=not_a_real_sort');
 
@@ -294,7 +309,9 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
       await expect(homePage.getSortSelect()).toBeVisible();
     });
 
-    test('CAT-N07: non-numeric price query falls back gracefully @e2e @regression @destructive', async ({ homePage }) => {
+    test('CAT-N07: non-numeric price query falls back gracefully @e2e @regression @destructive', async ({
+      homePage
+    }) => {
       // Act: Open catalog with malformed price query values
       await homePage.gotoWithQuery('minPrice=abc&maxPrice=xyz');
 
@@ -303,7 +320,9 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
       expect(await homePage.isEmptyStateVisible()).toBe(false);
     });
 
-    test('CAT-N08: whitespace-padded search term returns no results @e2e @regression @destructive', async ({ homePage }) => {
+    test('CAT-N08: whitespace-padded search term returns no results @e2e @regression @destructive', async ({
+      homePage
+    }) => {
       // Act: Search with leading/trailing spaces directly via query
       await homePage.gotoWithQuery(`q=${encodeURIComponent('  helper  ')}`);
 
@@ -313,7 +332,9 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
   });
 
   test.describe('edge cases', () => {
-    test('CAT-E01: exact price boundary (min=max) is inclusive @e2e @regression @destructive', async ({ homePage }) => {
+    test('CAT-E01: exact price boundary (min=max) is inclusive @e2e @regression @destructive', async ({
+      homePage
+    }) => {
       const target = seededProducts[1];
 
       // Act: Filter exact boundary where min == max
@@ -329,7 +350,10 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
       }
     });
 
-    test('CAT-E02: deep-link with combined filters resolves deterministically @e2e @regression @destructive', async ({ page, homePage }) => {
+    test('CAT-E02: deep-link with combined filters resolves deterministically @e2e @regression @destructive', async ({
+      page,
+      homePage
+    }) => {
       const query =
         `q=${encodeURIComponent(catalogSearch.term)}` +
         `&category=${catalogCategories.automation}` +
@@ -357,7 +381,9 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
       await expect(page).toHaveURL(/sort=price_desc/i);
     });
 
-    test('CAT-E03: repeated same search remains idempotent @e2e @regression @destructive', async ({ homePage }) => {
+    test('CAT-E03: repeated same search remains idempotent @e2e @regression @destructive', async ({
+      homePage
+    }) => {
       // Act: Run same search twice
       await homePage.goto();
       await homePage.search(catalogSearch.term);
@@ -370,9 +396,13 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
       expect(secondCount).toBe(firstCount);
     });
 
-    test('CAT-E04: filter+sort combination preserves both constraints @e2e @regression @destructive', async ({ homePage }) => {
+    test('CAT-E04: filter+sort combination preserves both constraints @e2e @regression @destructive', async ({
+      homePage
+    }) => {
       // Act: Apply max price filter and descending price sort together
-      await homePage.gotoWithQuery(`minPrice=0&maxPrice=${catalogPrice.maxAffordable}&sort=${catalogSort.priceDesc}`);
+      await homePage.gotoWithQuery(
+        `minPrice=0&maxPrice=${catalogPrice.maxAffordable}&sort=${catalogSort.priceDesc}`
+      );
 
       // Assert: Every result is within boundary and sorted descending
       const values = await homePage.getVisibleProductPriceValues();

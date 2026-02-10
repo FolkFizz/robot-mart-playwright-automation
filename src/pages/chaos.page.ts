@@ -18,7 +18,9 @@ export class ChaosPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.saveButton = this.page.locator('button.btn-save, button:has-text("Apply Configuration"), [data-testid="save-chaos-btn"]');
+    this.saveButton = this.page.locator(
+      'button.btn-save, button:has-text("Apply Configuration"), [data-testid="save-chaos-btn"]'
+    );
     this.toggleInputs = this.page.locator('input[type="checkbox"][name]');
   }
 
@@ -48,7 +50,10 @@ export class ChaosPage extends BasePage {
   }
 
   async isSaveButtonVisible(): Promise<boolean> {
-    return await this.saveButton.first().isVisible().catch(() => false);
+    return await this.saveButton
+      .first()
+      .isVisible()
+      .catch(() => false);
   }
 
   async setToggle(name: ChaosToggle, enabled: boolean): Promise<void> {
@@ -83,9 +88,7 @@ export class ChaosPage extends BasePage {
     await Promise.all([
       this.page
         .waitForResponse(
-          (res) =>
-            res.url().includes(routes.api.chaosConfig) &&
-            res.request().method() === 'POST',
+          (res) => res.url().includes(routes.api.chaosConfig) && res.request().method() === 'POST',
           { timeout: 10_000 }
         )
         .catch(() => null),

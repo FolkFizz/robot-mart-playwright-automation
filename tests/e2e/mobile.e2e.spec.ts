@@ -7,7 +7,7 @@ import { seededProducts, catalogSearch, coupons, uiMessages } from '@data';
  * =============================================================================
  * MOBILE VIEWPORT E2E TESTS
  * =============================================================================
- * 
+ *
  * Test Scenarios:
  * ---------------
  * 1. Mobile navigation functionality
@@ -15,7 +15,7 @@ import { seededProducts, catalogSearch, coupons, uiMessages } from '@data';
  * 3. Mobile product browsing
  * 4. Mobile checkout flow
  * 5. Responsive layout verification
- * 
+ *
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (4 tests):
@@ -23,19 +23,19 @@ import { seededProducts, catalogSearch, coupons, uiMessages } from '@data';
  *   - MOBILE-P02: Add product to cart on mobile
  *   - MOBILE-P03: View and update cart quantity on mobile viewport
  *   - MOBILE-P04: Mobile checkout accessible
- * 
+ *
  * NEGATIVE CASES (4 tests):
  *   - MOBILE-N01: Empty-cart checkout is blocked on mobile
  *   - MOBILE-N02: Invalid coupon shows validation error on mobile cart
  *   - MOBILE-N03: No-result search shows empty state on mobile
  *   - MOBILE-N04: Invalid checkout email blocked by HTML5 validation on mobile
- * 
+ *
  * EDGE CASES (4 tests):
  *   - MOBILE-E01: Product cards remain usable on small screens
  *   - MOBILE-E02: Landscape rotation keeps checkout flow accessible
  *   - MOBILE-E03: Rapid quantity updates remain consistent on mobile cart
  *   - MOBILE-E04: Coupon apply/remove lifecycle works on mobile cart
- * 
+ *
  * Business Rules:
  * ---------------
  * - Mobile viewport: 375x667 (iPhone SE)
@@ -44,7 +44,7 @@ import { seededProducts, catalogSearch, coupons, uiMessages } from '@data';
  * - Product cards remain visible within small-screen layout bounds
  * - Empty cart cannot proceed to successful checkout
  * - Form and coupon validations still enforced on mobile UI
- * 
+ *
  * =============================================================================
  */
 
@@ -65,8 +65,10 @@ test.describe('mobile viewport @e2e @mobile', () => {
   });
 
   test.describe('positive cases', () => {
-
-    test('MOBILE-P01: mobile navigation menu accessible @e2e @mobile @smoke', async ({ page, homePage }) => {
+    test('MOBILE-P01: mobile navigation menu accessible @e2e @mobile @smoke', async ({
+      page,
+      homePage
+    }) => {
       // Act: Navigate to home on mobile
       await homePage.goto();
 
@@ -79,7 +81,11 @@ test.describe('mobile viewport @e2e @mobile', () => {
       expect(await homePage.isNavigationVisible()).toBe(true);
     });
 
-    test('MOBILE-P02: add product to cart on mobile viewport @e2e @mobile @regression', async ({ page, homePage, productPage, cartPage }) => {
+    test('MOBILE-P02: add product to cart on mobile viewport @e2e @mobile @regression', async ({
+      homePage,
+      productPage,
+      cartPage
+    }) => {
       // Arrange: Navigate to home
       await homePage.goto();
 
@@ -93,7 +99,11 @@ test.describe('mobile viewport @e2e @mobile', () => {
       expect(itemCount).toBeGreaterThan(0);
     });
 
-    test('MOBILE-P03: view and update cart quantity on mobile viewport @e2e @mobile @regression', async ({ api, page, cartPage }) => {
+    test('MOBILE-P03: view and update cart quantity on mobile viewport @e2e @mobile @regression', async ({
+      api,
+      page,
+      cartPage
+    }) => {
       // Arrange: Seed cart with one product
       await seedCart(api, [{ id: seededProducts[0].id, quantity: 1 }]);
 
@@ -111,7 +121,12 @@ test.describe('mobile viewport @e2e @mobile', () => {
       expect(afterQty).toBe(beforeQty + 1);
     });
 
-    test('MOBILE-P04: checkout page accessible on mobile @e2e @mobile @regression @destructive', async ({ api, page, cartPage, checkoutPage }) => {
+    test('MOBILE-P04: checkout page accessible on mobile @e2e @mobile @regression @destructive', async ({
+      api,
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       // Arrange: Add item to cart
       await seedCart(api, [{ id: seededProducts[0].id, quantity: 1 }]);
 
@@ -120,7 +135,9 @@ test.describe('mobile viewport @e2e @mobile', () => {
       await cartPage.proceedToCheckoutWithFallback();
 
       // Assert: Checkout page loads
-      await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place);
+      await expect(page).toHaveURL(
+        (url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place
+      );
 
       // Verify checkout controls visible
       expect(await checkoutPage.isNameInputVisible()).toBe(true);
@@ -129,8 +146,11 @@ test.describe('mobile viewport @e2e @mobile', () => {
   });
 
   test.describe('negative cases', () => {
-
-    test('MOBILE-N01: empty-cart checkout is blocked on mobile @e2e @mobile @regression @destructive', async ({ api, page, checkoutPage }) => {
+    test('MOBILE-N01: empty-cart checkout is blocked on mobile @e2e @mobile @regression @destructive', async ({
+      api,
+      page,
+      checkoutPage
+    }) => {
       // Arrange: Ensure no items in cart
       await seedCart(api, []);
 
@@ -140,7 +160,8 @@ test.describe('mobile viewport @e2e @mobile', () => {
       // Assert: Redirect to cart OR guarded checkout state
       const url = page.url();
       const redirectedToCart = url.includes(routes.cart);
-      const stayedOnCheckout = url.includes(routes.order.checkout) || url.includes(routes.order.place);
+      const stayedOnCheckout =
+        url.includes(routes.order.checkout) || url.includes(routes.order.place);
       const hasGuard = await checkoutPage.hasEmptyCartGuard([
         uiMessages.cartEmpty,
         'cart is empty',
@@ -151,7 +172,10 @@ test.describe('mobile viewport @e2e @mobile', () => {
       expect(redirectedToCart || (stayedOnCheckout && hasGuard)).toBe(true);
     });
 
-    test('MOBILE-N02: invalid coupon shows validation error on mobile cart @e2e @mobile @regression', async ({ api, cartPage }) => {
+    test('MOBILE-N02: invalid coupon shows validation error on mobile cart @e2e @mobile @regression', async ({
+      api,
+      cartPage
+    }) => {
       // Arrange: Cart with one item
       await seedCart(api, [{ id: seededProducts[0].id, quantity: 1 }]);
       await cartPage.goto();
@@ -164,7 +188,9 @@ test.describe('mobile viewport @e2e @mobile', () => {
       expect(await cartPage.isRemoveCouponVisible()).toBe(false);
     });
 
-    test('MOBILE-N03: no-result search shows empty state on mobile @e2e @mobile @regression', async ({ homePage }) => {
+    test('MOBILE-N03: no-result search shows empty state on mobile @e2e @mobile @regression', async ({
+      homePage
+    }) => {
       // Arrange: Home page on mobile
       await homePage.goto();
 
@@ -176,12 +202,19 @@ test.describe('mobile viewport @e2e @mobile', () => {
       expect(await homePage.getProductCount()).toBe(0);
     });
 
-    test('MOBILE-N04: invalid checkout email blocked by HTML5 validation on mobile @e2e @mobile @regression @destructive', async ({ api, page, cartPage, checkoutPage }) => {
+    test('MOBILE-N04: invalid checkout email blocked by HTML5 validation on mobile @e2e @mobile @regression @destructive', async ({
+      api,
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       // Arrange: Cart with one item and open checkout
       await seedCart(api, [{ id: seededProducts[0].id, quantity: 1 }]);
       await cartPage.goto();
       await cartPage.proceedToCheckoutWithFallback();
-      await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place);
+      await expect(page).toHaveURL(
+        (url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place
+      );
 
       // Act: Fill invalid email and attempt submit
       await checkoutPage.setName('Mobile Tester');
@@ -189,15 +222,21 @@ test.describe('mobile viewport @e2e @mobile', () => {
       await checkoutPage.clickSubmit();
 
       // Assert: Browser validation blocks submission
-      const isValid = await checkoutPage.getEmailInput().evaluate((el) => (el as HTMLInputElement).checkValidity());
+      const isValid = await checkoutPage
+        .getEmailInput()
+        .evaluate((el) => (el as HTMLInputElement).checkValidity());
       expect(isValid).toBe(false);
-      await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place);
+      await expect(page).toHaveURL(
+        (url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place
+      );
     });
   });
 
   test.describe('edge cases', () => {
-
-    test('MOBILE-E01: product cards remain usable on small screens @e2e @mobile @regression', async ({ page, homePage }) => {
+    test('MOBILE-E01: product cards remain usable on small screens @e2e @mobile @regression', async ({
+      page,
+      homePage
+    }) => {
       // Act: Navigate to home
       await homePage.goto();
 
@@ -218,10 +257,17 @@ test.describe('mobile viewport @e2e @mobile', () => {
 
       // Verify card is still actionable on mobile
       await homePage.clickProductById(seededProducts[0].id);
-      await expect(page).toHaveURL((url) => url.pathname === routes.productDetail(seededProducts[0].id));
+      await expect(page).toHaveURL(
+        (url) => url.pathname === routes.productDetail(seededProducts[0].id)
+      );
     });
 
-    test('MOBILE-E02: landscape rotation keeps checkout flow accessible @e2e @mobile @regression @destructive', async ({ api, page, cartPage, checkoutPage }) => {
+    test('MOBILE-E02: landscape rotation keeps checkout flow accessible @e2e @mobile @regression @destructive', async ({
+      api,
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       // Arrange: Seed cart and rotate to landscape
       await seedCart(api, [{ id: seededProducts[0].id, quantity: 1 }]);
       await page.setViewportSize({ width: mobileViewport.height, height: mobileViewport.width });
@@ -231,12 +277,17 @@ test.describe('mobile viewport @e2e @mobile', () => {
       await cartPage.proceedToCheckoutWithFallback();
 
       // Assert: Checkout still reachable and interactable
-      await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place);
+      await expect(page).toHaveURL(
+        (url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place
+      );
       expect(await checkoutPage.isNameInputVisible()).toBe(true);
       expect(await checkoutPage.isSubmitButtonVisible()).toBe(true);
     });
 
-    test('MOBILE-E03: repeated quantity updates remain consistent on mobile cart @e2e @mobile @regression', async ({ api, cartPage }) => {
+    test('MOBILE-E03: repeated quantity updates remain consistent on mobile cart @e2e @mobile @regression', async ({
+      api,
+      cartPage
+    }) => {
       // Arrange: Single item in cart
       await seedCart(api, [{ id: seededProducts[0].id, quantity: 1 }]);
       await cartPage.goto();
@@ -246,7 +297,11 @@ test.describe('mobile viewport @e2e @mobile', () => {
       let endQty = startQty;
       for (let i = 0; i < 5; i += 1) {
         await cartPage.increaseQtyById(seededProducts[0].id);
-        endQty = await cartPage.waitForItemQuantityAtLeast(seededProducts[0].id, startQty + 1, 2_000);
+        endQty = await cartPage.waitForItemQuantityAtLeast(
+          seededProducts[0].id,
+          startQty + 1,
+          2_000
+        );
         if (endQty >= startQty + 2) break;
       }
 
@@ -255,7 +310,10 @@ test.describe('mobile viewport @e2e @mobile', () => {
       expect(await cartPage.getCartCount()).toBe(endQty);
     });
 
-    test('MOBILE-E04: coupon apply/remove lifecycle works on mobile cart @e2e @mobile @regression', async ({ api, cartPage }) => {
+    test('MOBILE-E04: coupon apply/remove lifecycle works on mobile cart @e2e @mobile @regression', async ({
+      api,
+      cartPage
+    }) => {
       // Arrange: Cart with one item
       await seedCart(api, [{ id: seededProducts[0].id, quantity: 1 }]);
       await cartPage.goto();

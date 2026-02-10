@@ -124,7 +124,9 @@ test.describe('order to inventory integration @integration @orders @inventory', 
   });
 
   test.describe('positive cases', () => {
-    test('ORD-INV-INT-P01: stock decreases after successful order @integration @orders @smoke @destructive', async ({ api }) => {
+    test('ORD-INV-INT-P01: stock decreases after successful order @integration @orders @smoke @destructive', async ({
+      api
+    }) => {
       const stockBefore = await getProductStock(api, productId);
       expect(stockBefore).toBe(FIXED_STOCK);
 
@@ -139,7 +141,9 @@ test.describe('order to inventory integration @integration @orders @inventory', 
       expect(stockAfter).toBe(stockBefore - 1);
     });
 
-    test('ORD-INV-INT-P02: stock reduction equals ordered quantity @integration @orders @regression @destructive', async ({ api }) => {
+    test('ORD-INV-INT-P02: stock reduction equals ordered quantity @integration @orders @regression @destructive', async ({
+      api
+    }) => {
       const orderQuantity = 3;
       const stockBefore = await getProductStock(api, productId);
       expect(stockBefore).toBeGreaterThanOrEqual(orderQuantity);
@@ -154,7 +158,9 @@ test.describe('order to inventory integration @integration @orders @inventory', 
       expect(stockAfter).toBe(stockBefore - orderQuantity);
     });
 
-    test('ORD-INV-INT-P03: order is created when quantity is within stock @integration @orders @regression @destructive', async ({ api }) => {
+    test('ORD-INV-INT-P03: order is created when quantity is within stock @integration @orders @regression @destructive', async ({
+      api
+    }) => {
       const stockBefore = await getProductStock(api, productId);
       expect(stockBefore).toBeGreaterThan(0);
 
@@ -171,7 +177,9 @@ test.describe('order to inventory integration @integration @orders @inventory', 
   });
 
   test.describe('negative cases', () => {
-    test('ORD-INV-INT-N01: cart rejects quantity above available stock @integration @orders @regression @destructive', async ({ api }) => {
+    test('ORD-INV-INT-N01: cart rejects quantity above available stock @integration @orders @regression @destructive', async ({
+      api
+    }) => {
       const currentStock = await getProductStock(api, productId);
       const excessiveQuantity = currentStock + 1;
 
@@ -181,7 +189,9 @@ test.describe('order to inventory integration @integration @orders @inventory', 
       expect(extractMessage(add.body).toLowerCase()).toContain('stock');
     });
 
-    test('ORD-INV-INT-N02: zero stock blocks adding and checkout @integration @orders @regression @destructive', async ({ api }) => {
+    test('ORD-INV-INT-N02: zero stock blocks adding and checkout @integration @orders @regression @destructive', async ({
+      api
+    }) => {
       const currentStock = await getProductStock(api, productId);
       expect(currentStock).toBeGreaterThan(0);
 
@@ -204,7 +214,9 @@ test.describe('order to inventory integration @integration @orders @inventory', 
   });
 
   test.describe('edge cases', () => {
-    test('ORD-INV-INT-E01: concurrent orders cannot oversell inventory @integration @orders @regression @destructive', async ({ api }) => {
+    test('ORD-INV-INT-E01: concurrent orders cannot oversell inventory @integration @orders @regression @destructive', async ({
+      api
+    }) => {
       const stockBefore = await getProductStock(api, productId);
       expect(stockBefore).toBeGreaterThan(1);
 
@@ -242,7 +254,9 @@ test.describe('order to inventory integration @integration @orders @inventory', 
       }
     });
 
-    test('ORD-INV-INT-E02: checkout revalidates stale cart against current stock @integration @orders @regression @destructive', async ({ api }) => {
+    test('ORD-INV-INT-E02: checkout revalidates stale cart against current stock @integration @orders @regression @destructive', async ({
+      api
+    }) => {
       const stockBefore = await getProductStock(api, productId);
       expect(stockBefore).toBeGreaterThan(1);
 

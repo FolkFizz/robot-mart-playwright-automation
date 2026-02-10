@@ -46,7 +46,9 @@ import { CheckoutPage, CartPage } from '@pages';
 const gotoCheckoutFromCart = async (page: Page, cartPage: CartPage) => {
   await cartPage.goto();
   await cartPage.proceedToCheckoutWithFallback();
-  await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place);
+  await expect(page).toHaveURL(
+    (url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place
+  );
 };
 
 test.use({ seedData: true });
@@ -62,7 +64,11 @@ test.describe('stripe checkout integration @e2e @checkout @stripe', () => {
   });
 
   test.describe('positive cases', () => {
-    test('STRIPE-P01: checkout is reachable and payment section is initialized @e2e @checkout @smoke', async ({ page, cartPage, checkoutPage }) => {
+    test('STRIPE-P01: checkout is reachable and payment section is initialized @e2e @checkout @smoke', async ({
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       await gotoCheckoutFromCart(page, cartPage);
 
       await checkoutPage.expectSubmitVisible();
@@ -73,18 +79,28 @@ test.describe('stripe checkout integration @e2e @checkout @stripe', () => {
       }
     });
 
-    test('STRIPE-P02: checkout total matches cart grand total @e2e @checkout @regression', async ({ page, cartPage, checkoutPage }) => {
+    test('STRIPE-P02: checkout total matches cart grand total @e2e @checkout @regression', async ({
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       await cartPage.goto();
       const cartTotal = await cartPage.getGrandTotalValue();
 
       await cartPage.proceedToCheckoutWithFallback();
-      await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place);
+      await expect(page).toHaveURL(
+        (url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place
+      );
 
       const checkoutTotal = CheckoutPage.parsePrice(await checkoutPage.getTotal());
       expect(checkoutTotal).toBeCloseTo(cartTotal, 2);
     });
 
-    test('STRIPE-P03: Stripe SDK and payment frame load in stripe mode @e2e @checkout @smoke', async ({ page, cartPage, checkoutPage }) => {
+    test('STRIPE-P03: Stripe SDK and payment frame load in stripe mode @e2e @checkout @smoke', async ({
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       await gotoCheckoutFromCart(page, cartPage);
 
       if (await checkoutPage.isMockPayment()) {
@@ -102,7 +118,11 @@ test.describe('stripe checkout integration @e2e @checkout @stripe', () => {
   });
 
   test.describe('negative cases', () => {
-    test('STRIPE-N01: mock mode shows mock-payment note instead of Stripe @e2e @checkout @regression', async ({ page, cartPage, checkoutPage }) => {
+    test('STRIPE-N01: mock mode shows mock-payment note instead of Stripe @e2e @checkout @regression', async ({
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       await gotoCheckoutFromCart(page, cartPage);
 
       const isMock = await checkoutPage.isMockPayment();
@@ -115,7 +135,10 @@ test.describe('stripe checkout integration @e2e @checkout @stripe', () => {
       }
     });
 
-    test('STRIPE-N02: empty cart blocks real payment entry on checkout @e2e @checkout @regression @destructive', async ({ api, checkoutPage }) => {
+    test('STRIPE-N02: empty cart blocks real payment entry on checkout @e2e @checkout @regression @destructive', async ({
+      api,
+      checkoutPage
+    }) => {
       await clearCart(api);
       await checkoutPage.goto();
 
@@ -134,18 +157,28 @@ test.describe('stripe checkout integration @e2e @checkout @stripe', () => {
   });
 
   test.describe('edge cases', () => {
-    test('STRIPE-E01: checkout total remains stable after page reload @e2e @checkout @regression', async ({ page, cartPage, checkoutPage }) => {
+    test('STRIPE-E01: checkout total remains stable after page reload @e2e @checkout @regression', async ({
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       await gotoCheckoutFromCart(page, cartPage);
       const beforeReload = CheckoutPage.parsePrice(await checkoutPage.getTotal());
 
       await checkoutPage.reloadDomReady();
-      await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place);
+      await expect(page).toHaveURL(
+        (url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place
+      );
       const afterReload = CheckoutPage.parsePrice(await checkoutPage.getTotal());
 
       expect(afterReload).toBeCloseTo(beforeReload, 2);
     });
 
-    test('STRIPE-E02: submit button status exists in both stripe and mock modes @e2e @checkout @regression', async ({ page, cartPage, checkoutPage }) => {
+    test('STRIPE-E02: submit button status exists in both stripe and mock modes @e2e @checkout @regression', async ({
+      page,
+      cartPage,
+      checkoutPage
+    }) => {
       await gotoCheckoutFromCart(page, cartPage);
 
       if (!(await checkoutPage.isMockPayment())) {

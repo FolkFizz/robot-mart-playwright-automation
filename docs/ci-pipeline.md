@@ -14,23 +14,29 @@ Active GitHub Actions workflows are configured under `.github/workflows/`.
 
 ## Workflow Summary
 
-| Workflow | Trigger | Main scope | Default filters |
-| --- | --- | --- | --- |
-| `ui-smoke` | PR + push + manual | `tests/e2e`, `tests/security`, `tests/a11y` | include `@smoke|@safe`, exclude `@chat|@ai|@stripe|@chaos|@destructive` |
-| `api` | PR + push + manual | `tests/api` | include `@smoke|@security`, exclude `@chat|@ai|@admin|@destructive` |
-| `a11y` | PR + push + manual | `tests/a11y` | include `@smoke`, exclude `@stripe|@destructive|@chat|@ai` |
-| `regression-nightly` | weekly schedule + manual | API/E2E/Security + selected Integration specs | include `@regression`, exclude `@chat|@ai|@chaos|@stripe` (+ `@destructive` by default) |
-| `k6-nightly` | weekly schedule + manual | k6 suite via `scripts/run-perf-suite.js` | default profile `gate` |
+| Workflow             | Trigger                  | Main Scope                                    | Default Filters                                                                                         |
+| -------------------- | ------------------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `ui-smoke`           | PR + push + manual       | `tests/e2e`, `tests/security`, `tests/a11y`   | include `@smoke` or `@safe`; exclude `@chat`, `@ai`, `@stripe`, `@chaos`, `@destructive`                |
+| `api`                | PR + push + manual       | `tests/api`                                   | include `@smoke` or `@security`; exclude `@chat`, `@ai`, `@admin`, `@destructive`                       |
+| `a11y`               | PR + push + manual       | `tests/a11y`                                  | include `@smoke`; exclude `@stripe`, `@destructive`, `@chat`, `@ai`                                     |
+| `regression-nightly` | weekly schedule + manual | API/E2E/Security + selected Integration specs | include `@regression`; exclude `@chat`, `@ai`, `@chaos`, `@stripe` (`@destructive` excluded by default) |
+| `k6-nightly`         | weekly schedule + manual | k6 suite via `scripts/run-perf-suite.js`      | default profile `gate`                                                                                  |
 
 ## URL Resolution
 
-All workflows resolve target URL in this order:
+Playwright workflows resolve URL in this order:
 
-1. Manual dispatch input `base_url` (if provided)
+1. Manual dispatch input `base_url` (if provided by that workflow)
 2. Repository variable `BASE_URL`
 3. Fallback: `https://robot-store-sandbox.onrender.com`
 
-k6 tests additionally support `REAL_URL` via repo variable for direct override in `performance/lib/config.js`.
+k6 workflow resolves URL in this order:
+
+1. Manual dispatch input `base_url`
+2. `PERF_BASE_URL` repository variable
+3. `REAL_URL` repository variable (legacy)
+4. `BASE_URL`
+5. Fallback: `https://robot-store-sandbox.onrender.com`
 
 ## Cost / Free-Tier Controls
 

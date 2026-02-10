@@ -37,7 +37,7 @@ export class InboxPage extends BasePage {
     let candidate = this.page.locator('.inbox-item', { hasText: new RegExp(escaped, 'i') });
 
     // Fallback for reset email subject variants.
-    if (await candidate.count() === 0 && /reset|password/i.test(subject)) {
+    if ((await candidate.count()) === 0 && /reset|password/i.test(subject)) {
       candidate = this.page.locator('.inbox-item', {
         hasText: /reset.*password|password.*reset|\[reset\]/i
       });

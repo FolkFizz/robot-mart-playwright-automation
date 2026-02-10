@@ -37,6 +37,16 @@ export type A11yRunOptions = {
   waitForNetworkIdle?: boolean;
 };
 
+type AxeBuilderLike = {
+  include(selector: string): AxeBuilderLike;
+  exclude(selector: string): AxeBuilderLike;
+  withTags(tags: string[]): AxeBuilderLike;
+  configure(config: { rules: Record<string, { enabled: boolean }> }): AxeBuilderLike;
+  analyze(): Promise<AxeResults>;
+};
+
+type AxeBuilderCtor = new (options: { page: Page }) => AxeBuilderLike;
+
 const toArray = (value?: string | string[]) => {
   if (!value) return [];
   return Array.isArray(value) ? value : [value];
@@ -47,17 +57,21 @@ export const runA11y = async (page: Page, options: A11yRunOptions = {}): Promise
     await page.waitForLoadState('networkidle');
   }
 
-  let AxeBuilder: any;
+  let AxeBuilder: AxeBuilderCtor;
   try {
     const mod = await import('@axe-core/playwright');
-    AxeBuilder = mod.AxeBuilder;
+    const maybeBuilder = (mod as { AxeBuilder?: AxeBuilderCtor }).AxeBuilder;
+    if (!maybeBuilder) {
+      throw new Error('AxeBuilder export not found');
+    }
+    AxeBuilder = maybeBuilder;
   } catch {
     throw new Error(
       'Missing dependency: @axe-core/playwright. Install it first: `npm i -D @axe-core/playwright`'
     );
   }
 
-  let builder = new AxeBuilder({ page });
+  let builder: AxeBuilderLike = new AxeBuilder({ page });
 
   const includeSelectors = toArray(options.include);
   includeSelectors.forEach((selector) => {
@@ -82,7 +96,10 @@ export const runA11y = async (page: Page, options: A11yRunOptions = {}): Promise
   return await builder.analyze();
 };
 
-export const filterViolations = (results: AxeResults, allowedIds: string[] = allowedViolationIds) => {
+export const filterViolations = (
+  results: AxeResults,
+  allowedIds: string[] = allowedViolationIds
+) => {
   return results.violations.filter((violation) => !allowedIds.includes(violation.id));
 };
 

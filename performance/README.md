@@ -44,7 +44,9 @@ The suite covers these categories:
    - Windows: `winget install k6` or `choco install k6`
    - macOS: `brew install k6`
 2. Configure environment in `.env`
-   - `REAL_URL` (preferred target) or `BASE_URL`
+   - `PERF_BASE_URL` (recommended target override for k6)
+   - `REAL_URL` (legacy alias, optional)
+   - `BASE_URL` (fallback shared with Playwright)
 3. Optional but recommended for stable checkout/load runs
    - `RESET_KEY` for stock reset endpoint
    - or DB access for `npm run setup:stock`
@@ -92,6 +94,10 @@ Commands:
 8. `npm run test:perf:stress`
 9. `npm run test:perf:soak`
 10. `npm run test:perf:breakpoint`
+
+Before running, confirm resolved targets:
+
+- `npm run env:targets`
 
 ## Stock Preparation
 

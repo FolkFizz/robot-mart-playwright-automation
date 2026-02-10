@@ -49,7 +49,9 @@ test.describe('product search @e2e @search', () => {
   });
 
   test.describe('positive cases', () => {
-    test('SEARCH-P01: valid search returns matching product card @e2e @search @smoke', async ({ homePage }) => {
+    test('SEARCH-P01: valid search returns matching product card @e2e @search @smoke', async ({
+      homePage
+    }) => {
       await homePage.gotoWithQuery(`q=${encodeURIComponent(catalogSearch.term)}`);
 
       expect(await homePage.getProductCount()).toBeGreaterThan(0);
@@ -57,7 +59,9 @@ test.describe('product search @e2e @search', () => {
       await expect(homePage.getSearchInput()).toHaveValue(catalogSearch.term);
     });
 
-    test('SEARCH-P02: search is case-insensitive @e2e @search @regression', async ({ homePage }) => {
+    test('SEARCH-P02: search is case-insensitive @e2e @search @regression', async ({
+      homePage
+    }) => {
       await homePage.gotoWithQuery(`q=${encodeURIComponent(catalogSearch.term.toLowerCase())}`);
       const lowerCount = await homePage.getProductCount();
 
@@ -69,7 +73,9 @@ test.describe('product search @e2e @search', () => {
       expect(upperCount).toBe(lowerCount);
     });
 
-    test('SEARCH-P03: partial name match returns expected product @e2e @search @regression', async ({ homePage }) => {
+    test('SEARCH-P03: partial name match returns expected product @e2e @search @regression', async ({
+      homePage
+    }) => {
       await homePage.gotoWithQuery(`q=${encodeURIComponent(catalogSearch.partial)}`);
 
       expect(await homePage.getProductCount()).toBeGreaterThan(0);
@@ -79,14 +85,18 @@ test.describe('product search @e2e @search', () => {
   });
 
   test.describe('negative cases', () => {
-    test('SEARCH-N01: no-result search shows empty state @e2e @search @regression', async ({ homePage }) => {
+    test('SEARCH-N01: no-result search shows empty state @e2e @search @regression', async ({
+      homePage
+    }) => {
       await homePage.gotoWithQuery(`q=${encodeURIComponent(catalogSearch.noResults)}`);
 
       expect(await homePage.getProductCount()).toBe(0);
       expect(await homePage.isEmptyStateVisible()).toBe(true);
     });
 
-    test('SEARCH-N02: empty search returns default unfiltered list @e2e @search @regression', async ({ homePage }) => {
+    test('SEARCH-N02: empty search returns default unfiltered list @e2e @search @regression', async ({
+      homePage
+    }) => {
       await homePage.goto();
       const defaultCount = await homePage.getProductCount();
       expect(defaultCount).toBeGreaterThan(0);
@@ -99,14 +109,17 @@ test.describe('product search @e2e @search', () => {
   });
 
   test.describe('edge cases', () => {
-    test('SEARCH-E01: special characters are handled safely @e2e @search @regression', async ({ page, homePage }) => {
+    test('SEARCH-E01: special characters are handled safely @e2e @search @regression', async ({
+      page,
+      homePage
+    }) => {
       const dialogs: string[] = [];
       page.on('dialog', async (dialog) => {
         dialogs.push(dialog.message());
         await dialog.dismiss();
       });
 
-      const xssAttempt = '\"><script>alert(1)</script>';
+      const xssAttempt = '"><script>alert(1)</script>';
       await homePage.gotoWithQuery(`q=${encodeURIComponent(xssAttempt)}`);
 
       expect(await homePage.isCatalogHeadingVisible()).toBe(true);
@@ -114,7 +127,9 @@ test.describe('product search @e2e @search', () => {
       expect(await homePage.getProductCount()).toBe(0);
     });
 
-    test('SEARCH-E02: multiple-space term handled as literal input @e2e @search @regression', async ({ homePage }) => {
+    test('SEARCH-E02: multiple-space term handled as literal input @e2e @search @regression', async ({
+      homePage
+    }) => {
       const spacedTerm = `  ${catalogSearch.term}  `;
       await homePage.gotoWithQuery(`q=${encodeURIComponent(spacedTerm)}`);
 
@@ -123,7 +138,10 @@ test.describe('product search @e2e @search', () => {
       expect(await homePage.isEmptyStateVisible()).toBe(true);
     });
 
-    test('SEARCH-E03: very long search term handled gracefully @e2e @search @regression', async ({ page, homePage }) => {
+    test('SEARCH-E03: very long search term handled gracefully @e2e @search @regression', async ({
+      page,
+      homePage
+    }) => {
       const longTerm = 'A'.repeat(500);
       await homePage.gotoWithQuery(`q=${encodeURIComponent(longTerm)}`);
 

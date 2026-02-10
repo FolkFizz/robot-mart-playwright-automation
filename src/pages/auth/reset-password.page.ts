@@ -17,7 +17,9 @@ export class ResetPasswordPage extends BasePage {
     this.submitButton = this.page.locator('button[type="submit"]');
     this.successMessage = this.page.locator('.success, .alert-success, .message');
     this.errorMessage = this.page.locator('.error, .alert-error');
-    this.loginInputs = this.page.locator('input[name="username"], input[name="email"], [data-testid="login-username"]');
+    this.loginInputs = this.page.locator(
+      'input[name="username"], input[name="email"], [data-testid="login-username"]'
+    );
   }
 
   async gotoByToken(token: string): Promise<void> {

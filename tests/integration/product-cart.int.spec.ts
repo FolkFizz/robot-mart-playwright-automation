@@ -127,7 +127,11 @@ test.describe('product to cart integration @integration @cart', () => {
   });
 
   test.describe('positive cases', () => {
-    test('PROD-CART-INT-P01: product price matches cart unit price @integration @cart @smoke', async ({ homePage, productPage, cartPage }) => {
+    test('PROD-CART-INT-P01: product price matches cart unit price @integration @cart @smoke', async ({
+      homePage,
+      productPage,
+      cartPage
+    }) => {
       await homePage.goto();
       await homePage.clickProductById(firstProduct.id);
 
@@ -139,7 +143,11 @@ test.describe('product to cart integration @integration @cart', () => {
       expect(cartPrice).toBeCloseTo(productPrice, 2);
     });
 
-    test('PROD-CART-INT-P02: product name transfers correctly to cart row @integration @cart @regression', async ({ homePage, productPage, cartPage }) => {
+    test('PROD-CART-INT-P02: product name transfers correctly to cart row @integration @cart @regression', async ({
+      homePage,
+      productPage,
+      cartPage
+    }) => {
       await homePage.goto();
       await homePage.clickProductById(secondProduct.id);
 
@@ -151,7 +159,11 @@ test.describe('product to cart integration @integration @cart', () => {
       expect(cartItemName).toContain(productName);
     });
 
-    test('PROD-CART-INT-P03: selected quantity is preserved when added to cart @integration @cart @regression', async ({ homePage, productPage, cartPage }) => {
+    test('PROD-CART-INT-P03: selected quantity is preserved when added to cart @integration @cart @regression', async ({
+      homePage,
+      productPage,
+      cartPage
+    }) => {
       await homePage.goto();
       await homePage.clickProductById(firstProduct.id);
 
@@ -165,7 +177,9 @@ test.describe('product to cart integration @integration @cart', () => {
   });
 
   test.describe('negative cases', () => {
-    test('PROD-CART-INT-N01: out-of-stock product cannot be added via API @integration @cart @regression', async ({ api }) => {
+    test('PROD-CART-INT-N01: out-of-stock product cannot be added via API @integration @cart @regression', async ({
+      api
+    }) => {
       await ensureProductStock(api, firstProduct.id, 0);
       await loginAsUser(api);
       await seedCart(api, []);
@@ -176,7 +190,9 @@ test.describe('product to cart integration @integration @cart', () => {
       expect((add.body.message ?? '').toLowerCase()).toContain('stock');
     });
 
-    test('PROD-CART-INT-N02: quantity above current stock is rejected @integration @cart @regression', async ({ api }) => {
+    test('PROD-CART-INT-N02: quantity above current stock is rejected @integration @cart @regression', async ({
+      api
+    }) => {
       const currentStock = await getProductStock(api, firstProduct.id);
       expect(currentStock).toBeGreaterThan(0);
 
@@ -188,7 +204,11 @@ test.describe('product to cart integration @integration @cart', () => {
   });
 
   test.describe('edge cases', () => {
-    test('PROD-CART-INT-E01: product image mapping remains consistent in cart @integration @cart @regression', async ({ api, homePage, productPage }) => {
+    test('PROD-CART-INT-E01: product image mapping remains consistent in cart @integration @cart @regression', async ({
+      api,
+      homePage,
+      productPage
+    }) => {
       await homePage.goto();
       await homePage.clickProductById(firstProduct.id);
 
@@ -209,7 +229,11 @@ test.describe('product to cart integration @integration @cart', () => {
       }
     });
 
-    test('PROD-CART-INT-E02: repeated add operations accumulate quantity and total @integration @cart @regression', async ({ homePage, productPage, cartPage }) => {
+    test('PROD-CART-INT-E02: repeated add operations accumulate quantity and total @integration @cart @regression', async ({
+      homePage,
+      productPage,
+      cartPage
+    }) => {
       await homePage.goto();
       await homePage.clickProductById(secondProduct.id);
 

@@ -78,10 +78,15 @@ test.describe('order history comprehensive @e2e @orders', () => {
   });
 
   test.describe('positive cases', () => {
-    test('ORD-HIST-P01: orders tab loads and shows list or empty state @e2e @orders @smoke', async ({ page, profilePage }) => {
+    test('ORD-HIST-P01: orders tab loads and shows list or empty state @e2e @orders @smoke', async ({
+      page,
+      profilePage
+    }) => {
       await profilePage.gotoTab('orders');
 
-      await expect(page).toHaveURL((url) => `${url.pathname}${url.search}` === routes.profileOrders);
+      await expect(page).toHaveURL(
+        (url) => `${url.pathname}${url.search}` === routes.profileOrders
+      );
       await profilePage.expectOrderHistoryHeadingVisible();
 
       const orderCount = await profilePage.getOrderCount();
@@ -92,7 +97,10 @@ test.describe('order history comprehensive @e2e @orders', () => {
       }
     });
 
-    test('ORD-HIST-P02: newly created order shows correct product details @e2e @orders @regression @destructive', async ({ api, profilePage }) => {
+    test('ORD-HIST-P02: newly created order shows correct product details @e2e @orders @regression @destructive', async ({
+      api,
+      profilePage
+    }) => {
       const orderId = await createOrderForUser(api, [{ id: seededProducts[0].id, quantity: 1 }]);
 
       await profilePage.gotoTab('orders');
@@ -103,7 +111,10 @@ test.describe('order history comprehensive @e2e @orders', () => {
       await expect(orderCard).toContainText(orderId);
     });
 
-    test('ORD-HIST-P03: order card shows status, placed date, and total @e2e @orders @regression @destructive', async ({ api, profilePage }) => {
+    test('ORD-HIST-P03: order card shows status, placed date, and total @e2e @orders @regression @destructive', async ({
+      api,
+      profilePage
+    }) => {
       const orderId = await createOrderForUser(api, [
         { id: seededProducts[0].id, quantity: 1 },
         { id: seededProducts[1].id, quantity: 1 }
@@ -118,7 +129,11 @@ test.describe('order history comprehensive @e2e @orders', () => {
       await expect(orderCard).toContainText(/Total:\s*\$[0-9,.]+\.[0-9]{2}/);
     });
 
-    test('ORD-HIST-P04: view invoice link navigates to order invoice page @e2e @orders @regression @destructive', async ({ api, page, profilePage }) => {
+    test('ORD-HIST-P04: view invoice link navigates to order invoice page @e2e @orders @regression @destructive', async ({
+      api,
+      page,
+      profilePage
+    }) => {
       const orderId = await createOrderForUser(api, [{ id: seededProducts[0].id, quantity: 1 }]);
 
       await profilePage.gotoTab('orders');
@@ -139,7 +154,11 @@ test.describe('order history comprehensive @e2e @orders', () => {
   });
 
   test.describe('negative cases', () => {
-    test('ORD-HIST-N01: unauthenticated user cannot access order history tab @e2e @orders @regression', async ({ page, profilePage, loginPage }) => {
+    test('ORD-HIST-N01: unauthenticated user cannot access order history tab @e2e @orders @regression', async ({
+      page,
+      profilePage,
+      loginPage
+    }) => {
       await page.context().clearCookies();
       await profilePage.gotoTab('orders');
 
@@ -148,14 +167,20 @@ test.describe('order history comprehensive @e2e @orders', () => {
       expect(redirectedToLogin || hasLoginInput).toBe(true);
     });
 
-    test('ORD-HIST-N02: empty order history shows empty state for a new user @e2e @orders @regression @destructive', async ({ api, page, profilePage }) => {
+    test('ORD-HIST-N02: empty order history shows empty state for a new user @e2e @orders @regression @destructive', async ({
+      api,
+      page,
+      profilePage
+    }) => {
       await registerAndLoginIsolatedUser(api, { prefix: 'orders' });
       const storage = await api.storageState();
       await page.context().clearCookies();
       await page.context().addCookies(storage.cookies);
 
       await profilePage.gotoTab('orders');
-      await expect(page).toHaveURL((url) => `${url.pathname}${url.search}` === routes.profileOrders);
+      await expect(page).toHaveURL(
+        (url) => `${url.pathname}${url.search}` === routes.profileOrders
+      );
 
       expect(await profilePage.getOrderCount()).toBe(0);
       await profilePage.expectNoOrdersVisible();
@@ -163,9 +188,16 @@ test.describe('order history comprehensive @e2e @orders', () => {
   });
 
   test.describe('edge cases', () => {
-    test('ORD-HIST-E01: multiple newly created orders are sorted newest first @e2e @orders @regression @destructive', async ({ api, profilePage }) => {
-      const olderOrderId = await createOrderForUser(api, [{ id: seededProducts[0].id, quantity: 1 }]);
-      const newerOrderId = await createOrderForUser(api, [{ id: seededProducts[1].id, quantity: 1 }]);
+    test('ORD-HIST-E01: multiple newly created orders are sorted newest first @e2e @orders @regression @destructive', async ({
+      api,
+      profilePage
+    }) => {
+      const olderOrderId = await createOrderForUser(api, [
+        { id: seededProducts[0].id, quantity: 1 }
+      ]);
+      const newerOrderId = await createOrderForUser(api, [
+        { id: seededProducts[1].id, quantity: 1 }
+      ]);
 
       await profilePage.gotoTab('orders');
       expect(await profilePage.getOrderCount()).toBeGreaterThanOrEqual(2);
@@ -176,7 +208,11 @@ test.describe('order history comprehensive @e2e @orders', () => {
       expect(olderCardText).toContain(olderOrderId);
     });
 
-    test('ORD-HIST-E02: refreshing orders tab preserves order visibility @e2e @orders @regression @destructive', async ({ api, page, profilePage }) => {
+    test('ORD-HIST-E02: refreshing orders tab preserves order visibility @e2e @orders @regression @destructive', async ({
+      api,
+      page,
+      profilePage
+    }) => {
       const orderId = await createOrderForUser(api, [{ id: seededProducts[0].id, quantity: 1 }]);
 
       await profilePage.gotoTab('orders');
@@ -184,7 +220,9 @@ test.describe('order history comprehensive @e2e @orders', () => {
       const beforeReloadCount = await profilePage.getOrderCount();
 
       await profilePage.reloadDomReady();
-      await expect(page).toHaveURL((url) => `${url.pathname}${url.search}` === routes.profileOrders);
+      await expect(page).toHaveURL(
+        (url) => `${url.pathname}${url.search}` === routes.profileOrders
+      );
       await profilePage.expectOrderCardVisible(orderId);
 
       const afterReloadCount = await profilePage.getOrderCount();

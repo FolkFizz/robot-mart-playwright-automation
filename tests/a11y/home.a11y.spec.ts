@@ -4,29 +4,29 @@
  * =============================================================================
  * HOME PAGE ACCESSIBILITY TESTS
  * =============================================================================
- * 
+ *
  * Test Scenarios:
  * ---------------
  * 1. WCAG 2.1 AA Compliance Validation
  * 2. Keyboard Navigation (Nav, Footer, Products)
  * 3. Screen Reader Compatibility (Headings, Semantics)
  * 4. Interactive Elements (Search, Filters)
- * 
+ *
  * Test Cases Coverage:
  * --------------------
  * POSITIVE CASES (1 test):
  *   - A11Y-HOME-P01: home page has no critical violations
- * 
+ *
  * NEGATIVE CASES (2 tests):
  *   - A11Y-HOME-N01: keyboard tab navigation keeps focus on visible interactive elements
  *   - A11Y-HOME-N02: loading state maintains accessibility
- * 
+ *
  * EDGE CASES (4 tests):
  *   - A11Y-HOME-E01: product grid with many items remains accessible
  *   - A11Y-HOME-E02: search and price filter controls meet color contrast
  *   - A11Y-HOME-E03: search input supports keyboard submit without focus trap
  *   - A11Y-HOME-E04: category and sort filters accessible via keyboard
- * 
+ *
  * Business Rules Tested:
  * ----------------------
  * - Accessibility Standard: WCAG 2.1 Level AA
@@ -36,14 +36,18 @@
  * - Keyboard Access: All interactive elements must be keyboard accessible
  * - Known Legacy UI Debt: stock badge contrast + unlabeled sort select are
  *   excluded from non-blocking page-level audits until fixed in the app
- * 
+ *
  * =============================================================================
  */
 
 test.describe('home accessibility @a11y @safe', () => {
   test.describe('positive cases', () => {
-
-    test('A11Y-HOME-P01: home page has no critical violations @a11y @smoke @safe', async ({ page, homePage, runA11y, expectNoA11yViolations }) => {
+    test('A11Y-HOME-P01: home page has no critical violations @a11y @smoke @safe', async ({
+      page,
+      homePage,
+      runA11y,
+      expectNoA11yViolations
+    }) => {
       // Arrange & Act: Load home page
       await homePage.goto();
 
@@ -56,8 +60,9 @@ test.describe('home accessibility @a11y @safe', () => {
   });
 
   test.describe('negative cases', () => {
-
-    test('A11Y-HOME-N01: keyboard tab navigation keeps focus on visible interactive elements @a11y @home @regression', async ({ homePage }) => {
+    test('A11Y-HOME-N01: keyboard tab navigation keeps focus on visible interactive elements @a11y @home @regression', async ({
+      homePage
+    }) => {
       // Arrange: Load home page
       await homePage.goto();
 
@@ -70,13 +75,18 @@ test.describe('home accessibility @a11y @safe', () => {
       expect(['a', 'button', 'input', 'select', 'textarea']).toContain(focusedTag);
     });
 
-    test('A11Y-HOME-N02: loading state maintains accessibility @a11y @home @regression', async ({ page, homePage, runA11y, expectNoA11yViolations }) => {
+    test('A11Y-HOME-N02: loading state maintains accessibility @a11y @home @regression', async ({
+      page,
+      homePage,
+      runA11y,
+      expectNoA11yViolations
+    }) => {
       // Arrange: Navigate to home
       await homePage.goto();
-      
+
       // Act: Reload to trigger loading state
       await homePage.reloadDomReady();
-      
+
       // Assert: Check accessibility during/after load
       const results = await runA11y(page, { exclude: homePage.getA11yExcludeSelectors() });
       expectNoA11yViolations(results);
@@ -84,8 +94,12 @@ test.describe('home accessibility @a11y @safe', () => {
   });
 
   test.describe('edge cases', () => {
-
-    test('A11Y-HOME-E01: product grid with many items remains accessible @a11y @home @regression', async ({ page, homePage, runA11y, expectNoA11yViolations }) => {
+    test('A11Y-HOME-E01: product grid with many items remains accessible @a11y @home @regression', async ({
+      page,
+      homePage,
+      runA11y,
+      expectNoA11yViolations
+    }) => {
       // Arrange: Load home page with full product catalog
       await homePage.goto();
 
@@ -100,7 +114,11 @@ test.describe('home accessibility @a11y @safe', () => {
       expectNoA11yViolations(results);
     });
 
-    test('A11Y-HOME-E02: search and price filter controls meet color contrast @a11y @home @smoke', async ({ page, homePage, runA11y }) => {
+    test('A11Y-HOME-E02: search and price filter controls meet color contrast @a11y @home @smoke', async ({
+      page,
+      homePage,
+      runA11y
+    }) => {
       // Arrange: Load home page
       await homePage.goto();
 
@@ -114,7 +132,10 @@ test.describe('home accessibility @a11y @safe', () => {
       expect(colorContrastViolations).toEqual([]);
     });
 
-    test('A11Y-HOME-E03: search input supports keyboard submit without focus trap @a11y @home @regression', async ({ page, homePage }) => {
+    test('A11Y-HOME-E03: search input supports keyboard submit without focus trap @a11y @home @regression', async ({
+      page,
+      homePage
+    }) => {
       // Arrange: Load home page
       await homePage.goto();
 
@@ -132,7 +153,10 @@ test.describe('home accessibility @a11y @safe', () => {
       expect(await homePage.hasResultsOrEmptyState()).toBe(true);
     });
 
-    test('A11Y-HOME-E04: category and sort filters accessible via keyboard @a11y @home @regression', async ({ page, homePage }) => {
+    test('A11Y-HOME-E04: category and sort filters accessible via keyboard @a11y @home @regression', async ({
+      page,
+      homePage
+    }) => {
       // Arrange: Load home page
       await homePage.goto();
 

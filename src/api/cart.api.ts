@@ -2,11 +2,7 @@ import { APIRequestContext, expect } from '@playwright/test';
 import { routes } from '@config/constants';
 
 // เพิ่มสินค้าเข้าตะกร้า (JSON)
-export const addToCart = async (
-  ctx: APIRequestContext,
-  productId: number,
-  quantity = 1
-) => {
+export const addToCart = async (ctx: APIRequestContext, productId: number, quantity = 1) => {
   const res = await ctx.post(routes.api.cartAdd, {
     data: { productId, quantity },
     headers: { Accept: 'application/json' }
@@ -32,10 +28,7 @@ export const updateCartItem = async (
 };
 
 // ลบสินค้าจากตะกร้า
-export const removeCartItem = async (
-  ctx: APIRequestContext,
-  productId: number
-) => {
+export const removeCartItem = async (ctx: APIRequestContext, productId: number) => {
   const res = await ctx.post(routes.api.cartRemove, {
     data: { productId },
     headers: { Accept: 'application/json' }

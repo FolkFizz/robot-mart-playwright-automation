@@ -100,7 +100,6 @@ type TestFixtures = {
   adminOrdersPage: AdminOrdersPage;
 };
 
-
 type WorkerFixtures = {
   seedData: boolean;
   _seed: void;
@@ -125,7 +124,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     },
     { scope: 'worker', auto: true }
   ],
-  api: async ({}, use) => {
+  api: async (_args, use) => {
     const ctx = await createApiContext();
     await use(ctx);
     await ctx.dispose();
@@ -140,10 +139,10 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       await loginAsAdmin(api);
     });
   },
-  runA11y: async ({}, use) => {
+  runA11y: async (_args, use) => {
     await use(runA11y);
   },
-  expectNoA11yViolations: async ({}, use) => {
+  expectNoA11yViolations: async (_args, use) => {
     await use(expectNoA11yViolations);
   },
   // Main Page Objects
@@ -207,7 +206,6 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   adminOrdersPage: async ({ page }, use) => {
     await use(new AdminOrdersPage(page));
   }
-
 });
 
 export { expect };
