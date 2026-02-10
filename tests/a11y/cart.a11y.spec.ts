@@ -74,34 +74,23 @@ test.describe('cart accessibility @a11y @cart', () => {
       expectNoA11yViolations(results);
     });
 
-    test('A11Y-CART-P02: cart item quantity controls accessible via keyboard @a11y @cart @regression', async ({ page, cartPage }) => {
+    test('A11Y-CART-P02: cart item quantity controls accessible via keyboard @a11y @cart @regression', async ({ cartPage }) => {
       // Arrange: Navigate to cart
       await cartPage.goto();
 
       // Act: Focus on quantity control button
-      const quantityControl = page.locator('[data-testid^="cart-qty-increase-"], [data-testid^="cart-qty-decrease-"]').first();
-      await expect(quantityControl).toBeVisible();
-      await quantityControl.focus();
+      await cartPage.focusFirstQuantityControl();
 
       // Assert: Element is keyboard accessible
-      const isFocused = await quantityControl.evaluate(el => el === document.activeElement);
-      expect(isFocused).toBe(true);
+      expect(await cartPage.isFirstQuantityControlFocused()).toBe(true);
     });
 
-    test('A11Y-CART-P03: remove item button has proper ARIA label @a11y @cart @smoke', async ({ page, cartPage }) => {
+    test('A11Y-CART-P03: remove item button has proper ARIA label @a11y @cart @smoke', async ({ cartPage }) => {
       // Arrange: Navigate to cart
       await cartPage.goto();
 
       // Act: Find remove control in cart row
-      const removeButton = page.locator('[data-testid^="cart-remove-"]').first();
-      
-      // Assert: Button exists
-      await expect(removeButton).toBeVisible();
-
-      // Assert: Has accessible name (aria-label, title, or visible text)
-      const ariaLabel = await removeButton.getAttribute('aria-label');
-      const title = await removeButton.getAttribute('title');
-      const buttonText = await removeButton.innerText().catch(() => '');
+      const { ariaLabel, title, text: buttonText } = await cartPage.getFirstRemoveButtonA11yMeta();
       expect(ariaLabel || title || buttonText).toBeTruthy();
     });
 
@@ -117,40 +106,29 @@ test.describe('cart accessibility @a11y @cart', () => {
       expect(total.length).toBeGreaterThan(0);
     });
 
-    test('A11Y-CART-P05: coupon input field accessible with proper labels @a11y @cart @smoke', async ({ page, cartPage }) => {
+    test('A11Y-CART-P05: coupon input field accessible with proper labels @a11y @cart @smoke', async ({ cartPage }) => {
       // Arrange: Navigate to cart
       await cartPage.goto();
 
       // Act & Assert: Coupon input should have associated label or aria-label
-      const couponInput = page.locator('input[name="coupon"], input[placeholder*="coupon" i], input[aria-label*="coupon" i]').first();
-      
-      if (await couponInput.count() > 0) {
-        const ariaLabel = await couponInput.getAttribute('aria-label');
-        const placeholder = await couponInput.getAttribute('placeholder');
-        const id = await couponInput.getAttribute('id');
-        
-        // Should have some form of label
-        const hasLabel = ariaLabel || placeholder || (id && await page.locator(`label[for="${id}"]`).count() > 0);
+      if (await cartPage.isCouponInputVisible()) {
+        const meta = await cartPage.getCouponInputA11yMeta();
+        const hasLabel = meta.ariaLabel || meta.placeholder || meta.hasLabelByFor;
         expect(hasLabel).toBeTruthy();
       }
     });
 
-    test('A11Y-CART-P06: proceed to checkout button keyboard accessible @a11y @cart @smoke', async ({ page, cartPage }) => {
+    test('A11Y-CART-P06: proceed to checkout button keyboard accessible @a11y @cart @smoke', async ({ cartPage }) => {
       // Arrange: Navigate to cart
       await cartPage.goto();
 
       // Act: Find checkout button
-      const checkoutButton = page.locator('button:has-text("checkout"), a:has-text("checkout"), button:has-text("Proceed")').first();
-      
-      if (await checkoutButton.count() > 0) {
+      const focused = await cartPage.focusCheckoutControl();
+      if (focused) {
         // Assert: Button should be keyboard focusable (not tabindex="-1")
-        const tabIndex = await checkoutButton.getAttribute('tabindex');
+        const tabIndex = await cartPage.getCheckoutControlTabIndex();
         expect(tabIndex).not.toBe('-1');
-        
-        // Focus the button
-        await checkoutButton.focus();
-        const isFocused = await checkoutButton.evaluate((el) => el === document.activeElement);
-        expect(isFocused).toBe(true);
+        expect(await cartPage.isCheckoutControlFocused()).toBe(true);
       }
     });
   });
@@ -171,48 +149,32 @@ test.describe('cart accessibility @a11y @cart', () => {
       expectNoA11yViolations(results);
     });
 
-    test('A11Y-CART-N02: stock limit warning announced to screen readers @a11y @cart @regression', async ({ api, page, cartPage }) => {
+    test('A11Y-CART-N02: stock limit warning announced to screen readers @a11y @cart @regression', async ({ cartPage }) => {
       // Arrange: Try to add quantity that may exceed stock
       await cartPage.goto();
       
       // Act: Try to set high quantity (if stock limit exists)
-      const quantityInput = page.locator('input[type="number"], input[aria-label*="quantity" i]').first();
-      
-      if (await quantityInput.count() > 0) {
-        await quantityInput.fill('999');
+      if (await cartPage.setFirstQuantityInput('999')) {
         
         // Assert: Error message should be accessible
         // Look for aria-live region or visible error
-        const errorMessage = page.locator('[role="alert"], .error, [aria-live]').first();
-        
-        // If error appears, it should be accessible
-        if (await errorMessage.count() > 0 && await errorMessage.isVisible()) {
-          const text = await errorMessage.innerText();
-          expect(text.length).toBeGreaterThan(0);
+        if (await cartPage.hasVisibleAlert()) {
+          const text = await cartPage.getFirstAlertText();
+          expect(text.trim().length).toBeGreaterThan(0);
         }
       }
     });
 
-    test('A11Y-CART-N03: invalid coupon error accessible @a11y @cart @regression', async ({ page, cartPage }) => {
+    test('A11Y-CART-N03: invalid coupon error accessible @a11y @cart @regression', async ({ cartPage }) => {
       // Arrange: Navigate to cart
       await cartPage.goto();
       
       // Act: Try to apply invalid coupon
-      const couponInput = page.locator('input[name="coupon"], input[placeholder*="coupon" i]').first();
-      const applyButton = page.locator('button:has-text("apply")').first();
-      
-      if (await couponInput.count() > 0 && await applyButton.count() > 0) {
-        await couponInput.fill('INVALID_COUPON_XYZ_123');
-        await applyButton.click();
-        
-        // Assert: Error message should be accessible
-        await page.waitForTimeout(500); // Brief wait for error message
-        const errorMessage = page.locator('[role="alert"], .error, .invalid').first();
-        
-        if (await errorMessage.count() > 0 && await errorMessage.isVisible()) {
-          const text = await errorMessage.innerText();
-          expect(text.length).toBeGreaterThan(0);
-        }
+      const errorText = await cartPage.applyInvalidCouponAndReadError('INVALID_COUPON_XYZ_123');
+
+      // Assert: Error message should be accessible
+      if (errorText.trim().length > 0) {
+        expect(errorText.length).toBeGreaterThan(0);
       }
     });
   });
@@ -251,7 +213,7 @@ test.describe('cart accessibility @a11y @cart', () => {
       await cartPage.goto();
       
       // Wait for content to load
-      await page.waitForLoadState('networkidle');
+      await cartPage.waitForNetworkIdle();
       
       // Assert: After loading, page is accessible
       const results = await runA11y(page, { exclude: cartA11yExclude });

@@ -74,7 +74,7 @@ test.describe('product search @e2e @search', () => {
 
       expect(await homePage.getProductCount()).toBeGreaterThan(0);
       expect(await homePage.isProductCardVisible(seededProducts[0].id)).toBe(true);
-      await expect(homePage.getByTestId(`product-title-${seededProducts[0].id}`)).toContainText(catalogSearch.partial);
+      await homePage.expectProductCardTitleContains(seededProducts[0].id, catalogSearch.partial);
     });
   });
 
@@ -109,7 +109,7 @@ test.describe('product search @e2e @search', () => {
       const xssAttempt = '\"><script>alert(1)</script>';
       await homePage.gotoWithQuery(`q=${encodeURIComponent(xssAttempt)}`);
 
-      await expect(page.getByRole('heading', { name: /All Products/i })).toBeVisible();
+      expect(await homePage.isCatalogHeadingVisible()).toBe(true);
       expect(dialogs.length).toBe(0);
       expect(await homePage.getProductCount()).toBe(0);
     });
@@ -128,7 +128,7 @@ test.describe('product search @e2e @search', () => {
       await homePage.gotoWithQuery(`q=${encodeURIComponent(longTerm)}`);
 
       await expect(page).toHaveURL(/\?q=/);
-      await expect(page.getByRole('heading', { name: /All Products/i })).toBeVisible();
+      expect(await homePage.isCatalogHeadingVisible()).toBe(true);
       expect(await homePage.getProductCount()).toBe(0);
       expect(await homePage.isEmptyStateVisible()).toBe(true);
     });

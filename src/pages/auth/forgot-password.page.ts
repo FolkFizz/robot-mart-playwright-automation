@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '../base.page';
 import { routes } from '@config/constants';
 
@@ -39,5 +39,23 @@ export class ForgotPasswordPage extends BasePage {
 
   async getErrorText(): Promise<string> {
     return await this.errorText.innerText();
+  }
+
+  async isEmailValid(): Promise<boolean> {
+    return await this.emailInput.evaluate((el) => (el as HTMLInputElement).checkValidity());
+  }
+
+  async getEmailValidationMessage(): Promise<string> {
+    return await this.emailInput.evaluate((el) => (el as HTMLInputElement).validationMessage);
+  }
+
+  async expectMessageContains(pattern: string | RegExp): Promise<void> {
+    await expect(this.messageText).toBeVisible();
+    await expect(this.messageText).toContainText(pattern);
+  }
+
+  async expectNoErrorText(): Promise<void> {
+    const text = (await this.getErrorText().catch(() => '')).trim();
+    expect(text).toBe('');
   }
 }

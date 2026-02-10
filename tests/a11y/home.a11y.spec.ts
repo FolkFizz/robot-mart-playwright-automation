@@ -41,14 +41,6 @@
  */
 
 test.describe('home accessibility @a11y @safe', () => {
-  const homeA11yExclude = [
-    '.chat-toggle',
-    '.reset-link',
-    'h2 > span',
-    '.stock-status .in-stock',
-    'select.sort-select'
-  ];
-
   test.describe('positive cases', () => {
 
     test('A11Y-HOME-P01: home page has no critical violations @a11y @smoke @safe', async ({ page, homePage, runA11y, expectNoA11yViolations }) => {
@@ -56,7 +48,7 @@ test.describe('home accessibility @a11y @safe', () => {
       await homePage.goto();
 
       // Act: Run accessibility audit
-      const results = await runA11y(page, { exclude: homeA11yExclude });
+      const results = await runA11y(page, { exclude: homePage.getA11yExcludeSelectors() });
 
       // Assert: No violations found
       expectNoA11yViolations(results);
@@ -65,18 +57,16 @@ test.describe('home accessibility @a11y @safe', () => {
 
   test.describe('negative cases', () => {
 
-    test('A11Y-HOME-N01: keyboard tab navigation keeps focus on visible interactive elements @a11y @home @regression', async ({ page, homePage }) => {
+    test('A11Y-HOME-N01: keyboard tab navigation keeps focus on visible interactive elements @a11y @home @regression', async ({ homePage }) => {
       // Arrange: Load home page
       await homePage.goto();
 
       // Act: Tab once from page root
-      await page.keyboard.press('Tab');
+      await homePage.pressTabFromPageRoot();
 
       // Assert: Focus lands on a visible interactive control
-      const focusedElement = page.locator(':focus');
-      await expect(focusedElement).toBeVisible();
-
-      const focusedTag = await focusedElement.evaluate((el) => el.tagName.toLowerCase());
+      expect(await homePage.isFocusedElementVisible()).toBe(true);
+      const focusedTag = await homePage.getFocusedElementTagName();
       expect(['a', 'button', 'input', 'select', 'textarea']).toContain(focusedTag);
     });
 
@@ -85,11 +75,10 @@ test.describe('home accessibility @a11y @safe', () => {
       await homePage.goto();
       
       // Act: Reload to trigger loading state
-      await page.reload();
+      await homePage.reloadDomReady();
       
       // Assert: Check accessibility during/after load
-      await page.waitForLoadState('domcontentloaded');
-      const results = await runA11y(page, { exclude: homeA11yExclude });
+      const results = await runA11y(page, { exclude: homePage.getA11yExcludeSelectors() });
       expectNoA11yViolations(results);
     });
   });
@@ -101,11 +90,11 @@ test.describe('home accessibility @a11y @safe', () => {
       await homePage.goto();
 
       // Assert: Product list is populated
-      const productCount = await page.locator('[data-testid^="product-card-"]').count();
+      const productCount = await homePage.getProductCount();
       expect(productCount).toBeGreaterThan(5);
 
       // Act: Run accessibility audit
-      const results = await runA11y(page, { exclude: homeA11yExclude });
+      const results = await runA11y(page, { exclude: homePage.getA11yExcludeSelectors() });
 
       // Assert: No violations with full product grid
       expectNoA11yViolations(results);
@@ -117,12 +106,7 @@ test.describe('home accessibility @a11y @safe', () => {
 
       // Act: Run color-contrast checks on core filter controls
       const results = await runA11y(page, {
-        include: [
-          'input[placeholder="Search models..."]',
-          'input.filter-input[name="minPrice"]',
-          'input.filter-input[name="maxPrice"]',
-          '.btn-filter'
-        ]
+        include: homePage.getContrastIncludeSelectors()
       });
 
       // Assert: No color contrast violations on these controls
@@ -135,21 +119,17 @@ test.describe('home accessibility @a11y @safe', () => {
       await homePage.goto();
 
       // Act: Use keyboard to submit search
-      const searchInput = page.locator('input[placeholder="Search models..."]');
-      await expect(searchInput).toBeVisible();
-      await searchInput.focus();
-      await searchInput.fill('robot');
+      await expect(homePage.getSearchInput()).toBeVisible();
+      await homePage.focusSearchInput();
 
-      const isFocusedBeforeSubmit = await searchInput.evaluate((el) => el === document.activeElement);
+      const isFocusedBeforeSubmit = await homePage.isSearchInputFocused();
       expect(isFocusedBeforeSubmit).toBe(true);
 
-      await searchInput.press('Enter');
+      await homePage.submitSearchWithEnter('robot');
 
       // Assert: Search applies via query param and page remains usable
       await expect(page).toHaveURL(/[?&]q=robot/i);
-      const hasAnyResult = (await page.locator('[data-testid^="product-card-"]').count()) > 0;
-      const emptyStateVisible = await page.getByText('No bots found matching your criteria.').isVisible().catch(() => false);
-      expect(hasAnyResult || emptyStateVisible).toBe(true);
+      expect(await homePage.hasResultsOrEmptyState()).toBe(true);
     });
 
     test('A11Y-HOME-E04: category and sort filters accessible via keyboard @a11y @home @regression', async ({ page, homePage }) => {
@@ -157,19 +137,17 @@ test.describe('home accessibility @a11y @safe', () => {
       await homePage.goto();
 
       // Act & Assert: Category link can be focused and activated via keyboard
-      const categoryLink = page.locator('.category-list a[href*="category="]').first();
-      await expect(categoryLink).toBeVisible();
-      await categoryLink.focus();
-      const categoryFocused = await categoryLink.evaluate((el) => el === document.activeElement);
+      expect(await homePage.isFirstCategoryLinkVisible()).toBe(true);
+      await homePage.focusFirstCategoryLink();
+      const categoryFocused = await homePage.isFirstCategoryLinkFocused();
       expect(categoryFocused).toBe(true);
-      await page.keyboard.press('Enter');
+      await homePage.activateFocusedElement();
       await expect(page).toHaveURL(/category=/i);
 
       // Act & Assert: Sort dropdown is keyboard focusable
-      const sortSelect = page.locator('select.sort-select');
-      await expect(sortSelect).toBeVisible();
-      await sortSelect.focus();
-      const sortFocused = await sortSelect.evaluate((el) => el === document.activeElement);
+      expect(await homePage.isSortSelectVisible()).toBe(true);
+      await homePage.focusSortSelect();
+      const sortFocused = await homePage.isSortSelectFocused();
       expect(sortFocused).toBe(true);
     });
   });

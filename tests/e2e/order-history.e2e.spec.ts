@@ -81,35 +81,35 @@ test.describe('order history comprehensive @e2e @orders', () => {
       await profilePage.gotoTab('orders');
 
       await expect(page).toHaveURL(/\/profile\?tab=orders/);
-      await expect(page.getByRole('heading', { name: /Order History/i })).toBeVisible();
+      await profilePage.expectOrderHistoryHeadingVisible();
 
       const orderCount = await profilePage.getOrderCount();
       if (orderCount > 0) {
-        await expect(page.locator('.order-card').first()).toBeVisible();
+        await profilePage.expectAnyOrderCardVisible();
       } else {
-        await expect(page.getByText(/No orders found/i)).toBeVisible();
+        await profilePage.expectNoOrdersVisible();
       }
     });
 
-    test('ORD-HIST-P02: newly created order shows correct product details @e2e @orders @regression @destructive', async ({ api, page, profilePage }) => {
+    test('ORD-HIST-P02: newly created order shows correct product details @e2e @orders @regression @destructive', async ({ api, profilePage }) => {
       const orderId = await createOrderForUser(api, [{ id: seededProducts[0].id, quantity: 1 }]);
 
       await profilePage.gotoTab('orders');
-      const orderCard = page.locator('.order-card', { hasText: orderId }).first();
+      const orderCard = profilePage.orderCardByOrderId(orderId);
 
       await expect(orderCard).toBeVisible();
       await expect(orderCard).toContainText(seededProducts[0].name);
       await expect(orderCard).toContainText(orderId);
     });
 
-    test('ORD-HIST-P03: order card shows status, placed date, and total @e2e @orders @regression @destructive', async ({ api, page, profilePage }) => {
+    test('ORD-HIST-P03: order card shows status, placed date, and total @e2e @orders @regression @destructive', async ({ api, profilePage }) => {
       const orderId = await createOrderForUser(api, [
         { id: seededProducts[0].id, quantity: 1 },
         { id: seededProducts[1].id, quantity: 1 }
       ]);
 
       await profilePage.gotoTab('orders');
-      const orderCard = page.locator('.order-card', { hasText: orderId }).first();
+      const orderCard = profilePage.orderCardByOrderId(orderId);
 
       await expect(orderCard).toBeVisible();
       await expect(orderCard).toContainText(/Completed|Pending|Processing|Paid/i);
@@ -121,16 +121,13 @@ test.describe('order history comprehensive @e2e @orders', () => {
       const orderId = await createOrderForUser(api, [{ id: seededProducts[0].id, quantity: 1 }]);
 
       await profilePage.gotoTab('orders');
-      const orderCard = page.locator('.order-card', { hasText: orderId }).first();
-      await expect(orderCard).toBeVisible();
-
-      const invoiceLink = orderCard.getByRole('link', { name: /View Invoice/i });
-      await expect(invoiceLink).toHaveAttribute('href', new RegExp(`/order/invoice/${orderId}`));
+      await profilePage.expectOrderCardVisible(orderId);
+      await profilePage.expectInvoiceHrefByOrderId(orderId, new RegExp(`/order/invoice/${orderId}`));
 
       const beforeUrl = page.url();
-      await invoiceLink.click();
+      await profilePage.clickInvoiceLinkByOrderId(orderId);
       if (page.url() === beforeUrl) {
-        const href = await invoiceLink.getAttribute('href');
+        const href = await profilePage.getInvoiceHrefByOrderId(orderId);
         expect(href).toBeTruthy();
         await page.goto(href as string, { waitUntil: 'domcontentloaded' });
       }
@@ -140,12 +137,12 @@ test.describe('order history comprehensive @e2e @orders', () => {
   });
 
   test.describe('negative cases', () => {
-    test('ORD-HIST-N01: unauthenticated user cannot access order history tab @e2e @orders @regression', async ({ page }) => {
+    test('ORD-HIST-N01: unauthenticated user cannot access order history tab @e2e @orders @regression', async ({ page, profilePage, loginPage }) => {
       await page.context().clearCookies();
-      await page.goto(`${routes.profile}?tab=orders`);
+      await profilePage.gotoTab('orders');
 
       const redirectedToLogin = /\/login/.test(page.url());
-      const hasLoginInput = (await page.locator('input[name="username"], input[name="email"], [data-testid="login-username"]').count()) > 0;
+      const hasLoginInput = await loginPage.hasAnyLoginInputVisible();
       expect(redirectedToLogin || hasLoginInput).toBe(true);
     });
 
@@ -157,22 +154,21 @@ test.describe('order history comprehensive @e2e @orders', () => {
       await expect(page).toHaveURL(/\/profile\?tab=orders/);
 
       expect(await profilePage.getOrderCount()).toBe(0);
-      await expect(page.getByText(/No orders found/i)).toBeVisible();
+      await profilePage.expectNoOrdersVisible();
     });
   });
 
   test.describe('edge cases', () => {
-    test('ORD-HIST-E01: multiple newly created orders are sorted newest first @e2e @orders @regression @destructive', async ({ api, page, profilePage }) => {
+    test('ORD-HIST-E01: multiple newly created orders are sorted newest first @e2e @orders @regression @destructive', async ({ api, profilePage }) => {
       const olderOrderId = await createOrderForUser(api, [{ id: seededProducts[0].id, quantity: 1 }]);
-      await page.waitForTimeout(30);
+      await profilePage.sleep(30);
       const newerOrderId = await createOrderForUser(api, [{ id: seededProducts[1].id, quantity: 1 }]);
 
       await profilePage.gotoTab('orders');
-      const orderCards = page.locator('.order-card');
-      expect(await orderCards.count()).toBeGreaterThanOrEqual(2);
+      expect(await profilePage.getOrderCount()).toBeGreaterThanOrEqual(2);
 
-      const newestCardText = await orderCards.nth(0).innerText();
-      const olderCardText = await orderCards.nth(1).innerText();
+      const newestCardText = await profilePage.getOrderCardTextByIndex(0);
+      const olderCardText = await profilePage.getOrderCardTextByIndex(1);
       expect(newestCardText).toContain(newerOrderId);
       expect(olderCardText).toContain(olderOrderId);
     });
@@ -181,13 +177,12 @@ test.describe('order history comprehensive @e2e @orders', () => {
       const orderId = await createOrderForUser(api, [{ id: seededProducts[0].id, quantity: 1 }]);
 
       await profilePage.gotoTab('orders');
-      const orderCard = page.locator('.order-card', { hasText: orderId }).first();
-      await expect(orderCard).toBeVisible();
+      await profilePage.expectOrderCardVisible(orderId);
       const beforeReloadCount = await profilePage.getOrderCount();
 
-      await page.reload({ waitUntil: 'domcontentloaded' });
+      await profilePage.reloadDomReady();
       await expect(page).toHaveURL(/\/profile\?tab=orders/);
-      await expect(page.locator('.order-card', { hasText: orderId }).first()).toBeVisible();
+      await profilePage.expectOrderCardVisible(orderId);
 
       const afterReloadCount = await profilePage.getOrderCount();
       expect(afterReloadCount).toBe(beforeReloadCount);

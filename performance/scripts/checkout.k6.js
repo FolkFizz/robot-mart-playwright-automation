@@ -2,7 +2,7 @@ import http from 'k6/http';
 import { group, sleep, check } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 import { SharedArray } from 'k6/data';
-import { app } from '../lib/config.js';
+import { app, perfAuth } from '../lib/config.js';
 import { spike } from '../scenarios/index.js';
 import { headers } from '../lib/http.js';
 
@@ -54,8 +54,8 @@ const checkoutAttempts = new Counter('checkout_attempts');
 const checkoutDuration = new Trend('checkout_duration');
 
 const TEST_USER = {
-    username: __ENV.PERF_USER || 'user',
-    password: __ENV.PERF_PASSWORD || 'user123',
+    username: perfAuth.username,
+    password: perfAuth.password,
 };
 
 const CHECKOUT_MODE = String(__ENV.CHECKOUT_MODE || 'strict').toLowerCase() === 'acceptance'
@@ -65,7 +65,7 @@ const CHECKOUT_MODE = String(__ENV.CHECKOUT_MODE || 'strict').toLowerCase() === 
 const RESET_STOCK = String(__ENV.PERF_RESET_STOCK || 'false').toLowerCase() === 'true';
 const RESET_KEY = __ENV.RESET_KEY || __ENV.PERF_RESET_KEY || '';
 const AUTO_REGISTER = String(__ENV.PERF_AUTO_REGISTER || 'false').toLowerCase() === 'true';
-const AUTO_REGISTER_PASSWORD = __ENV.PERF_AUTO_REGISTER_PASSWORD || 'Pass12345!';
+const AUTO_REGISTER_PASSWORD = perfAuth.autoRegisterPassword;
 const DEBUG_UNEXPECTED = String(__ENV.PERF_DEBUG_UNEXPECTED || 'false').toLowerCase() === 'true';
 const MAX_UNEXPECTED_LOGS = Number(__ENV.PERF_DEBUG_MAX_LOGS || 10);
 
@@ -394,7 +394,7 @@ function ensureVuCredentials() {
         `${app.baseURL}/register`,
         {
             username: unique,
-            email: `${unique}@example.com`,
+            email: `${unique}@${perfAuth.emailDomain}`,
             password: AUTO_REGISTER_PASSWORD,
             confirmPassword: AUTO_REGISTER_PASSWORD,
         },

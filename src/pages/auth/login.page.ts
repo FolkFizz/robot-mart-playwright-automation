@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '../base.page';
 import { routes } from '@config/constants';
 
@@ -8,6 +8,8 @@ export class LoginPage extends BasePage {
   private readonly passwordInput: Locator;
   private readonly submitButton: Locator;
   private readonly accountMenu: Locator;
+  private readonly errorMessage: Locator;
+  private readonly loginInputs: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -15,6 +17,8 @@ export class LoginPage extends BasePage {
     this.passwordInput = this.getByTestId('login-password');
     this.submitButton = this.getByTestId('login-submit');
     this.accountMenu = this.getByTestId('nav-account-menu');
+    this.errorMessage = this.page.locator('.error, .alert-error');
+    this.loginInputs = this.page.locator('input[name="username"], input[name="email"], [data-testid="login-username"]');
   }
 
   // เปิดหน้า login
@@ -45,5 +49,26 @@ export class LoginPage extends BasePage {
 
   getUsernameInput(): Locator {
     return this.usernameInput;
+  }
+
+  getErrorMessageLocator(): Locator {
+    return this.errorMessage;
+  }
+
+  async expectErrorVisible(): Promise<void> {
+    await this.errorMessage.waitFor({ state: 'visible' });
+  }
+
+  async expectErrorContains(pattern: string | RegExp): Promise<void> {
+    await this.expectErrorVisible();
+    await expect(this.errorMessage.first()).toContainText(pattern);
+  }
+
+  async hasAnyLoginInputVisible(): Promise<boolean> {
+    return (await this.loginInputs.count()) > 0;
+  }
+
+  async isLoginLinkVisible(name: string): Promise<boolean> {
+    return await this.page.getByRole('link', { name }).isVisible().catch(() => false);
   }
 }

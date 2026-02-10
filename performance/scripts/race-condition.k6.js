@@ -1,7 +1,7 @@
 import http from 'k6/http';
 import { check, group, sleep } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
-import { app } from '../lib/config.js';
+import { app, perfAuth } from '../lib/config.js';
 import { headers } from '../lib/http.js';
 import { concurrent } from '../scenarios/index.js';
 
@@ -26,8 +26,8 @@ import { concurrent } from '../scenarios/index.js';
  */
 
 const TEST_USER = {
-    username: __ENV.PERF_USER || 'user',
-    password: __ENV.PERF_PASSWORD || 'user123',
+    username: perfAuth.username,
+    password: perfAuth.password,
 };
 
 const toPositiveInt = (value, fallback) => {

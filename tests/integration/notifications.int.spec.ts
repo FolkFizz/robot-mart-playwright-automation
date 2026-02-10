@@ -2,6 +2,7 @@ import type { APIRequestContext, Page } from '@playwright/test';
 import { test, expect, loginAndSyncSession } from '@fixtures';
 import { disableChaos } from '@api';
 import { routes } from '@config';
+import { HomePage, NotificationsPage } from '@pages';
 
 /**
  * =============================================================================
@@ -75,12 +76,6 @@ const fetchNotifications = async (api: APIRequestContext): Promise<Notifications
   return body;
 };
 
-const openDropdownAndCount = async (page: Page): Promise<number> => {
-  await page.getByTestId('nav-bell').click();
-  await page.locator('#notifDropdown').waitFor({ state: 'visible' });
-  return await page.locator('#notifItemsContainer .notif-item').count();
-};
-
 test.use({ seedData: true });
 
 test.describe('notifications integration @integration @notifications', () => {
@@ -143,12 +138,12 @@ test.describe('notifications integration @integration @notifications', () => {
   });
 
   test.describe('edge cases', () => {
-    test('NOTIF-INT-E01: mark-all-read action updates unread count from API @integration @notifications @regression', async ({ api, page, homePage, notificationsPage }) => {
+    test('NOTIF-INT-E01: mark-all-read action updates unread count from API @integration @notifications @regression', async ({ api, homePage, notificationsPage }) => {
       await homePage.goto();
       await notificationsPage.open();
       await notificationsPage.markAllRead();
 
-      await page.waitForTimeout(300);
+      await notificationsPage.waitAfterMarkAllRead();
       const body = await fetchNotifications(api);
       expect(body.unreadCount).toBe(0);
     });
@@ -174,7 +169,7 @@ test.describe('notifications integration @integration @notifications', () => {
       expect(uiCount).toBe(body.notifications.length);
     });
 
-    test('NOTIF-INT-E04: notifications count stays consistent across tabs @integration @notifications @regression', async ({ browser, api, page, homePage }) => {
+    test('NOTIF-INT-E04: notifications count stays consistent across tabs @integration @notifications @regression', async ({ browser, api, homePage, notificationsPage }) => {
       await homePage.goto();
 
       const contextB = await browser.newContext();
@@ -182,10 +177,12 @@ test.describe('notifications integration @integration @notifications', () => {
       try {
         const storage = await api.storageState();
         await contextB.addCookies(storage.cookies);
-        await pageB.goto(routes.home, { waitUntil: 'domcontentloaded' });
+        const homePageB = new HomePage(pageB);
+        const notificationsPageB = new NotificationsPage(pageB);
+        await homePageB.goto();
 
-        const countA = await openDropdownAndCount(page);
-        const countB = await openDropdownAndCount(pageB);
+        const countA = await notificationsPage.openAndCount();
+        const countB = await notificationsPageB.openAndCount();
 
         const body = await fetchNotifications(api);
         expect(countA).toBe(body.notifications.length);

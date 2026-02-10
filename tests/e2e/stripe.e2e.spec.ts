@@ -1,7 +1,8 @@
 import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { disableChaos, clearCart } from '@api';
 import { seededProducts } from '@data';
-import { CheckoutPage } from '@pages';
+import type { Page } from '@playwright/test';
+import { CheckoutPage, CartPage } from '@pages';
 
 /**
  * =============================================================================
@@ -41,9 +42,9 @@ import { CheckoutPage } from '@pages';
  * =============================================================================
  */
 
-const gotoCheckoutFromCart = async (page: any, cartPage: any) => {
+const gotoCheckoutFromCart = async (page: Page, cartPage: CartPage) => {
   await cartPage.goto();
-  await page.getByTestId('cart-checkout').click();
+  await cartPage.proceedToCheckoutWithFallback();
   await expect(page).toHaveURL(/\/order\/(checkout|place)/);
 };
 
@@ -63,9 +64,9 @@ test.describe('stripe checkout integration @e2e @checkout @stripe', () => {
     test('STRIPE-P01: checkout is reachable and payment section is initialized @e2e @checkout @smoke', async ({ page, cartPage, checkoutPage }) => {
       await gotoCheckoutFromCart(page, cartPage);
 
-      await expect(page.getByTestId('checkout-submit')).toBeVisible();
+      await checkoutPage.expectSubmitVisible();
       if (await checkoutPage.isMockPayment()) {
-        await expect(page.getByTestId('mock-payment-note')).toBeVisible();
+        await checkoutPage.expectMockPaymentNoteVisible();
       } else {
         await checkoutPage.waitForStripeReady();
       }
@@ -75,7 +76,7 @@ test.describe('stripe checkout integration @e2e @checkout @stripe', () => {
       await cartPage.goto();
       const cartTotal = await cartPage.getGrandTotalValue();
 
-      await page.getByTestId('cart-checkout').click();
+      await cartPage.proceedToCheckoutWithFallback();
       await expect(page).toHaveURL(/\/order\/(checkout|place)/);
 
       const checkoutTotal = CheckoutPage.parsePrice(await checkoutPage.getTotal());
@@ -91,10 +92,10 @@ test.describe('stripe checkout integration @e2e @checkout @stripe', () => {
 
       await checkoutPage.waitForStripeReady();
 
-      const stripeLoaded = await page.evaluate(() => typeof (window as { Stripe?: unknown }).Stripe !== 'undefined');
+      const stripeLoaded = await checkoutPage.isStripeSdkLoaded();
       expect(stripeLoaded).toBe(true);
 
-      const frameCount = await page.locator('iframe[name^="__privateStripeFrame"]').count();
+      const frameCount = await checkoutPage.getStripeFrameCount();
       expect(frameCount).toBeGreaterThan(0);
     });
   });
@@ -105,29 +106,29 @@ test.describe('stripe checkout integration @e2e @checkout @stripe', () => {
 
       const isMock = await checkoutPage.isMockPayment();
       if (isMock) {
-        await expect(page.getByTestId('mock-payment-note')).toBeVisible();
-        await expect(page.getByTestId('payment-element')).toHaveCount(0);
+        await checkoutPage.expectMockPaymentNoteVisible();
+        await checkoutPage.expectPaymentElementCount(0);
       } else {
         await checkoutPage.waitForStripeReady();
-        await expect(page.getByTestId('payment-element')).toBeVisible();
+        await checkoutPage.expectPaymentElementVisible();
       }
     });
 
-    test('STRIPE-N02: empty cart blocks real payment entry on checkout @e2e @checkout @regression @destructive', async ({ api, page }) => {
+    test('STRIPE-N02: empty cart blocks real payment entry on checkout @e2e @checkout @regression @destructive', async ({ api, checkoutPage }) => {
       await clearCart(api);
-      await page.goto('/order/checkout');
+      await checkoutPage.goto();
 
-      const bodyText = (await page.locator('body').innerText()).toLowerCase();
-      const hasEmptyCartGuard =
-        bodyText.includes('cart is empty') ||
-        bodyText.includes('your cart is empty') ||
-        bodyText.includes('empty cart') ||
-        bodyText.includes('go shop');
+      const hasEmptyCartGuard = await checkoutPage.hasEmptyCartGuard([
+        'cart is empty',
+        'your cart is empty',
+        'empty cart',
+        'go shop'
+      ]);
 
       expect(hasEmptyCartGuard).toBe(true);
-      await expect(page.getByTestId('checkout-name')).toHaveCount(0);
-      await expect(page.getByTestId('payment-element')).toHaveCount(0);
-      await expect(page.getByTestId('checkout-submit')).toHaveCount(0);
+      expect(await checkoutPage.getNameInputCount()).toBe(0);
+      expect(await checkoutPage.getPaymentElementCount()).toBe(0);
+      expect(await checkoutPage.getSubmitButtonCount()).toBe(0);
     });
   });
 
@@ -136,7 +137,7 @@ test.describe('stripe checkout integration @e2e @checkout @stripe', () => {
       await gotoCheckoutFromCart(page, cartPage);
       const beforeReload = CheckoutPage.parsePrice(await checkoutPage.getTotal());
 
-      await page.reload({ waitUntil: 'domcontentloaded' });
+      await checkoutPage.reloadDomReady();
       await expect(page).toHaveURL(/\/order\/(checkout|place)/);
       const afterReload = CheckoutPage.parsePrice(await checkoutPage.getTotal());
 

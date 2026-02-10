@@ -186,14 +186,11 @@ test.describe('product to cart integration @integration @cart', () => {
   });
 
   test.describe('edge cases', () => {
-    test('PROD-CART-INT-E01: product image mapping remains consistent in cart @integration @cart @regression', async ({ api, page, homePage, productPage }) => {
+    test('PROD-CART-INT-E01: product image mapping remains consistent in cart @integration @cart @regression', async ({ api, homePage, productPage }) => {
       await homePage.goto();
       await homePage.clickProductById(firstProduct.id);
 
-      const productImage = await page
-        .locator('[data-testid="product-image"], .product-image img, .product-detail img')
-        .first()
-        .getAttribute('src');
+      const productImage = await productPage.getImageSrc();
 
       const product = await getProductDetail(api, firstProduct.id);
       const imageSet = (product.image_set ?? '').toLowerCase();

@@ -130,7 +130,7 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
       // Act: Submit payment (with retry logic)
       let result = await checkoutPage.submitStripePayment({ ...customer, card: validCard, timeoutMs: 30000 });
       if (result.status === 'timeout') {
-        await page.reload({ waitUntil: 'domcontentloaded' });
+        await checkoutPage.reloadDomReady();
         result = await checkoutPage.submitStripePayment({ ...customer, card: validCard, timeoutMs: 30000 });
       }
 
@@ -140,8 +140,8 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
 
       // Assert: Success page and order visible in profile
       if (result.status === 'success') {
-        await expect(page.getByTestId('order-success-message')).toBeVisible();
-        const orderId = await page.getByTestId('order-id').innerText();
+        await checkoutPage.expectOrderSuccessVisible();
+        const orderId = await checkoutPage.getOrderIdText();
         const trimmed = orderId.trim();
         expect(trimmed.length).toBeGreaterThan(5);
 
@@ -150,8 +150,7 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
 
         // Order should appear in profile
         await profilePage.gotoTab('orders');
-        const orderCard = page.locator('.order-card', { hasText: trimmed });
-        await expect(orderCard).toBeVisible();
+        await profilePage.expectOrderCardVisible(trimmed);
       } else {
         console.warn('[checkout] Stripe did not complete within timeout; skipping order-id assertions');
       }
@@ -308,24 +307,24 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
   // ========================================================================
   test.describe('negative cases', () => {
     
-    test('CHK-N01: empty cart checkout is blocked (redirect or guard message) @e2e @checkout @regression @destructive', async ({ api, page }) => {
+    test('CHK-N01: empty cart checkout is blocked (redirect or guard message) @e2e @checkout @regression @destructive', async ({ api, page, checkoutPage }) => {
       // Arrange: Ensure cart is empty first
       await seedCart(api, []);
 
       // Act: Try to access checkout with empty cart
-      await page.goto('/order/checkout');
+      await checkoutPage.goto();
 
       // Assert: Either redirected to cart OR blocked with empty-cart guard on checkout
       const url = page.url();
-      const body = (await page.locator('body').innerText().catch(() => '')).toLowerCase();
 
       const redirectedToCart = /\/cart/.test(url);
       const stayedOnCheckout = /\/order\/(checkout|place)/.test(url);
-      const hasEmptyCartGuard =
-        body.includes(uiMessages.cartEmpty.toLowerCase()) ||
-        body.includes('empty cart') ||
-        body.includes('cart is empty') ||
-        body.includes('no items');
+      const hasEmptyCartGuard = await checkoutPage.hasEmptyCartGuard([
+        uiMessages.cartEmpty,
+        'empty cart',
+        'cart is empty',
+        'no items'
+      ]);
 
       expect(redirectedToCart || (stayedOnCheckout && hasEmptyCartGuard)).toBe(true);
     });

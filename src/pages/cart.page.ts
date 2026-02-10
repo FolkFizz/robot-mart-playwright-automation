@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from './base.page';
 import { routes } from '@config/constants';
 import { parseMoney } from '@utils/money';
@@ -14,6 +14,8 @@ export class CartPage extends BasePage {
   private readonly grandTotalLabel: Locator;
   private readonly clearCartButton: Locator;
   private readonly checkoutButton: Locator;
+  private readonly checkoutLinkFallback: Locator;
+  private readonly alertError: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -26,6 +28,8 @@ export class CartPage extends BasePage {
     this.grandTotalLabel = this.getByTestId('cart-grand-total');
     this.clearCartButton = this.getByTestId('cart-clear');
     this.checkoutButton = this.getByTestId('cart-checkout');
+    this.checkoutLinkFallback = this.page.locator('a[href="/order/place"], a[href="/order/checkout"]').first();
+    this.alertError = this.page.locator('.alert-error, .error, [role="alert"], [aria-live]').first();
   }
 
   // เปิดหน้า cart
@@ -165,5 +169,124 @@ export class CartPage extends BasePage {
   async proceedToCheckout(): Promise<void> {
     await this.checkoutButton.click();
     await this.waitForNetworkIdle();
+  }
+
+  getCheckoutButton(): Locator {
+    return this.checkoutButton;
+  }
+
+  async proceedToCheckoutWithFallback(): Promise<void> {
+    if ((await this.checkoutButton.count()) > 0) {
+      await expect(this.checkoutButton).toBeVisible();
+      await this.checkoutButton.click();
+      await this.waitForDomReady();
+      return;
+    }
+
+    if ((await this.checkoutLinkFallback.count()) > 0) {
+      await this.checkoutLinkFallback.click();
+      await this.waitForDomReady();
+    }
+  }
+
+  async getFirstAlertText(): Promise<string> {
+    return await this.alertError.innerText().catch(() => '');
+  }
+
+  async hasVisibleAlert(): Promise<boolean> {
+    return await this.alertError.isVisible().catch(() => false);
+  }
+
+  async expectAlertContains(pattern: string | RegExp): Promise<void> {
+    await expect(this.alertError).toBeVisible();
+    await expect(this.alertError).toContainText(pattern);
+  }
+
+  async isEmptyMessageVisible(text: string): Promise<boolean> {
+    return await this.page.getByText(text).isVisible().catch(() => false);
+  }
+
+  async expectEmptyMessageVisible(text: string): Promise<void> {
+    await expect(this.page.getByText(text)).toBeVisible();
+  }
+
+  async focusFirstQuantityControl(): Promise<void> {
+    await this.page
+      .locator('[data-testid^="cart-qty-increase-"], [data-testid^="cart-qty-decrease-"]')
+      .first()
+      .focus();
+  }
+
+  async isFirstQuantityControlFocused(): Promise<boolean> {
+    const control = this.page
+      .locator('[data-testid^="cart-qty-increase-"], [data-testid^="cart-qty-decrease-"]')
+      .first();
+    if ((await control.count()) === 0) return false;
+    return await control.evaluate((el) => el === document.activeElement);
+  }
+
+  async getFirstRemoveButtonA11yMeta(): Promise<{ ariaLabel: string | null; title: string | null; text: string }> {
+    const removeButton = this.page.locator('[data-testid^="cart-remove-"]').first();
+    return {
+      ariaLabel: await removeButton.getAttribute('aria-label'),
+      title: await removeButton.getAttribute('title'),
+      text: await removeButton.innerText().catch(() => '')
+    };
+  }
+
+  async getCouponInputA11yMeta(): Promise<{ ariaLabel: string | null; placeholder: string | null; id: string | null; hasLabelByFor: boolean }> {
+    const couponInput = this.page.locator('input[name="coupon"], input[placeholder*="coupon" i], input[aria-label*="coupon" i]').first();
+    const id = await couponInput.getAttribute('id');
+    const hasLabelByFor = id ? (await this.page.locator(`label[for="${id}"]`).count()) > 0 : false;
+
+    return {
+      ariaLabel: await couponInput.getAttribute('aria-label'),
+      placeholder: await couponInput.getAttribute('placeholder'),
+      id,
+      hasLabelByFor
+    };
+  }
+
+  async focusCheckoutControl(): Promise<boolean> {
+    const target = this.page
+      .locator('button:has-text("checkout"), a:has-text("checkout"), button:has-text("Proceed")')
+      .first();
+    if ((await target.count()) === 0) return false;
+    await target.focus();
+    return true;
+  }
+
+  async isCheckoutControlFocused(): Promise<boolean> {
+    const target = this.page
+      .locator('button:has-text("checkout"), a:has-text("checkout"), button:has-text("Proceed")')
+      .first();
+    if ((await target.count()) === 0) return false;
+    return await target.evaluate((el) => el === document.activeElement);
+  }
+
+  async getCheckoutControlTabIndex(): Promise<string | null> {
+    const target = this.page
+      .locator('button:has-text("checkout"), a:has-text("checkout"), button:has-text("Proceed")')
+      .first();
+    if ((await target.count()) === 0) return null;
+    return await target.getAttribute('tabindex');
+  }
+
+  async setFirstQuantityInput(value: string): Promise<boolean> {
+    const input = this.page.locator('input[type="number"], input[aria-label*="quantity" i]').first();
+    if ((await input.count()) === 0) return false;
+    await input.fill(value);
+    return true;
+  }
+
+  async applyInvalidCouponAndReadError(code: string): Promise<string> {
+    const couponInput = this.page.locator('input[name="coupon"], input[placeholder*="coupon" i]').first();
+    const applyButton = this.page.locator('button:has-text("apply")').first();
+    if ((await couponInput.count()) === 0 || (await applyButton.count()) === 0) return '';
+
+    await couponInput.fill(code);
+    await applyButton.click();
+    await this.sleep(500);
+    return await this.getFirstAlertText();
   }
 }

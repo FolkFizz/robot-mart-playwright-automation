@@ -1,7 +1,7 @@
 import http from 'k6/http';
 import { check, group, sleep } from 'k6';
 import { Counter } from 'k6/metrics';
-import { app } from '../lib/config.js';
+import { app, perfAuth } from '../lib/config.js';
 import { ramping } from '../scenarios/index.js';
 import { headers } from '../lib/http.js';
 
@@ -26,8 +26,8 @@ const profileSuccess = new Counter('profile_success');
 const authUnexpected = new Counter('auth_unexpected');
 
 const TEST_USER = {
-    username: __ENV.PERF_USER || 'user',
-    password: __ENV.PERF_PASSWORD || 'user123',
+    username: perfAuth.username,
+    password: perfAuth.password,
 };
 
 export const options = {

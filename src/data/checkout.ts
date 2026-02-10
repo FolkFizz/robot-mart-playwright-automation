@@ -1,6 +1,10 @@
+import { users } from './users';
+
+const checkoutEmail = process.env.TEST_CHECKOUT_EMAIL?.trim() || users.user.email;
+
 export const customer = {
   name: 'Test User',
-  email: 'test.user@robotstore.com'
+  email: checkoutEmail
 } as const;
 
 export const validCard = {

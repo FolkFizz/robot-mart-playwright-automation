@@ -1,5 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from './base.page';
+import { routes } from '@config/constants';
 
 // POM สำหรับหน้า Checkout
 export class CheckoutPage extends BasePage {
@@ -10,6 +11,15 @@ export class CheckoutPage extends BasePage {
   private readonly paymentElement: Locator;
   private readonly paymentMessage: Locator;
   private readonly mockNote: Locator;
+  private readonly orderSuccessMessage: Locator;
+  private readonly orderIdLabel: Locator;
+  private readonly successMessage: Locator;
+  private readonly errorMessage: Locator;
+  private readonly stripeIframes: Locator;
+  private readonly addressInput: Locator;
+  private readonly orderSummary: Locator;
+  private readonly skipLink: Locator;
+  private readonly mainContent: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -20,6 +30,15 @@ export class CheckoutPage extends BasePage {
     this.paymentElement = this.getByTestId('payment-element');
     this.paymentMessage = this.getByTestId('payment-message');
     this.mockNote = this.getByTestId('mock-payment-note');
+    this.orderSuccessMessage = this.getByTestId('order-success-message');
+    this.orderIdLabel = this.getByTestId('order-id');
+    this.successMessage = this.page.locator('.success, .alert-success, .message');
+    this.errorMessage = this.page.locator('.error, .alert-error');
+    this.stripeIframes = this.page.locator('iframe[name^="__privateStripeFrame"]');
+    this.addressInput = this.page.locator('input[name*="address" i], input[id*="address" i]').first();
+    this.orderSummary = this.page.locator('.order-summary, #order-summary, [aria-label*="summary" i]').first();
+    this.skipLink = this.page.locator('a[href="#main-content"], .skip-link').first();
+    this.mainContent = this.page.locator('#main-content, [role="main"]').first();
   }
 
   static parsePrice(text: string): number {
@@ -28,6 +47,10 @@ export class CheckoutPage extends BasePage {
 
   static parseShipping(text: string): number {
     return text.trim().toUpperCase() === 'FREE' ? 0 : CheckoutPage.parsePrice(text);
+  }
+
+  async goto(): Promise<void> {
+    await super.goto(routes.checkout);
   }
 
   // อ่านยอดรวม (total)
@@ -135,6 +158,10 @@ export class CheckoutPage extends BasePage {
     return await this.submitButton.getAttribute('data-status');
   }
 
+  async isStripeSdkLoaded(): Promise<boolean> {
+    return await this.page.evaluate(() => typeof (window as { Stripe?: unknown }).Stripe !== 'undefined');
+  }
+
   async waitForPaymentResult(timeoutMs = 30000): Promise<{ status: 'success' | 'error' | 'timeout'; sawLoading: boolean; message?: string }> {
     const deadline = Date.now() + timeoutMs;
     let sawLoading = false;
@@ -155,7 +182,7 @@ export class CheckoutPage extends BasePage {
       const status = await this.getSubmitStatus().catch(() => 'idle');
       if (status === 'loading') sawLoading = true;
 
-      await this.page.waitForTimeout(500);
+      await this.sleep(500);
     }
 
     return { status: 'timeout', sawLoading };
@@ -176,5 +203,145 @@ export class CheckoutPage extends BasePage {
   // อ่านข้อความ error/payment message
   async getPaymentMessage(): Promise<string> {
     return await this.paymentMessage.innerText();
+  }
+
+  async expectSuccessContains(pattern: string | RegExp): Promise<void> {
+    await expect(this.successMessage).toBeVisible();
+    await expect(this.successMessage).toContainText(pattern);
+  }
+
+  async expectOrderSuccessVisible(): Promise<void> {
+    await expect(this.orderSuccessMessage).toBeVisible();
+  }
+
+  async getOrderIdText(): Promise<string> {
+    return await this.orderIdLabel.innerText();
+  }
+
+  async expectAnyErrorVisible(): Promise<void> {
+    await expect(this.errorMessage).toBeVisible();
+  }
+
+  async expectErrorContains(pattern: string | RegExp): Promise<void> {
+    await this.expectAnyErrorVisible();
+    await expect(this.errorMessage).toContainText(pattern);
+  }
+
+  async isNameInputVisible(): Promise<boolean> {
+    return await this.nameInput.isVisible().catch(() => false);
+  }
+
+  async isSubmitButtonVisible(): Promise<boolean> {
+    return await this.submitButton.isVisible().catch(() => false);
+  }
+
+  async expectSubmitVisible(): Promise<void> {
+    await expect(this.submitButton).toBeVisible();
+  }
+
+  async expectMockPaymentNoteVisible(): Promise<void> {
+    await expect(this.mockNote).toBeVisible();
+  }
+
+  async expectPaymentElementVisible(): Promise<void> {
+    await expect(this.paymentElement).toBeVisible();
+  }
+
+  async getNameInputCount(): Promise<number> {
+    return await this.nameInput.count();
+  }
+
+  async getSubmitButtonCount(): Promise<number> {
+    return await this.submitButton.count();
+  }
+
+  async getPaymentElementCount(): Promise<number> {
+    return await this.paymentElement.count();
+  }
+
+  async expectPaymentElementCount(count: number): Promise<void> {
+    await expect(this.paymentElement).toHaveCount(count);
+  }
+
+  async getStripeFrameCount(): Promise<number> {
+    return await this.stripeIframes.count();
+  }
+
+  async isStripeFrameVisible(): Promise<boolean> {
+    if ((await this.getStripeFrameCount()) === 0) return false;
+    return await this.stripeIframes.first().isVisible().catch(() => false);
+  }
+
+  async hasEmptyCartGuard(messages: string[]): Promise<boolean> {
+    const body = (await this.getBodyText()).toLowerCase();
+    return messages.some((message) => body.includes(message.toLowerCase()));
+  }
+
+  async hasAddressAutocomplete(): Promise<boolean | null> {
+    if ((await this.addressInput.count()) === 0) return null;
+    const autocomplete = await this.addressInput.getAttribute('autocomplete');
+    return Boolean(autocomplete && autocomplete.length > 0);
+  }
+
+  async hasMockOrStripePaymentUi(): Promise<boolean> {
+    if (await this.isMockPayment()) return true;
+    if (await this.isStripeFrameVisible()) return true;
+    return await this.paymentElement.isVisible().catch(() => false);
+  }
+
+  async hasOrderSummary(): Promise<boolean> {
+    return (await this.orderSummary.count()) > 0;
+  }
+
+  async getOrderSummaryText(): Promise<string> {
+    if (!(await this.hasOrderSummary())) return '';
+    return await this.orderSummary.innerText();
+  }
+
+  async hasSkipLink(): Promise<boolean> {
+    return (await this.skipLink.count()) > 0;
+  }
+
+  async activateSkipLink(): Promise<void> {
+    await this.skipLink.focus();
+    await this.page.keyboard.press('Enter');
+  }
+
+  async tabOnce(): Promise<void> {
+    await this.page.keyboard.press('Tab');
+  }
+
+  async tabUntilNameInputFocused(maxTabs = 20): Promise<boolean> {
+    for (let i = 0; i < maxTabs; i += 1) {
+      await this.tabOnce();
+      const isFocused = await this.nameInput.evaluate((el) => el === document.activeElement);
+      if (isFocused) return true;
+    }
+    return false;
+  }
+
+  async isMainContentFocused(): Promise<boolean | null> {
+    if ((await this.mainContent.count()) === 0) return null;
+    return await this.mainContent.evaluate((el) => el === document.activeElement);
+  }
+
+  async isNameValid(): Promise<boolean> {
+    return await this.nameInput.evaluate((el) => (el as HTMLInputElement).checkValidity());
+  }
+
+  async isEmailValid(): Promise<boolean> {
+    return await this.emailInput.evaluate((el) => (el as HTMLInputElement).checkValidity());
+  }
+
+  async getNameValidationMessage(): Promise<string> {
+    return await this.nameInput.evaluate((el) => (el as HTMLInputElement).validationMessage);
+  }
+
+  async getEmailValidationMessage(): Promise<string> {
+    return await this.emailInput.evaluate((el) => (el as HTMLInputElement).validationMessage);
+  }
+
+  getA11yExcludeSelectors(): string[] {
+    return ['.chat-toggle'];
   }
 }

@@ -211,7 +211,7 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(await cartPage.getCartCount()).toBe(qty);
     });
 
-    test('CART-P07: clear cart empties all items @e2e @cart @regression @destructive', async ({ api, page, cartPage }) => {
+    test('CART-P07: clear cart empties all items @e2e @cart @regression @destructive', async ({ api, cartPage }) => {
       // Arrange: Cart with product
       await seedCart(api, [{ id: firstProduct.id }]);
 
@@ -223,7 +223,7 @@ test.describe('cart comprehensive @e2e @cart', () => {
       // Assert: Cart is empty
       expect(await cartPage.getItemCount()).toBe(0);
       expect(await cartPage.getCartCount()).toBe(0);
-      await expect(page.getByText(uiMessages.cartEmpty)).toBeVisible();
+      await cartPage.expectEmptyMessageVisible(uiMessages.cartEmpty);
     });
 
     test('CART-P08: cannot decrease quantity below 1 @e2e @cart @regression @destructive', async ({ api, cartPage }) => {
@@ -297,20 +297,19 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(body.message).toBe('Admin cannot shop');
     });
 
-    test('CART-N02-UI: admin cannot add items to cart via UI @e2e @cart @security @regression @destructive', async ({ api, page, homePage }) => {
+    test('CART-N02-UI: admin cannot add items to cart via UI @e2e @cart @security @regression @destructive', async ({ api, page, homePage, productPage }) => {
       // Arrange: Login as admin and sync admin session to browser context
       await loginAsAdmin(api);
       const storage = await api.storageState();
       await page.context().clearCookies();
       await page.context().addCookies(storage.cookies);
-      await page.goto(routes.home);
+      await homePage.goto();
 
       // Act: Navigate to product detail as admin
       await homePage.clickProductById(firstProduct.id);
-      const addToCartButton = page.getByTestId('product-add-to-cart');
-      const addButtonVisible = await addToCartButton.isVisible().catch(() => false);
+      const addButtonVisible = await productPage.isAddToCartVisible();
       if (addButtonVisible) {
-        await expect(addToCartButton).toBeDisabled();
+        expect(await productPage.isAddToCartDisabled()).toBe(true);
       }
       
       // Assert: Admin cannot complete shopping action
@@ -388,7 +387,7 @@ test.describe('cart comprehensive @e2e @cart', () => {
       expect(body.message).toBe('Cart is empty');
     });
 
-    test('COUP-N01: invalid coupon code shows error @e2e @cart @regression @destructive', async ({ api, page, cartPage }) => {
+    test('COUP-N01: invalid coupon code shows error @e2e @cart @regression @destructive', async ({ api, cartPage }) => {
       // Arrange: Cart with product
       await seedCart(api, [{ id: firstProduct.id }]);
 
@@ -398,12 +397,10 @@ test.describe('cart comprehensive @e2e @cart', () => {
       await cartPage.applyCoupon('INVALID_COUPON_XYZ');
 
       // Assert: Error message displayed
-      const error = page.locator('.alert-error');
-      await expect(error).toBeVisible();
-      await expect(error).toContainText('Invalid coupon code');
+      await cartPage.expectAlertContains('Invalid coupon code');
     });
 
-    test('COUP-N02: expired coupon rejected with error @e2e @cart @regression @destructive', async ({ api, page, cartPage }) => {
+    test('COUP-N02: expired coupon rejected with error @e2e @cart @regression @destructive', async ({ api, cartPage }) => {
       // Arrange: Cart with product
       await seedCart(api, [{ id: firstProduct.id }]);
 
@@ -413,9 +410,7 @@ test.describe('cart comprehensive @e2e @cart', () => {
       await cartPage.applyCoupon(coupons.expired50.code);
 
       // Assert: Expiry error shown
-      const error = page.locator('.alert-error');
-      await expect(error).toBeVisible();
-      await expect(error).toContainText(uiMessages.couponExpired);
+      await cartPage.expectAlertContains(uiMessages.couponExpired);
     });
   });
 
@@ -462,7 +457,7 @@ test.describe('cart comprehensive @e2e @cart', () => {
       }
     });
 
-    test('COUP-E01: coupon code with whitespace is trimmed @e2e @cart @regression @destructive', async ({ api, page, cartPage }) => {
+    test('COUP-E01: coupon code with whitespace is trimmed @e2e @cart @regression @destructive', async ({ api, cartPage }) => {
       // Arrange: Cart with product
       await seedCart(api, [{ id: firstProduct.id }]);
 

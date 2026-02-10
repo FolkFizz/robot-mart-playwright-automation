@@ -31,4 +31,13 @@ export class NotificationsPage extends BasePage {
   async getNotificationCount(): Promise<number> {
     return await this.notifItems.count();
   }
+
+  async openAndCount(): Promise<number> {
+    await this.open();
+    return await this.getNotificationCount();
+  }
+
+  async waitAfterMarkAllRead(): Promise<void> {
+    await this.sleep(300);
+  }
 }

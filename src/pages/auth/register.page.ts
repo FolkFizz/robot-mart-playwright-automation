@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '../base.page';
 import { routes } from '@config/constants';
 
@@ -9,6 +9,7 @@ export class RegisterPage extends BasePage {
   private readonly passwordInput: Locator;
   private readonly confirmPasswordInput: Locator;
   private readonly submitButton: Locator;
+  private readonly errorMessage: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -17,6 +18,7 @@ export class RegisterPage extends BasePage {
     this.passwordInput = this.getByTestId('register-password');
     this.confirmPasswordInput = this.getByTestId('register-confirm-password');
     this.submitButton = this.getByTestId('register-submit');
+    this.errorMessage = this.page.locator('.error, .alert-error');
   }
 
   // เปิดหน้า register
@@ -54,5 +56,14 @@ export class RegisterPage extends BasePage {
 
   async submit(): Promise<void> {
     await this.submitButton.click();
+  }
+
+  async expectErrorVisible(): Promise<void> {
+    await expect(this.errorMessage).toBeVisible();
+  }
+
+  async expectErrorContains(pattern: string | RegExp): Promise<void> {
+    await this.expectErrorVisible();
+    await expect(this.errorMessage).toContainText(pattern);
   }
 }

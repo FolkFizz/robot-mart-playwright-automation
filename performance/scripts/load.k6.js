@@ -2,7 +2,7 @@ import http from 'k6/http';
 import { group, sleep, check } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 import { SharedArray } from 'k6/data';
-import { app } from '../lib/config.js';
+import { app, perfAuth } from '../lib/config.js';
 import { headers } from '../lib/http.js';
 
 /**
@@ -39,8 +39,8 @@ const TEST_MODE = String(__ENV.TEST_MODE || 'balanced').toLowerCase() === 'accep
     : 'balanced';
 
 const TEST_USER = {
-    username: __ENV.PERF_USER || 'user',
-    password: __ENV.PERF_PASSWORD || 'user123',
+    username: perfAuth.username,
+    password: perfAuth.password,
 };
 
 const RESET_STOCK = String(__ENV.PERF_RESET_STOCK || 'false').toLowerCase() === 'true';

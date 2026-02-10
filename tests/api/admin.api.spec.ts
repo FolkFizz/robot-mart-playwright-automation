@@ -1,6 +1,7 @@
 ﻿import { test, expect } from '@fixtures';
 import { resetStockSafe, listAdminNotifications, loginAsAdmin, loginAsUser } from '@api';
 import { routes } from '@config';
+import { securityTestData } from '@data';
 
 /**
  * =============================================================================
@@ -126,7 +127,7 @@ test.describe('admin api @api @admin', () => {
     test('ADMIN-API-N03: invalid reset key rejected by reset API @api @admin @regression', async ({ api }) => {
       // Act: Try to reset stock with invalid reset key
       const res = await api.post(routes.api.resetStockSafe, {
-        headers: { 'X-RESET-KEY': 'INVALID_RESET_KEY' }
+        headers: { 'X-RESET-KEY': securityTestData.invalidResetKey }
       });
       const body = await res.json();
 
@@ -172,3 +173,4 @@ test.describe('admin api @api @admin', () => {
     });
   });
 });
+

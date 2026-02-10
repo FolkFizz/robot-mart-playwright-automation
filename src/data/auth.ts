@@ -1,8 +1,19 @@
+import { users } from './users';
+import { resetTestData } from './test-secrets';
+
+const pickEnv = (key: string, fallback: string): string => {
+  const value = process.env[key];
+  if (!value || value.trim().length === 0) return fallback;
+  return value.trim();
+};
+
 export const authInputs = {
-  wrongPassword: 'wrong_password',
-  wrongUsername: 'wrong_username',
-  duplicateEmail: 'user@robotstore.com',
-  duplicatePassword: 'user123',
+  wrongPassword: pickEnv('TEST_WRONG_PASSWORD', users.invalid.password),
+  wrongUsername: pickEnv('TEST_WRONG_USERNAME', users.invalid.username),
+  duplicateEmail: users.user.email,
+  duplicatePassword: users.user.password,
+  nonExistentEmail: resetTestData.nonExistentEmail,
+  invalidResetToken: resetTestData.invalidToken,
   loginLinkText: 'Log in'
 } as const;
 

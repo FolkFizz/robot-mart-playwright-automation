@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from './base.page';
 import { routes } from '@config/constants';
 import { parseMoney } from '@utils/money';
@@ -12,6 +12,8 @@ export class HomePage extends BasePage {
   private readonly applyFilterButton: Locator;
   private readonly categoryList: Locator;
   private readonly emptyState: Locator;
+  private readonly navigation: Locator;
+  private readonly headingAllProducts: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -27,6 +29,8 @@ export class HomePage extends BasePage {
     this.categoryList = this.page.locator('.category-list');
     // empty state
     this.emptyState = this.page.getByText('No bots found matching your criteria.');
+    this.navigation = this.page.locator('nav, .navbar, .header, [role="navigation"]').first();
+    this.headingAllProducts = this.page.getByRole('heading', { name: /All Products/i });
   }
 
   // เปิดหน้า home
@@ -116,6 +120,10 @@ export class HomePage extends BasePage {
     return await this.getByTestId(`product-title-${id}`).innerText();
   }
 
+  async expectProductCardTitleContains(id: number | string, pattern: string | RegExp): Promise<void> {
+    await expect(this.getByTestId(`product-title-${id}`)).toContainText(pattern);
+  }
+
   async getProductCardPriceText(id: number | string): Promise<string> {
     return await this.getByTestId(`product-price-${id}`).innerText();
   }
@@ -148,6 +156,10 @@ export class HomePage extends BasePage {
     return await this.page.locator('[data-testid^="product-card-"]').count();
   }
 
+  async isNavigationVisible(): Promise<boolean> {
+    return await this.navigation.isVisible().catch(() => false);
+  }
+
   // อ่านราคาสินค้าทั้งหมดที่แสดงอยู่
   async getVisibleProductPriceTexts(): Promise<string[]> {
     return await this.page.locator('[data-testid^="product-price-"]').allInnerTexts();
@@ -176,5 +188,118 @@ export class HomePage extends BasePage {
   // เช็คว่า empty state แสดงหรือไม่
   async isEmptyStateVisible(): Promise<boolean> {
     return await this.emptyState.isVisible().catch(() => false);
+  }
+
+  getA11yExcludeSelectors(): string[] {
+    return [
+      '.chat-toggle',
+      '.reset-link',
+      'h2 > span',
+      '.stock-status .in-stock',
+      'select.sort-select'
+    ];
+  }
+
+  getContrastIncludeSelectors(): string[] {
+    return [
+      'input[placeholder="Search models..."]',
+      'input.filter-input[name="minPrice"]',
+      'input.filter-input[name="maxPrice"]',
+      '.btn-filter'
+    ];
+  }
+
+  async pressTabFromPageRoot(): Promise<void> {
+    await this.page.keyboard.press('Tab');
+  }
+
+  async isFocusedElementVisible(): Promise<boolean> {
+    return await this.page.locator(':focus').isVisible().catch(() => false);
+  }
+
+  async getFocusedElementTagName(): Promise<string> {
+    return await this.page.locator(':focus').evaluate((el) => el.tagName.toLowerCase());
+  }
+
+  async focusSearchInput(): Promise<void> {
+    await this.searchInput.focus();
+  }
+
+  async isSearchInputFocused(): Promise<boolean> {
+    return await this.searchInput.evaluate((el) => el === document.activeElement);
+  }
+
+  async submitSearchWithEnter(term: string): Promise<void> {
+    await this.searchInput.fill(term);
+    await this.searchInput.press('Enter');
+  }
+
+  async hasResultsOrEmptyState(): Promise<boolean> {
+    const hasAnyResult = (await this.getProductCount()) > 0;
+    const emptyStateVisible = await this.isEmptyStateVisible();
+    return hasAnyResult || emptyStateVisible;
+  }
+
+  async focusFirstCategoryLink(): Promise<void> {
+    await this.page.locator('.category-list a[href*="category="]').first().focus();
+  }
+
+  async isFirstCategoryLinkFocused(): Promise<boolean> {
+    const categoryLink = this.page.locator('.category-list a[href*="category="]').first();
+    return await categoryLink.evaluate((el) => el === document.activeElement);
+  }
+
+  async activateFocusedElement(): Promise<void> {
+    await this.page.keyboard.press('Enter');
+  }
+
+  async focusSortSelect(): Promise<void> {
+    await this.sortSelect.focus();
+  }
+
+  async isSortSelectFocused(): Promise<boolean> {
+    return await this.sortSelect.evaluate((el) => el === document.activeElement);
+  }
+
+  async isCatalogHeadingVisible(): Promise<boolean> {
+    return await this.headingAllProducts.isVisible().catch(() => false);
+  }
+
+  async getProductCardViewportMetrics(id: number | string): Promise<{
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+    width: number;
+    height: number;
+    viewportWidth: number;
+    viewportHeight: number;
+  }> {
+    const card = this.getByTestId(`product-card-${id}`);
+    return await card.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      return {
+        left: r.left,
+        top: r.top,
+        right: r.right,
+        bottom: r.bottom,
+        width: r.width,
+        height: r.height,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight
+      };
+    });
+  }
+
+  async scrollProductCardIntoView(id: number | string): Promise<void> {
+    await this.getByTestId(`product-card-${id}`).scrollIntoViewIfNeeded();
+  }
+
+  async isFirstCategoryLinkVisible(): Promise<boolean> {
+    return await this.page.locator('.category-list a[href*="category="]').first().isVisible().catch(() => false);
+  }
+
+  async isSortSelectVisible(): Promise<boolean> {
+    return await this.sortSelect.isVisible().catch(() => false);
   }
 }

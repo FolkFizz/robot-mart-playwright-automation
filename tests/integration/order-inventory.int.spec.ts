@@ -2,7 +2,7 @@ import type { APIRequestContext } from '@playwright/test';
 import { test, expect, seedCart, resetAndSeed } from '@fixtures';
 import { createApiContext, disableChaos, loginAsUser } from '@api';
 import { routes } from '@config';
-import { seededProducts } from '@data';
+import { seededProducts, buildTestEmail, isolatedUserPassword } from '@data';
 
 /**
  * =============================================================================
@@ -115,8 +115,8 @@ const createIsolatedUserContext = async (label: string): Promise<APIRequestConte
   const ctx = await createApiContext();
   const token = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${label}`;
   const username = `ordinv_${token}`;
-  const email = `${username}@example.com`;
-  const password = 'Pass12345!';
+  const email = buildTestEmail(username);
+  const password = isolatedUserPassword;
 
   const registerRes = await ctx.post(routes.register, {
     form: { username, email, password, confirmPassword: password },

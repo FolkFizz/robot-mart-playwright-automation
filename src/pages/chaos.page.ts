@@ -43,6 +43,14 @@ export class ChaosPage extends BasePage {
     return this.page.locator(`input[type="checkbox"][name="${name}"]`);
   }
 
+  async hasToggleInput(name: ChaosToggle): Promise<boolean> {
+    return (await this.toggleInput(name).count()) === 1;
+  }
+
+  async isSaveButtonVisible(): Promise<boolean> {
+    return await this.saveButton.first().isVisible().catch(() => false);
+  }
+
   async setToggle(name: ChaosToggle, enabled: boolean): Promise<void> {
     const checkbox = this.toggleInput(name);
     await checkbox.waitFor({ state: 'attached' });

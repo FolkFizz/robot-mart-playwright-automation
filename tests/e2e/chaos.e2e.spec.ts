@@ -3,6 +3,7 @@ import { disableChaos, resetChaos, setChaosConfig } from '@api';
 import { chaosStatusText, chaosToggles, seededProducts } from '@data';
 import { routes } from '@config';
 import type { Page } from '@playwright/test';
+import { CartPage } from '@pages';
 
 /**
  * =============================================================================
@@ -94,16 +95,18 @@ const chaosConfigForSingleToggle = (toggle: (typeof allChaosToggles)[number]) =>
 });
 
 const reachCheckoutFromSeededCart = async (page: Page, attempts = 10): Promise<boolean> => {
+  const cartPage = new CartPage(page);
+
   for (let i = 0; i < attempts; i++) {
     try {
-      await page.goto(routes.cart, { waitUntil: 'domcontentloaded', timeout: 12_000 });
-      const itemCount = await page.locator('[data-testid^="cart-item-"]').count();
+      await cartPage.goto();
+      const itemCount = await cartPage.getItemCount();
       if (itemCount < 1) {
         await sleep(500);
         continue;
       }
 
-      await page.getByTestId('cart-checkout').click({ timeout: 10_000 }).catch(() => null);
+      await cartPage.proceedToCheckoutWithFallback().catch(() => null);
       await sleep(2000);
 
       if (isCheckoutUrl(page.url())) {
@@ -141,22 +144,22 @@ test.describe('chaos comprehensive @e2e @chaos', () => {
   });
 
   test.describe('positive cases', () => {
-    test('CHAOS-P01: chaos lab renders all toggle controls @e2e @chaos @smoke', async ({ page, chaosPage }) => {
+    test('CHAOS-P01: chaos lab renders all toggle controls @e2e @chaos @smoke', async ({ chaosPage }) => {
       await chaosPage.goto();
 
       for (const toggle of allChaosToggles) {
-        await expect(page.locator(`input[type="checkbox"][name="${toggle}"]`)).toHaveCount(1);
+        expect(await chaosPage.hasToggleInput(toggle)).toBe(true);
       }
-      await expect(page.locator('button.btn-save, button:has-text("Apply Configuration")').first()).toBeVisible();
+      expect(await chaosPage.isSaveButtonVisible()).toBe(true);
       expect(await chaosPage.getStatusText()).toBe(chaosStatusText.normal);
     });
 
-    test('CHAOS-P02: enabling layout-shift via UI persists after reload @e2e @chaos @regression', async ({ page, chaosPage }) => {
+    test('CHAOS-P02: enabling layout-shift via UI persists after reload @e2e @chaos @regression', async ({ chaosPage }) => {
       await chaosPage.goto();
       await chaosPage.setToggle(chaosToggles.layoutShift, true);
       await chaosPage.applyChanges();
 
-      await page.reload({ waitUntil: 'domcontentloaded' });
+      await chaosPage.reloadDomReady();
       expect(await chaosPage.getToggleState(chaosToggles.layoutShift)).toBe(true);
       expect(await chaosPage.getStatusText()).toBe(chaosStatusText.active);
     });

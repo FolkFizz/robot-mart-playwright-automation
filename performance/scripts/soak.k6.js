@@ -2,7 +2,7 @@ import http from 'k6/http';
 import { group, sleep, check } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 import { SharedArray } from 'k6/data';
-import { app } from '../lib/config.js';
+import { app, perfAuth } from '../lib/config.js';
 import { headers } from '../lib/http.js';
 import { soak } from '../scenarios/index.js';
 import { soakThresholds } from '../thresholds/index.js';
@@ -41,8 +41,8 @@ const QUICK_SCENARIO = {
 };
 
 const TEST_USER = {
-    username: __ENV.PERF_USER || 'user',
-    password: __ENV.PERF_PASSWORD || 'user123',
+    username: perfAuth.username,
+    password: perfAuth.password,
 };
 
 const toPositiveInt = (value, fallback) => {

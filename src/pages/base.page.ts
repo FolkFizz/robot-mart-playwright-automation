@@ -49,6 +49,18 @@ export class BasePage {
         await this.page.waitForLoadState('networkidle');
     }
 
+    async reloadDomReady(): Promise<void> {
+        await this.page.reload({ waitUntil: 'domcontentloaded' });
+    }
+
+    async sleep(ms: number): Promise<void> {
+        await this.page.waitForTimeout(ms);
+    }
+
+    async getBodyText(): Promise<string> {
+        return await this.page.locator('body').innerText().catch(() => '');
+    }
+
     // รอ Toast (default: รอให้โผล่)
     async waitForToast(options: {
         testId?: string;

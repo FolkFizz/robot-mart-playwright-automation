@@ -2,7 +2,7 @@ import type { APIRequestContext, Page } from '@playwright/test';
 import { test, expect, seedCart } from '@fixtures';
 import { createApiContext, disableChaos, loginAsAdmin, loginAsUser } from '@api';
 import { routes } from '@config';
-import { seededProducts } from '@data';
+import { seededProducts, buildTestEmail, isolatedUserPassword } from '@data';
 
 /**
  * =============================================================================
@@ -65,8 +65,8 @@ const registerAndLoginIsolatedUserContext = async (label: string): Promise<APIRe
   const ctx = await createApiContext();
   const token = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${label}`;
   const username = `authz_${token}`;
-  const email = `${username}@example.com`;
-  const password = 'Pass12345!';
+  const email = buildTestEmail(username);
+  const password = isolatedUserPassword;
 
   const registerRes = await ctx.post(routes.register, {
     form: { username, email, password, confirmPassword: password },
@@ -117,7 +117,7 @@ test.describe('authorization security @security @authz', () => {
   });
 
   test.describe('positive cases', () => {
-    test('AUTHZ-P01: admin can access admin dashboard and admin notifications API @security @authz @smoke', async ({ api, page }) => {
+    test('AUTHZ-P01: admin can access admin dashboard and admin notifications API @security @authz @smoke', async ({ api, page, adminDashboardPage }) => {
       await loginAsAdmin(api);
       await syncSessionFromApi(api, page);
 
@@ -129,12 +129,11 @@ test.describe('authorization security @security @authz', () => {
       const adminNotificationsBody = await adminNotificationsRes.json();
       expect(adminNotificationsBody.status).toBe('success');
 
-      const dashboardRes = await page.goto(routes.admin.dashboard, { waitUntil: 'domcontentloaded' });
-      expect(dashboardRes?.status()).toBe(200);
+      await adminDashboardPage.goto();
       expect(page.url()).toContain(routes.admin.dashboard);
     });
 
-    test('AUTHZ-P02: authenticated user can access own protected resources @security @authz @regression', async ({ api, page }) => {
+    test('AUTHZ-P02: authenticated user can access own protected resources @security @authz @regression', async ({ api, page, profilePage }) => {
       await loginAsUser(api);
       await syncSessionFromApi(api, page);
 
@@ -146,8 +145,7 @@ test.describe('authorization security @security @authz', () => {
       const notificationsBody = await notificationsRes.json();
       expect(notificationsBody.status).toBe('success');
 
-      const profileRes = await page.goto(`${routes.profile}?tab=orders`, { waitUntil: 'domcontentloaded' });
-      expect(profileRes?.status()).toBe(200);
+      await profilePage.gotoTab('orders');
       await expect(page).toHaveURL(/\/profile\?tab=orders/);
     });
   });
@@ -222,12 +220,12 @@ test.describe('authorization security @security @authz', () => {
       expect(afterLogout.headers()['location'] ?? '').toContain('/login');
     });
 
-    test('AUTHZ-N07: anonymous cannot access profile orders page @security @authz @regression', async ({ page }) => {
+    test('AUTHZ-N07: anonymous cannot access profile orders page @security @authz @regression', async ({ page, profilePage, loginPage }) => {
       await page.context().clearCookies();
-      await page.goto(`${routes.profile}?tab=orders`, { waitUntil: 'domcontentloaded' });
+      await profilePage.gotoTab('orders');
 
       const redirectedToLogin = /\/login/.test(page.url());
-      const hasLoginForm = (await page.locator('input[name="username"], input[name="email"], [data-testid="login-username"]').count()) > 0;
+      const hasLoginForm = await loginPage.hasAnyLoginInputVisible();
       expect(redirectedToLogin || hasLoginForm).toBe(true);
     });
   });

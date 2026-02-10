@@ -11,9 +11,11 @@ import {
   ProductPage,
   CartPage,
   CheckoutPage,
+  ChatWidgetPage,
   LoginPage,
   RegisterPage,
   ForgotPasswordPage,
+  ResetPasswordPage,
   ChaosPage,
   ProfilePage,
   ClaimsPage,
@@ -37,11 +39,13 @@ type TestFixtures = {
   productPage: ProductPage;
   cartPage: CartPage;
   checkoutPage: CheckoutPage;
+  chatWidgetPage: ChatWidgetPage;
   chaosPage: ChaosPage;
   // Auth Page Objects
   loginPage: LoginPage;
   registerPage: RegisterPage;
   forgotPasswordPage: ForgotPasswordPage;
+  resetPasswordPage: ResetPasswordPage;
   // User Page Objects
   profilePage: ProfilePage;
   claimsPage: ClaimsPage;
@@ -112,6 +116,9 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   checkoutPage: async ({ page }, use) => {
     await use(new CheckoutPage(page));
   },
+  chatWidgetPage: async ({ page }, use) => {
+    await use(new ChatWidgetPage(page));
+  },
   chaosPage: async ({ page }, use) => {
     await use(new ChaosPage(page));
   },
@@ -124,6 +131,9 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   },
   forgotPasswordPage: async ({ page }, use) => {
     await use(new ForgotPasswordPage(page));
+  },
+  resetPasswordPage: async ({ page }, use) => {
+    await use(new ResetPasswordPage(page));
   },
   // User Page Objects
   profilePage: async ({ page }, use) => {

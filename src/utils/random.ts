@@ -15,8 +15,10 @@ export const randomString = (length = 8) => {
   return result;
 };
 
+const randomEmailDomain = process.env.TEST_EMAIL_DOMAIN?.trim() || 'example.com';
+
 export const randomEmail = (prefix = 'user') => {
-  return `${prefix}.${randomString(6)}@example.com`;
+  return `${prefix}.${randomString(6)}@${randomEmailDomain}`;
 };
 
 // --- เพิ่ม helper ใหม่ ---
