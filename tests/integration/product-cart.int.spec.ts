@@ -1,8 +1,9 @@
 import type { APIRequestContext } from '@playwright/test';
-import { test, expect, loginAndSyncSession, seedCart, resetAndSeed } from '@fixtures';
+import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { disableChaos, loginAsUser } from '@api';
 import { routes } from '@config';
 import { seededProducts } from '@data';
+import { ensureProductStock } from '../helpers/inventory';
 
 /**
  * =============================================================================
@@ -119,7 +120,8 @@ test.describe('product to cart integration @integration @cart', () => {
   });
 
   test.beforeEach(async ({ api, page }) => {
-    await resetAndSeed(FIXED_STOCK);
+    await ensureProductStock(api, firstProduct.id, FIXED_STOCK);
+    await ensureProductStock(api, secondProduct.id, FIXED_STOCK);
     await loginAndSyncSession(api, page);
     await seedCart(api, []);
   });
@@ -164,7 +166,7 @@ test.describe('product to cart integration @integration @cart', () => {
 
   test.describe('negative cases', () => {
     test('PROD-CART-INT-N01: out-of-stock product cannot be added via API @integration @cart @regression', async ({ api }) => {
-      await resetAndSeed(0);
+      await ensureProductStock(api, firstProduct.id, 0);
       await loginAsUser(api);
       await seedCart(api, []);
 

@@ -133,7 +133,7 @@ test.describe('notifications integration @integration @notifications', () => {
         maxRedirects: 0
       });
       expect(res.status()).toBe(302);
-      expect(res.headers()['location'] ?? '').toContain('/login');
+      expect(res.headers()['location'] ?? '').toContain(routes.login);
     });
   });
 
@@ -143,9 +143,9 @@ test.describe('notifications integration @integration @notifications', () => {
       await notificationsPage.open();
       await notificationsPage.markAllRead();
 
-      await notificationsPage.waitAfterMarkAllRead();
-      const body = await fetchNotifications(api);
-      expect(body.unreadCount).toBe(0);
+      await expect
+        .poll(async () => (await fetchNotifications(api)).unreadCount, { timeout: 5_000 })
+        .toBe(0);
     });
 
     test('NOTIF-INT-E02: UI handles bounded notification list size @integration @notifications @regression', async ({ api, homePage, notificationsPage }) => {

@@ -126,7 +126,7 @@ test.describe('authentication comprehensive @e2e @auth', () => {
       await registerPage.register(user.username, user.email, user.password);
 
       // Assert: Redirected to login page
-      await expect(page).toHaveURL(/\/login/);
+      await expect(page).toHaveURL((url) => url.pathname === routes.login);
       await expect(loginPage.getUsernameInput()).toBeVisible();
     });
 
@@ -182,7 +182,7 @@ test.describe('authentication comprehensive @e2e @auth', () => {
       const link = await inboxPage.getFirstEmailLinkHref();
       
       expect(link ?? '').toContain(routes.resetPasswordBase);
-      expect(link ?? '').toMatch(/\/reset-password\//);
+      expect(link ?? '').toContain(`${routes.resetPasswordBase}/`);
     });
 
     test('AUTH-P06: reset password with valid token succeeds @e2e @auth @regression @destructive', async ({ page, forgotPasswordPage, inboxPage, loginPage, resetPasswordPage }) => {
@@ -207,7 +207,7 @@ test.describe('authentication comprehensive @e2e @auth', () => {
       await resetPasswordPage.expectSuccessContains(/successful|login/i);
 
       // Step 6: Verify can login with new password
-      if (!page.url().includes('/login')) {
+      if (!page.url().includes(routes.login)) {
         await loginPage.goto();
       }
       await loginPage.login(users.user.username, newPassword);
@@ -231,7 +231,7 @@ test.describe('authentication comprehensive @e2e @auth', () => {
 
     test('AUTH-N07: reset with expired token fails @e2e @auth @regression @destructive', async ({ api, resetPasswordPage }) => {
       // Arrange: Create an expired token via test API
-      const expiredTokenRes = await api.post('/api/test/create-expired-reset-token', {
+      const expiredTokenRes = await api.post(routes.api.testCreateExpiredResetToken, {
         data: { email: users.user.email }
       });
       

@@ -1,8 +1,9 @@
 import type { APIRequestContext } from '@playwright/test';
-import { test, expect, loginAndSyncSession, seedCart, resetAndSeed } from '@fixtures';
+import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { disableChaos } from '@api';
 import { routes } from '@config';
 import { seededProducts } from '@data';
+import { registerAndLoginIsolatedUser } from '../helpers/users';
 
 /**
  * =============================================================================
@@ -28,7 +29,7 @@ import { seededProducts } from '@data';
  *
  * NEGATIVE CASES (2 tests):
  *   - ORD-HIST-N01: unauthenticated user cannot access order history tab
- *   - ORD-HIST-N02: empty order history shows empty state after reset
+ *   - ORD-HIST-N02: empty order history shows empty state for a newly registered user
  *
  * EDGE CASES (2 tests):
  *   - ORD-HIST-E01: multiple newly created orders are sorted newest first
@@ -56,7 +57,7 @@ const createOrderForUser = async (
     headers: { Accept: 'application/json' }
   });
 
-  expect(createOrderRes.ok()).toBeTruthy();
+  expect(createOrderRes.status()).toBe(200);
   const createOrderBody = await createOrderRes.json();
   expect(createOrderBody.status).toBe('success');
   expect(typeof createOrderBody.orderId).toBe('string');
@@ -80,7 +81,7 @@ test.describe('order history comprehensive @e2e @orders', () => {
     test('ORD-HIST-P01: orders tab loads and shows list or empty state @e2e @orders @smoke', async ({ page, profilePage }) => {
       await profilePage.gotoTab('orders');
 
-      await expect(page).toHaveURL(/\/profile\?tab=orders/);
+      await expect(page).toHaveURL((url) => `${url.pathname}${url.search}` === routes.profileOrders);
       await profilePage.expectOrderHistoryHeadingVisible();
 
       const orderCount = await profilePage.getOrderCount();
@@ -122,17 +123,18 @@ test.describe('order history comprehensive @e2e @orders', () => {
 
       await profilePage.gotoTab('orders');
       await profilePage.expectOrderCardVisible(orderId);
-      await profilePage.expectInvoiceHrefByOrderId(orderId, new RegExp(`/order/invoice/${orderId}`));
+      await profilePage.expectInvoiceHrefByOrderId(orderId, routes.order.invoice(orderId));
 
       const beforeUrl = page.url();
       await profilePage.clickInvoiceLinkByOrderId(orderId);
       if (page.url() === beforeUrl) {
         const href = await profilePage.getInvoiceHrefByOrderId(orderId);
-        expect(href).toBeTruthy();
+        expect(typeof href).toBe('string');
+        expect(href ?? '').toContain(routes.order.invoiceBase);
         await page.goto(href as string, { waitUntil: 'domcontentloaded' });
       }
 
-      await expect(page).toHaveURL(new RegExp(`/order/invoice/${orderId}`));
+      await expect(page).toHaveURL((url) => url.pathname === routes.order.invoice(orderId));
     });
   });
 
@@ -141,17 +143,19 @@ test.describe('order history comprehensive @e2e @orders', () => {
       await page.context().clearCookies();
       await profilePage.gotoTab('orders');
 
-      const redirectedToLogin = /\/login/.test(page.url());
+      const redirectedToLogin = page.url().includes(routes.login);
       const hasLoginInput = await loginPage.hasAnyLoginInputVisible();
       expect(redirectedToLogin || hasLoginInput).toBe(true);
     });
 
-    test('ORD-HIST-N02: empty order history shows empty state after reset @e2e @orders @regression @destructive', async ({ api, page, profilePage }) => {
-      await resetAndSeed();
-      await loginAndSyncSession(api, page);
+    test('ORD-HIST-N02: empty order history shows empty state for a new user @e2e @orders @regression @destructive', async ({ api, page, profilePage }) => {
+      await registerAndLoginIsolatedUser(api, { prefix: 'orders' });
+      const storage = await api.storageState();
+      await page.context().clearCookies();
+      await page.context().addCookies(storage.cookies);
 
       await profilePage.gotoTab('orders');
-      await expect(page).toHaveURL(/\/profile\?tab=orders/);
+      await expect(page).toHaveURL((url) => `${url.pathname}${url.search}` === routes.profileOrders);
 
       expect(await profilePage.getOrderCount()).toBe(0);
       await profilePage.expectNoOrdersVisible();
@@ -161,7 +165,6 @@ test.describe('order history comprehensive @e2e @orders', () => {
   test.describe('edge cases', () => {
     test('ORD-HIST-E01: multiple newly created orders are sorted newest first @e2e @orders @regression @destructive', async ({ api, profilePage }) => {
       const olderOrderId = await createOrderForUser(api, [{ id: seededProducts[0].id, quantity: 1 }]);
-      await profilePage.sleep(30);
       const newerOrderId = await createOrderForUser(api, [{ id: seededProducts[1].id, quantity: 1 }]);
 
       await profilePage.gotoTab('orders');
@@ -181,7 +184,7 @@ test.describe('order history comprehensive @e2e @orders', () => {
       const beforeReloadCount = await profilePage.getOrderCount();
 
       await profilePage.reloadDomReady();
-      await expect(page).toHaveURL(/\/profile\?tab=orders/);
+      await expect(page).toHaveURL((url) => `${url.pathname}${url.search}` === routes.profileOrders);
       await profilePage.expectOrderCardVisible(orderId);
 
       const afterReloadCount = await profilePage.getOrderCount();

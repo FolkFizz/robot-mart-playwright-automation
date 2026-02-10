@@ -65,7 +65,10 @@ export class ResetPasswordPage extends BasePage {
   }
 
   async waitForLoginOrReset(timeoutMs = 5000): Promise<void> {
-    await this.page.waitForURL(/\/(login|reset-password)/, { timeout: timeoutMs });
+    await this.page.waitForURL(
+      (url) => url.pathname === routes.login || url.pathname.startsWith(routes.resetPasswordBase),
+      { timeout: timeoutMs }
+    );
   }
 
   async hasLoginInputVisible(): Promise<boolean> {

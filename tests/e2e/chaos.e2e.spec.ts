@@ -79,9 +79,19 @@ const gotoWithRetries = async (page: Page, url: string, attempts = 5): Promise<b
   return false;
 };
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-const isCheckoutUrl = (url: string) => url.includes('/order/checkout') || url.includes('/order/place');
-const checkoutPaths = [routes.checkout, '/order/place'];
+const isCheckoutUrl = (url: string) => url.includes(routes.order.checkout) || url.includes(routes.order.place);
+const checkoutPaths = [routes.order.checkout, routes.order.place];
+const waitForCheckoutUrl = async (page: Page, timeoutMs = 2_500): Promise<boolean> => {
+  try {
+    await page.waitForURL(
+      (url) => isCheckoutUrl(url.toString()),
+      { timeout: timeoutMs, waitUntil: 'domcontentloaded' }
+    );
+    return true;
+  } catch {
+    return isCheckoutUrl(page.url());
+  }
+};
 
 const chaosConfigForSingleToggle = (toggle: (typeof allChaosToggles)[number]) => ({
   dynamicIds: toggle === chaosToggles.dynamicIds,
@@ -102,18 +112,16 @@ const reachCheckoutFromSeededCart = async (page: Page, attempts = 10): Promise<b
       await cartPage.goto();
       const itemCount = await cartPage.getItemCount();
       if (itemCount < 1) {
-        await sleep(500);
+        await page.waitForLoadState('networkidle', { timeout: 1_500 }).catch(() => undefined);
         continue;
       }
 
       await cartPage.proceedToCheckoutWithFallback().catch(() => null);
-      await sleep(2000);
-
-      if (isCheckoutUrl(page.url())) {
+      if (await waitForCheckoutUrl(page, 3_000)) {
         return true;
       }
     } catch {
-      await sleep(500);
+      await page.waitForLoadState('domcontentloaded', { timeout: 1_000 }).catch(() => undefined);
     }
   }
 
@@ -126,7 +134,7 @@ const reachCheckoutFromSeededCart = async (page: Page, attempts = 10): Promise<b
           return true;
         }
       } catch {
-        await sleep(800);
+        await page.waitForLoadState('domcontentloaded', { timeout: 1_000 }).catch(() => undefined);
       }
     }
   }
@@ -187,7 +195,7 @@ test.describe('chaos comprehensive @e2e @chaos', () => {
       expect(await homePage.hasProducts()).toBe(true);
 
       await homePage.clickProductById(seededProducts[0].id);
-      await expect(page).toHaveURL(new RegExp(`/product/${seededProducts[0].id}`));
+      expect(page.url()).toContain(routes.productDetail(seededProducts[0].id));
       expect(await productPage.getTitle()).toContain(seededProducts[0].name);
     });
   });

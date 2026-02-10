@@ -1,5 +1,6 @@
 ﻿import type { Page } from '@playwright/test';
 import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
+import { routes } from '@config';
 import { seededProducts } from '@data';
 import { CartPage, CheckoutPage } from '@pages';
 
@@ -53,7 +54,7 @@ test.describe('checkout accessibility @a11y @checkout', () => {
   const openCheckoutFromCart = async (page: Page, cartPage: CartPage, checkoutPage: CheckoutPage) => {
     await cartPage.goto();
     await cartPage.proceedToCheckoutWithFallback();
-    await expect(page).toHaveURL(/\/order\/checkout/);
+    await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout);
     await checkoutPage.waitForDomReady();
   };
 
@@ -98,7 +99,7 @@ test.describe('checkout accessibility @a11y @checkout', () => {
 
       // Assert: Payment elements should be accessible
       // Either Stripe element or mock payment should be keyboard accessible
-      await checkoutPage.sleep(1000);
+      await checkoutPage.waitForPaymentUiReady();
       expect(await checkoutPage.hasMockOrStripePaymentUi()).toBe(true);
     });
 
@@ -175,7 +176,7 @@ test.describe('checkout accessibility @a11y @checkout', () => {
       expect(emailIsValid).toBe(false);
       expect(nameValidationMessage.length).toBeGreaterThan(0);
       expect(emailValidationMessage.length).toBeGreaterThan(0);
-      await expect(page).toHaveURL(/\/order\/checkout/);
+      await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout);
     });
   });
 
@@ -217,5 +218,6 @@ test.describe('checkout accessibility @a11y @checkout', () => {
     });
   });
 });
+
 
 

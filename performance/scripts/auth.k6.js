@@ -4,6 +4,8 @@ import { Counter } from 'k6/metrics';
 import { app, perfAuth } from '../lib/config.js';
 import { ramping } from '../scenarios/index.js';
 import { headers } from '../lib/http.js';
+import { authThresholds } from '../thresholds/index.js';
+import { getLocation, isAuthRedirect } from '../lib/perf-helpers.js';
 
 /**
  * =============================================================================
@@ -34,24 +36,8 @@ export const options = {
     scenarios: {
         auth: ramping,
     },
-    thresholds: {
-        'http_req_duration{endpoint:auth_login}': ['p(95)<1000'],
-        'http_req_failed{endpoint:auth_login}': ['rate<0.01'],
-        auth_unexpected: ['count==0'],
-        profile_success: ['count>0'],
-    },
+    thresholds: authThresholds,
 };
-
-function getLocation(res) {
-    return String((res && (res.headers.Location || res.headers.location)) || '');
-}
-
-function isAuthRedirect(res) {
-    if (!res || (res.status !== 302 && res.status !== 303)) {
-        return false;
-    }
-    return getLocation(res).includes('/login');
-}
 
 export default function () {
     const loginRes = group('Login', () =>

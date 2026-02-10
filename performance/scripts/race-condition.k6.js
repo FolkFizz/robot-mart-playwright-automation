@@ -4,6 +4,15 @@ import { Counter, Trend } from 'k6/metrics';
 import { app, perfAuth } from '../lib/config.js';
 import { headers } from '../lib/http.js';
 import { concurrent } from '../scenarios/index.js';
+import { raceThresholds } from '../thresholds/index.js';
+import {
+    toPositiveInt,
+    parseProductsPayload,
+    getLocation,
+    isAuthRedirect,
+    isStockLimitResponse,
+    resetStockIfNeeded,
+} from '../lib/perf-helpers.js';
 
 /**
  * =============================================================================
@@ -30,11 +39,6 @@ const TEST_USER = {
     password: perfAuth.password,
 };
 
-const toPositiveInt = (value, fallback) => {
-    const parsed = Number(value);
-    return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
-};
-
 const TARGET_PRODUCT = {
     id: Number(__ENV.PERF_RACE_PRODUCT_ID || 0),
     quantity: toPositiveInt(__ENV.PERF_RACE_QUANTITY, 1),
@@ -48,69 +52,12 @@ const rejectedPurchases = new Counter('rejected_purchases');
 const unexpectedPurchases = new Counter('unexpected_purchases');
 const checkoutDuration = new Trend('checkout_duration');
 
-const raceCustomThresholds = {
-    'http_req_duration{endpoint:checkout_mock_pay}': ['p(95)<5000'],
-    'http_req_failed{endpoint:checkout_mock_pay}': ['rate<0.10'],
-    successful_purchases: ['count>0'],
-    unexpected_purchases: ['count==0'],
-};
-
 export const options = {
     scenarios: {
         race_checkout: concurrent,
     },
-    thresholds: raceCustomThresholds,
+    thresholds: raceThresholds,
 };
-
-function getLocation(res) {
-    return String((res && (res.headers.Location || res.headers.location)) || '');
-}
-
-function isCartRedirect(res) {
-    if (!res || (res.status !== 302 && res.status !== 303)) {
-        return false;
-    }
-    return getLocation(res).includes('/cart?error=');
-}
-
-function isAuthRedirect(res) {
-    if (!res || (res.status !== 302 && res.status !== 303)) {
-        return false;
-    }
-    return getLocation(res).includes('/login');
-}
-
-function isStockRejectResponse(res) {
-    if (!res) {
-        return false;
-    }
-
-    if (res.status === 400) {
-        return true;
-    }
-
-    if (isCartRedirect(res)) {
-        return getLocation(res).toLowerCase().includes('stock');
-    }
-
-    return false;
-}
-
-function parseProductsPayload(res) {
-    if (!res || res.status !== 200) {
-        return [];
-    }
-
-    try {
-        const body = res.json();
-        if (!body || body.ok !== true || !Array.isArray(body.products)) {
-            return [];
-        }
-        return body.products;
-    } catch (_error) {
-        return [];
-    }
-}
 
 function pickTargetProduct(products) {
     const inStockProducts = [];
@@ -192,28 +139,7 @@ function authenticate() {
 export function setup() {
     console.log(`[Setup] Race test target: ${app.baseURL}`);
 
-    if (RESET_STOCK) {
-        if (!RESET_KEY) {
-            console.warn('[Setup] PERF_RESET_STOCK=true but RESET_KEY is missing. Skipping stock reset.');
-        } else {
-            const resetRes = http.post(
-                `${app.baseURL}/api/products/reset-stock`,
-                null,
-                {
-                    headers: { 'X-RESET-KEY': RESET_KEY },
-                    redirects: 0,
-                    tags: { endpoint: 'reset_stock' },
-                    responseCallback: http.expectedStatuses(200, 403),
-                }
-            );
-
-            if (resetRes.status === 200) {
-                console.log('[Setup] Stock reset completed.');
-            } else {
-                console.warn(`[Setup] Stock reset returned status=${resetRes.status}. Continuing without reset.`);
-            }
-        }
-    }
+    resetStockIfNeeded({ enabled: RESET_STOCK, resetKey: RESET_KEY });
 
     const productsRes = http.get(`${app.baseURL}/api/products`, {
         redirects: 0,
@@ -278,7 +204,7 @@ export default function (data) {
         );
 
         const handled = check(res, {
-            'race cart add handled': (r) => r.status === 200 || isStockRejectResponse(r),
+            'race cart add handled': (r) => r.status === 200 || isStockLimitResponse(r),
             'race cart add no 5xx': (r) => r.status < 500,
         });
 
@@ -307,7 +233,7 @@ export default function (data) {
         checkoutDuration.add(Date.now() - startedAt);
 
         const handled = check(checkoutRes, {
-            'race checkout handled': (r) => r.status === 200 || isStockRejectResponse(r) || isCartRedirect(r),
+            'race checkout handled': (r) => r.status === 200 || isStockLimitResponse(r),
             'race checkout no 5xx': (r) => r.status < 500,
         });
 

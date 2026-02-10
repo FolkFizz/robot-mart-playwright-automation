@@ -1,6 +1,6 @@
 ﻿import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { disableChaos } from '@api';
-import { SHIPPING } from '@config';
+import { SHIPPING, routes } from '@config';
 import { seededProducts, coupons, customer, validCard, paymentInputs, uiMessages } from '@data';
 import { CheckoutPage } from '@pages';
 
@@ -103,7 +103,7 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
 
       // Act: Proceed to checkout
       await cartPage.proceedToCheckout();
-      await expect(page).toHaveURL(/\/order\/checkout/);
+      await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout);
 
       // Assert: Stripe ready & totals match
       await checkoutPage.waitForStripeReady();
@@ -125,7 +125,7 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
 
       await cartPage.goto();
       await cartPage.proceedToCheckout();
-      await expect(page).toHaveURL(/\/order\/checkout/);
+      await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout);
 
       // Act: Submit payment (with retry logic)
       let result = await checkoutPage.submitStripePayment({ ...customer, card: validCard, timeoutMs: 30000 });
@@ -317,8 +317,8 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
       // Assert: Either redirected to cart OR blocked with empty-cart guard on checkout
       const url = page.url();
 
-      const redirectedToCart = /\/cart/.test(url);
-      const stayedOnCheckout = /\/order\/(checkout|place)/.test(url);
+      const redirectedToCart = url.includes(routes.cart);
+      const stayedOnCheckout = url.includes(routes.order.checkout) || url.includes(routes.order.place);
       const hasEmptyCartGuard = await checkoutPage.hasEmptyCartGuard([
         uiMessages.cartEmpty,
         'empty cart',
@@ -335,7 +335,7 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
 
       await cartPage.goto();
       await cartPage.proceedToCheckout();
-      await expect(page).toHaveURL(/\/order\/checkout/);
+      await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout);
       await checkoutPage.waitForDomReady();
 
       // Act: Clear name, try to submit
@@ -348,7 +348,7 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
       const isValid = await nameInput.evaluate((el) => (el as HTMLInputElement).checkValidity());
       expect(isValid).toBe(false);
       
-      await expect(page).toHaveURL(/\/order\/checkout/);
+      await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout);
     });
 
     test('CHK-N03: invalid email prevents submit @e2e @checkout @regression @destructive', async ({ api, page, cartPage, checkoutPage }) => {
@@ -357,7 +357,7 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
 
       await cartPage.goto();
       await cartPage.proceedToCheckout();
-      await expect(page).toHaveURL(/\/order\/checkout/);
+      await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout);
       await checkoutPage.waitForDomReady();
 
       // Act: Enter invalid email
@@ -369,7 +369,7 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
       const emailInput = checkoutPage.getEmailInput();
       const isValid = await emailInput.evaluate((el) => (el as HTMLInputElement).checkValidity());
       expect(isValid).toBe(false);
-      await expect(page).toHaveURL(/\/order\/checkout/);
+      await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout);
     });
 
     test('CHK-N04: empty email prevents submit @e2e @checkout @regression @destructive', async ({ api, page, cartPage, checkoutPage }) => {
@@ -378,7 +378,7 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
 
       await cartPage.goto();
       await cartPage.proceedToCheckout();
-      await expect(page).toHaveURL(/\/order\/checkout/);
+      await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout);
       await checkoutPage.waitForDomReady();
 
       // Act: Clear email, try submit
@@ -396,7 +396,7 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
       const emailInput = checkoutPage.getEmailInput();
       const isValid = await emailInput.evaluate((el) => (el as HTMLInputElement).checkValidity());
       expect(isValid).toBe(false);
-      await expect(page).toHaveURL(/\/order\/checkout/);
+      await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout);
     });
 
     test('CHK-N05: expired coupon rejected, totals unchanged @e2e @checkout @regression @destructive', async ({ api, cartPage }) => {
@@ -431,7 +431,7 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
       await seedCart(api, [{ id: firstProduct.id, quantity: 2 }]);
 
       // Act: Reduce stock to 1 (simulating concurrent purchase)
-      await api.post('/api/test/set-stock', {
+      await api.post(routes.api.testSetStock, {
         data: { productId: firstProduct.id, stock: 1 }
       });
 
@@ -440,11 +440,11 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
       await cartPage.proceedToCheckout();
 
       // Assert: Checkout must not end in successful order screen
-      await expect(page).not.toHaveURL(/\/order\/success/);
+      await expect(page).not.toHaveURL((url) => url.pathname === routes.orderSuccessBase);
       expect(
-        page.url().includes('/cart') ||
-          page.url().includes('/order/checkout') ||
-          page.url().includes('/order/place')
+        page.url().includes(routes.cart) ||
+          page.url().includes(routes.order.checkout) ||
+          page.url().includes(routes.order.place)
       ).toBe(true);
     });
   });

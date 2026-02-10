@@ -4,6 +4,9 @@ import { resetDb } from '@api/test-hooks.api';
 import { loginAsUser, loginAsAdmin } from '@api/auth.api';
 import { addToCart, clearCart } from '@api/cart.api';
 import { runA11y, expectNoA11yViolations } from '@utils/a11y';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 // Import all Page Objects
 import {
@@ -27,6 +30,44 @@ import {
   AdminInventoryPage,
   AdminOrdersPage
 } from '@pages';
+
+const seedRunId = process.env.PW_RUN_ID ?? 'local';
+const seedLockDir = path.join(os.tmpdir(), 'robot-store-playwright-seed');
+const seedDoneFile = path.join(seedLockDir, `${seedRunId}.done`);
+const seedLockFile = path.join(seedLockDir, `${seedRunId}.lock`);
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const seedOncePerRun = async (runSeed: () => Promise<void>): Promise<void> => {
+  fs.mkdirSync(seedLockDir, { recursive: true });
+  const deadline = Date.now() + 120_000;
+
+  while (Date.now() < deadline) {
+    if (fs.existsSync(seedDoneFile)) return;
+
+    try {
+      const lockFd = fs.openSync(seedLockFile, 'wx');
+      try {
+        if (!fs.existsSync(seedDoneFile)) {
+          await runSeed();
+          fs.writeFileSync(seedDoneFile, String(Date.now()));
+        }
+      } finally {
+        fs.closeSync(lockFd);
+        if (fs.existsSync(seedLockFile)) {
+          fs.unlinkSync(seedLockFile);
+        }
+      }
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== 'EEXIST') throw error;
+      await delay(250);
+    }
+  }
+
+  throw new Error(`[fixtures] Timed out waiting for seed lock: ${seedLockFile}`);
+};
 
 type TestFixtures = {
   api: APIRequestContext;
@@ -70,13 +111,15 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   _seed: [
     async ({ seedData }, use) => {
       if (seedData) {
-        const api = await createApiContext();
-        try {
-          const stockAll = process.env.SEED_STOCK ? Number(process.env.SEED_STOCK) : undefined;
-          await resetDb(api, { stockAll });
-        } finally {
-          await api.dispose();
-        }
+        await seedOncePerRun(async () => {
+          const api = await createApiContext();
+          try {
+            const stockAll = process.env.SEED_STOCK ? Number(process.env.SEED_STOCK) : undefined;
+            await resetDb(api, { stockAll });
+          } finally {
+            await api.dispose();
+          }
+        });
       }
       await use();
     },
@@ -182,14 +225,5 @@ export const seedCart = async (
   await clearCart(api);
   for (const item of items) {
     await addToCart(api, item.id, item.quantity ?? 1);
-  }
-};
-
-export const resetAndSeed = async (stockAll?: number) => {
-  const api = await createApiContext();
-  try {
-    await resetDb(api, { stockAll });
-  } finally {
-    await api.dispose();
   }
 };

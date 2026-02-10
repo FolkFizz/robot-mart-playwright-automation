@@ -1,5 +1,6 @@
 import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { disableChaos } from '@api';
+import { routes } from '@config';
 import { seededProducts, catalogSearch, coupons, uiMessages } from '@data';
 
 /**
@@ -100,7 +101,7 @@ test.describe('mobile viewport @e2e @mobile', () => {
       await cartPage.goto();
 
       // Assert: Cart page loads on mobile
-      await expect(page).toHaveURL(/\/cart/);
+      await expect(page).toHaveURL((url) => url.pathname === routes.cart);
       expect(await cartPage.getItemCount()).toBeGreaterThan(0);
 
       // Interact: Increase quantity via mobile controls
@@ -119,7 +120,7 @@ test.describe('mobile viewport @e2e @mobile', () => {
       await cartPage.proceedToCheckoutWithFallback();
 
       // Assert: Checkout page loads
-      await expect(page).toHaveURL(/\/order\/(checkout|place)/);
+      await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place);
 
       // Verify checkout controls visible
       expect(await checkoutPage.isNameInputVisible()).toBe(true);
@@ -138,8 +139,8 @@ test.describe('mobile viewport @e2e @mobile', () => {
 
       // Assert: Redirect to cart OR guarded checkout state
       const url = page.url();
-      const redirectedToCart = /\/cart/.test(url);
-      const stayedOnCheckout = /\/order\/(checkout|place)/.test(url);
+      const redirectedToCart = url.includes(routes.cart);
+      const stayedOnCheckout = url.includes(routes.order.checkout) || url.includes(routes.order.place);
       const hasGuard = await checkoutPage.hasEmptyCartGuard([
         uiMessages.cartEmpty,
         'cart is empty',
@@ -180,7 +181,7 @@ test.describe('mobile viewport @e2e @mobile', () => {
       await seedCart(api, [{ id: seededProducts[0].id, quantity: 1 }]);
       await cartPage.goto();
       await cartPage.proceedToCheckoutWithFallback();
-      await expect(page).toHaveURL(/\/order\/(checkout|place)/);
+      await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place);
 
       // Act: Fill invalid email and attempt submit
       await checkoutPage.setName('Mobile Tester');
@@ -190,7 +191,7 @@ test.describe('mobile viewport @e2e @mobile', () => {
       // Assert: Browser validation blocks submission
       const isValid = await checkoutPage.getEmailInput().evaluate((el) => (el as HTMLInputElement).checkValidity());
       expect(isValid).toBe(false);
-      await expect(page).toHaveURL(/\/order\/(checkout|place)/);
+      await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place);
     });
   });
 
@@ -217,7 +218,7 @@ test.describe('mobile viewport @e2e @mobile', () => {
 
       // Verify card is still actionable on mobile
       await homePage.clickProductById(seededProducts[0].id);
-      await expect(page).toHaveURL(new RegExp(`/product/${seededProducts[0].id}`));
+      await expect(page).toHaveURL((url) => url.pathname === routes.productDetail(seededProducts[0].id));
     });
 
     test('MOBILE-E02: landscape rotation keeps checkout flow accessible @e2e @mobile @regression @destructive', async ({ api, page, cartPage, checkoutPage }) => {
@@ -230,7 +231,7 @@ test.describe('mobile viewport @e2e @mobile', () => {
       await cartPage.proceedToCheckoutWithFallback();
 
       // Assert: Checkout still reachable and interactable
-      await expect(page).toHaveURL(/\/order\/(checkout|place)/);
+      await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place);
       expect(await checkoutPage.isNameInputVisible()).toBe(true);
       expect(await checkoutPage.isSubmitButtonVisible()).toBe(true);
     });
@@ -245,8 +246,7 @@ test.describe('mobile viewport @e2e @mobile', () => {
       let endQty = startQty;
       for (let i = 0; i < 5; i += 1) {
         await cartPage.increaseQtyById(seededProducts[0].id);
-        await cartPage.sleep(200);
-        endQty = await cartPage.getItemQuantity(seededProducts[0].id);
+        endQty = await cartPage.waitForItemQuantityAtLeast(seededProducts[0].id, startQty + 1, 2_000);
         if (endQty >= startQty + 2) break;
       }
 

@@ -1,8 +1,10 @@
 import type { APIRequestContext } from '@playwright/test';
-import { test, expect, seedCart, resetAndSeed } from '@fixtures';
-import { createApiContext, disableChaos, loginAsUser } from '@api';
+import { test, expect, seedCart } from '@fixtures';
+import { disableChaos, loginAsUser } from '@api';
 import { routes } from '@config';
-import { seededProducts, buildTestEmail, isolatedUserPassword } from '@data';
+import { seededProducts } from '@data';
+import { ensureProductStock } from '../helpers/inventory';
+import { createIsolatedUserContext } from '../helpers/users';
 
 /**
  * =============================================================================
@@ -111,37 +113,13 @@ const createOrderFromCart = async (api: APIRequestContext) => {
   return { status: res.status(), body };
 };
 
-const createIsolatedUserContext = async (label: string): Promise<APIRequestContext> => {
-  const ctx = await createApiContext();
-  const token = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${label}`;
-  const username = `ordinv_${token}`;
-  const email = buildTestEmail(username);
-  const password = isolatedUserPassword;
-
-  const registerRes = await ctx.post(routes.register, {
-    form: { username, email, password, confirmPassword: password },
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    maxRedirects: 0
-  });
-  expect([200, 302, 303]).toContain(registerRes.status());
-
-  const loginRes = await ctx.post(routes.login, {
-    form: { username, password },
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    maxRedirects: 0
-  });
-  expect([200, 302, 303]).toContain(loginRes.status());
-
-  return ctx;
-};
-
 test.describe('order to inventory integration @integration @orders @inventory', () => {
   test.beforeAll(async () => {
     await disableChaos();
   });
 
   test.beforeEach(async ({ api }) => {
-    await resetAndSeed(FIXED_STOCK);
+    await ensureProductStock(api, productId, FIXED_STOCK);
     await loginAsUser(api);
     await seedCart(api, []);
   });
@@ -232,8 +210,8 @@ test.describe('order to inventory integration @integration @orders @inventory', 
       expect(stockBefore).toBeGreaterThan(1);
 
       const quantityPerUser = Math.floor(stockBefore / 2) + 1;
-      const userA = await createIsolatedUserContext('a');
-      const userB = await createIsolatedUserContext('b');
+      const userA = await createIsolatedUserContext({ prefix: 'ordinv', label: 'a' });
+      const userB = await createIsolatedUserContext({ prefix: 'ordinv', label: 'b' });
 
       try {
         await Promise.all([
@@ -269,8 +247,8 @@ test.describe('order to inventory integration @integration @orders @inventory', 
       const stockBefore = await getProductStock(api, productId);
       expect(stockBefore).toBeGreaterThan(1);
 
-      const userA = await createIsolatedUserContext('a-stale');
-      const userB = await createIsolatedUserContext('b-fresh');
+      const userA = await createIsolatedUserContext({ prefix: 'ordinv', label: 'a-stale' });
+      const userB = await createIsolatedUserContext({ prefix: 'ordinv', label: 'b-fresh' });
 
       try {
         await seedCart(userA, [{ id: productId, quantity: stockBefore }]);

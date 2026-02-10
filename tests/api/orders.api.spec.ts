@@ -148,7 +148,7 @@ test.describe('orders api @api @orders', () => {
 
       // Assert: Redirected to login
       expect(res.status()).toBe(302);
-      expect(res.headers()['location']).toContain('/login');
+      expect(res.headers()['location']).toContain(routes.login);
     });
   });
 

@@ -142,7 +142,7 @@ test.describe('chatbot e2e @e2e @chat', () => {
 
         const userCountBefore = await chatWidgetPage.getUserMessageCount();
         await chatWidgetPage.sendMessage(input, 'click');
-        await chatWidgetPage.sleep(300);
+        await chatWidgetPage.expectUserMessageCount(userCountBefore, 2_000);
 
         const userCountAfter = await chatWidgetPage.getUserMessageCount();
         expect(userCountAfter).toBe(userCountBefore);

@@ -1,9 +1,17 @@
 import http from 'k6/http';
 import { group, sleep, check } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
-import { SharedArray } from 'k6/data';
 import { app, perfAuth } from '../lib/config.js';
 import { headers } from '../lib/http.js';
+import { loadStrict } from '../scenarios/index.js';
+import { loadBalancedThresholds, loadAcceptanceThresholds } from '../thresholds/index.js';
+import {
+    toPositiveInt,
+    createProductPool,
+    fetchTargetProductIds,
+    isStockLimitResponse,
+    resetStockIfNeeded,
+} from '../lib/perf-helpers.js';
 
 /**
  * =============================================================================
@@ -29,11 +37,6 @@ import { headers } from '../lib/http.js';
  * =============================================================================
  */
 
-const toPositiveInt = (value, fallback) => {
-    const parsed = Number(value);
-    return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
-};
-
 const TEST_MODE = String(__ENV.TEST_MODE || 'balanced').toLowerCase() === 'acceptance'
     ? 'acceptance'
     : 'balanced';
@@ -49,177 +52,11 @@ const RESET_KEY = __ENV.RESET_KEY || __ENV.PERF_RESET_KEY || '';
 const PRODUCT_MIN = toPositiveInt(__ENV.PERF_PRODUCT_MIN, 1);
 const PRODUCT_MAX = Math.max(PRODUCT_MIN, toPositiveInt(__ENV.PERF_PRODUCT_MAX, 205));
 
-const productIdsFromCsv = new SharedArray('product_ids_from_csv', () => {
-    try {
-        const csv = open('../data/products.csv');
-        const rows = csv
-            .split(/\r?\n/)
-            .map((line) => line.trim())
-            .filter(Boolean);
-
-        if (rows.length <= 1) {
-            return [];
-        }
-
-        const ids = [];
-        for (let i = 1; i < rows.length; i += 1) {
-            const [rawId] = rows[i].split(',');
-            const parsedId = Number(rawId);
-            if (Number.isInteger(parsedId) && parsedId > 0) {
-                ids.push(parsedId);
-            }
-        }
-
-        return ids;
-    } catch (_error) {
-        return [];
-    }
+const productPool = createProductPool({
+    sharedArrayName: 'product_ids_from_csv',
+    productMin: PRODUCT_MIN,
+    productMax: PRODUCT_MAX,
 });
-
-const fallbackProductIds = (() => {
-    const ids = [];
-    for (let id = PRODUCT_MIN; id <= PRODUCT_MAX; id += 1) {
-        ids.push(id);
-    }
-    return ids;
-})();
-
-function pickProductId() {
-    const source = productIdsFromCsv.length > 0 ? productIdsFromCsv : fallbackProductIds;
-    return source[Math.floor(Math.random() * source.length)];
-}
-
-function pickProductIdFrom(preferredIds) {
-    if (Array.isArray(preferredIds) && preferredIds.length > 0) {
-        return preferredIds[Math.floor(Math.random() * preferredIds.length)];
-    }
-
-    return pickProductId();
-}
-
-function parseProductsPayload(res) {
-    if (!res || res.status !== 200) {
-        return [];
-    }
-
-    try {
-        const body = res.json();
-        if (!body || body.ok !== true || !Array.isArray(body.products)) {
-            return [];
-        }
-        return body.products;
-    } catch (_error) {
-        return [];
-    }
-}
-
-function getInStockPreferredIds(products) {
-    const preferredIds = productIdsFromCsv.length > 0 ? productIdsFromCsv : fallbackProductIds;
-    const preferredSet = new Set(preferredIds.map((id) => Number(id)));
-    const inStock = [];
-
-    for (let i = 0; i < products.length; i += 1) {
-        const item = products[i] || {};
-        const id = Number(item.id);
-        const stock = Number(item.stock);
-
-        if (Number.isInteger(id) && preferredSet.has(id) && Number.isFinite(stock) && stock > 0) {
-            inStock.push(id);
-        }
-    }
-
-    return inStock;
-}
-
-function getInStockAnyIds(products) {
-    const inStock = [];
-
-    for (let i = 0; i < products.length; i += 1) {
-        const item = products[i] || {};
-        const id = Number(item.id);
-        const stock = Number(item.stock);
-
-        if (Number.isInteger(id) && Number.isFinite(stock) && stock > 0) {
-            inStock.push(id);
-        }
-    }
-
-    return inStock;
-}
-
-function fetchTargetProductIds() {
-    const productsRes = http.get(`${app.baseURL}/api/products`, {
-        redirects: 0,
-        tags: { endpoint: 'products_list' },
-    });
-
-    const products = parseProductsPayload(productsRes);
-    if (products.length === 0) {
-        return [];
-    }
-
-    const preferredInStock = getInStockPreferredIds(products);
-    if (preferredInStock.length > 0) {
-        return preferredInStock;
-    }
-
-    return getInStockAnyIds(products);
-}
-
-function setupStockIfNeeded() {
-    if (!RESET_STOCK) {
-        return;
-    }
-
-    if (!RESET_KEY) {
-        console.warn('[Setup] PERF_RESET_STOCK=true but RESET_KEY is missing. Skipping stock reset.');
-        return;
-    }
-
-    const resetRes = http.post(
-        `${app.baseURL}/api/products/reset-stock`,
-        null,
-        {
-            headers: { 'X-RESET-KEY': RESET_KEY },
-            redirects: 0,
-            tags: { endpoint: 'reset_stock' },
-            responseCallback: http.expectedStatuses(200, 403),
-        }
-    );
-
-    if (resetRes.status === 200) {
-        console.log('[Setup] Stock reset completed.');
-        return;
-    }
-
-    console.warn(`[Setup] Stock reset returned status=${resetRes.status}. Continuing without reset.`);
-}
-
-function getLocation(res) {
-    return String((res && (res.headers.Location || res.headers.location)) || '');
-}
-
-function isStockLimitResponse(res) {
-    if (!res) {
-        return false;
-    }
-
-    if ((res.status === 302 || res.status === 303) && getLocation(res).includes('/cart?error=')) {
-        return getLocation(res).toLowerCase().includes('stock');
-    }
-
-    if (res.status !== 400) {
-        return false;
-    }
-
-    try {
-        const body = res.json();
-        const message = String((body && body.message) || '').toLowerCase();
-        return message.includes('stock');
-    } catch (_error) {
-        return String(res.body || '').toLowerCase().includes('stock');
-    }
-}
 
 const loginAttempts = new Counter('login_attempts');
 const browseAttempts = new Counter('browse_attempts');
@@ -234,41 +71,20 @@ const browseDuration = new Trend('browse_duration');
 const cartDuration = new Trend('cart_duration');
 const checkoutDuration = new Trend('checkout_duration');
 
-const baseOptions = {
-    stages: [
-        { duration: '30s', target: 20 },
-        { duration: '1m', target: 20 },
-        { duration: '30s', target: 0 },
-    ],
-};
-
-const thresholdsByMode = {
-    balanced: {
-        http_req_failed: ['rate<0.10'],
-        http_req_duration: ['p(95)<1500', 'p(99)<3000'],
-        login_duration: ['p(95)<800'],
-        browse_duration: ['p(95)<1000'],
-        cart_duration: ['p(95)<500'],
-        checkout_duration: ['p(95)<800'],
-        checkout_attempts: ['count>0'],
-    },
-    acceptance: {},
-};
-
 export const options = {
-    ...baseOptions,
-    thresholds: thresholdsByMode[TEST_MODE],
+    scenarios: {
+        load_journey: loadStrict,
+    },
+    thresholds: TEST_MODE === 'balanced' ? loadBalancedThresholds : loadAcceptanceThresholds,
     tags: { test_mode: TEST_MODE },
 };
 
 export function setup() {
-    const productSource = productIdsFromCsv.length > 0
-        ? `csv(${productIdsFromCsv.length} ids)`
-        : `fallback(${PRODUCT_MIN}-${PRODUCT_MAX})`;
+    const productSource = productPool.getSourceLabel();
 
-    setupStockIfNeeded();
+    resetStockIfNeeded({ enabled: RESET_STOCK, resetKey: RESET_KEY });
 
-    const selectedProductIds = fetchTargetProductIds();
+    const selectedProductIds = fetchTargetProductIds(productPool.preferredIds);
 
     console.log(`\n[Setup] Load Test - mode=${TEST_MODE.toUpperCase()}`);
     console.log(`[Setup] Target: ${app.baseURL}`);
@@ -352,7 +168,7 @@ export default function (data) {
 
         const res = http.post(
             `${app.baseURL}/api/cart/add`,
-            JSON.stringify({ productId: pickProductIdFrom(selectedProductIds), quantity: 1 }),
+            JSON.stringify({ productId: productPool.pickProductIdFrom(selectedProductIds), quantity: 1 }),
             {
                 headers: headers.json,
                 redirects: 0,

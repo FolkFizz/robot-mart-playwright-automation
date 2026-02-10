@@ -313,7 +313,7 @@ test.describe('cart comprehensive @e2e @cart', () => {
       }
       
       // Assert: Admin cannot complete shopping action
-      await expect(page).not.toHaveURL(/\/cart/);
+      await expect(page).not.toHaveURL((url) => url.pathname === routes.cart);
       expect(addButtonVisible).toBe(false);
       expect(await homePage.getCartCount()).toBe(0);
     });

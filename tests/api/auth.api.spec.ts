@@ -132,7 +132,7 @@ test.describe('authentication api @api @auth', () => {
       // Assert: Invalid login session is not authenticated
       const notificationsRes = await api.get(routes.api.notifications, { maxRedirects: 0 });
       expect(notificationsRes.status()).toBe(302);
-      expect(notificationsRes.headers()['location']).toContain('/login');
+      expect(notificationsRes.headers()['location']).toContain(routes.login);
     });
 
     test('AUTH-API-N02: empty credentials are rejected and remain unauthenticated @api @auth @regression', async ({ api }) => {
@@ -153,7 +153,7 @@ test.describe('authentication api @api @auth', () => {
       // Assert: Still unauthenticated
       const notificationsRes = await api.get(routes.api.notifications, { maxRedirects: 0 });
       expect(notificationsRes.status()).toBe(302);
-      expect(notificationsRes.headers()['location']).toContain('/login');
+      expect(notificationsRes.headers()['location']).toContain(routes.login);
     });
 
     test('AUTH-API-N03: regular user session cannot access admin endpoint @api @auth @security @regression', async ({ api }) => {
@@ -206,7 +206,7 @@ test.describe('authentication api @api @auth', () => {
       // Assert: Not authenticated after failed attempts
       const notificationsBefore = await api.get(routes.api.notifications, { maxRedirects: 0 });
       expect(notificationsBefore.status()).toBe(302);
-      expect(notificationsBefore.headers()['location']).toContain('/login');
+      expect(notificationsBefore.headers()['location']).toContain(routes.login);
 
       // Act: Valid login still works
       await loginAsUser(api);

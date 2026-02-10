@@ -3,7 +3,7 @@
 This page summarizes how to run tests and what they connect to.
 
 ## 1) Local testing (default)
-Assumes your web app is running locally (e.g. `npm run dev`) and connects to **Neon test_db**.
+Assumes your target web app is running locally (for example in `robot-store-sandbox`: `npm run dev`) and connects to **Neon test_db**.
 
 ```bash
 npm run test
@@ -22,6 +22,7 @@ npm run test:prod
 ```
 
 - Overrides `BASE_URL` ? `https://robot-store-sandbox.onrender.com`
+- Overrides `BASE_URL` -> `https://robot-store-sandbox.onrender.com`
 - Only runs `@safe` or `@smoke` tests
 - **Reset/seed is skipped** automatically
 

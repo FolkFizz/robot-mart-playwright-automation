@@ -1,9 +1,9 @@
 import http from 'k6/http';
 import { check, group, sleep } from 'k6';
-import { SharedArray } from 'k6/data';
 import { app } from '../lib/config.js';
 import { ramping } from '../scenarios/index.js';
 import { browseThresholds } from '../thresholds/index.js';
+import { toPositiveInt, createProductPool } from '../lib/perf-helpers.js';
 
 /**
  * =============================================================================
@@ -38,53 +38,14 @@ export const options = {
     thresholds: browseThresholds,
 };
 
-const toPositiveInt = (value, fallback) => {
-    const parsed = Number(value);
-    return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
-};
-
 const PRODUCT_MIN = toPositiveInt(__ENV.PERF_PRODUCT_MIN, 1);
 const PRODUCT_MAX = Math.max(PRODUCT_MIN, toPositiveInt(__ENV.PERF_PRODUCT_MAX, 9));
 
-const productIdsFromCsv = new SharedArray('browse_product_ids_from_csv', () => {
-    try {
-        const csv = open('../data/products.csv');
-        const rows = csv
-            .split(/\r?\n/)
-            .map((line) => line.trim())
-            .filter(Boolean);
-
-        if (rows.length <= 1) {
-            return [];
-        }
-
-        const ids = [];
-        for (let i = 1; i < rows.length; i += 1) {
-            const [rawId] = rows[i].split(',');
-            const parsedId = Number(rawId);
-            if (Number.isInteger(parsedId) && parsedId > 0) {
-                ids.push(parsedId);
-            }
-        }
-
-        return ids;
-    } catch (_error) {
-        return [];
-    }
+const productPool = createProductPool({
+    sharedArrayName: 'browse_product_ids_from_csv',
+    productMin: PRODUCT_MIN,
+    productMax: PRODUCT_MAX,
 });
-
-const fallbackProductIds = (() => {
-    const ids = [];
-    for (let id = PRODUCT_MIN; id <= PRODUCT_MAX; id += 1) {
-        ids.push(id);
-    }
-    return ids;
-})();
-
-function pickProductId() {
-    const source = productIdsFromCsv.length > 0 ? productIdsFromCsv : fallbackProductIds;
-    return source[Math.floor(Math.random() * source.length)];
-}
 
 export default function () {
     group('Visit Home Page', () => {
@@ -123,7 +84,7 @@ export default function () {
     });
 
     group('View Product Details', () => {
-        const productId = pickProductId();
+        const productId = productPool.pickProductId();
         const res = http.get(`${app.baseURL}/api/products/${productId}`, {
             redirects: 0,
             tags: { endpoint: 'api_product_detail' },

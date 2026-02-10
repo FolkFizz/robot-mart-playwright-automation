@@ -57,7 +57,7 @@ test.use({ seedData: true });
 test.describe('input hardening security @security @hardening', () => {
   test.describe('positive cases', () => {
     test('SEC-INP-P01: valid login still works after failed malicious attempts @security @hardening @smoke', async ({ api }) => {
-      await api.get('/logout', { maxRedirects: 0 }).catch(() => undefined);
+      await api.get(routes.logout, { maxRedirects: 0 }).catch(() => undefined);
 
       for (const payload of maliciousLoginPayloads) {
         const badRes = await api.post(routes.login, {
@@ -78,7 +78,7 @@ test.describe('input hardening security @security @hardening', () => {
 
   test.describe('negative cases', () => {
     test('SEC-INP-N01: SQL/XSS-like login payloads are rejected @security @hardening @regression', async ({ api }) => {
-      await api.get('/logout', { maxRedirects: 0 }).catch(() => undefined);
+      await api.get(routes.logout, { maxRedirects: 0 }).catch(() => undefined);
 
       for (const payload of maliciousLoginPayloads) {
         const res = await api.post(routes.login, {
@@ -93,7 +93,7 @@ test.describe('input hardening security @security @hardening', () => {
 
         const protectedRes = await api.get(routes.api.notifications, { maxRedirects: 0 });
         expect(protectedRes.status()).toBe(302);
-        expect(protectedRes.headers()['location'] ?? '').toContain('/login');
+        expect(protectedRes.headers()['location'] ?? '').toContain(routes.login);
       }
     });
 
@@ -115,7 +115,7 @@ test.describe('input hardening security @security @hardening', () => {
       });
 
       expect(res.status()).toBe(302);
-      expect(res.headers()['location'] ?? '').toContain('/login');
+      expect(res.headers()['location'] ?? '').toContain(routes.login);
     });
   });
 
@@ -124,7 +124,7 @@ test.describe('input hardening security @security @hardening', () => {
       await loginAsUser(api);
 
       for (const id of malformedInvoiceIds) {
-        const res = await api.get(`/order/invoice/${id}`, { maxRedirects: 0 });
+        const res = await api.get(`${routes.order.invoiceBase}/${id}`, { maxRedirects: 0 });
         const text = await res.text();
 
         expect(res.status()).toBeGreaterThanOrEqual(400);

@@ -62,6 +62,12 @@ export class ChatWidgetPage extends BasePage {
     return await this.botMessages.count();
   }
 
+  async expectUserMessageCount(count: number, timeoutMs = 5_000): Promise<void> {
+    await expect
+      .poll(async () => await this.getUserMessageCount(), { timeout: timeoutMs })
+      .toBe(count);
+  }
+
   async expectLatestUserMessageContains(text: string, timeoutMs = 10_000): Promise<void> {
     await expect(this.userMessages.last()).toContainText(text, { timeout: timeoutMs });
   }
@@ -91,4 +97,3 @@ export class ChatWidgetPage extends BasePage {
     await expect(this.botMessages.first()).toBeVisible();
   }
 }
-

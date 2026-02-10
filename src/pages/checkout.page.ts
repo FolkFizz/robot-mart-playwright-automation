@@ -163,29 +163,43 @@ export class CheckoutPage extends BasePage {
   }
 
   async waitForPaymentResult(timeoutMs = 30000): Promise<{ status: 'success' | 'error' | 'timeout'; sawLoading: boolean; message?: string }> {
-    const deadline = Date.now() + timeoutMs;
     let sawLoading = false;
+    let latestMessage = '';
 
-    while (Date.now() < deadline) {
-      if (/\/order\/success\?order_id=/.test(this.page.url())) {
-        return { status: 'success', sawLoading };
-      }
+    try {
+      await expect
+        .poll(
+          async () => {
+            const status = await this.getSubmitStatus().catch(() => 'idle');
+            if (status === 'loading') sawLoading = true;
 
-      const hasMessage = (await this.paymentMessage.count().catch(() => 0)) > 0;
-      if (hasMessage) {
-        const text = (await this.paymentMessage.innerText().catch(() => '')).trim();
-        if (text.length > 0) {
-          return { status: 'error', sawLoading, message: text };
-        }
-      }
+            if (this.page.url().includes(`${routes.orderSuccessBase}?order_id=`)) {
+              return 'success';
+            }
 
-      const status = await this.getSubmitStatus().catch(() => 'idle');
-      if (status === 'loading') sawLoading = true;
+            const messageText = (await this.paymentMessage.innerText().catch(() => '')).trim();
+            if (messageText.length > 0) {
+              latestMessage = messageText;
+              return 'error';
+            }
 
-      await this.sleep(500);
+            return 'pending';
+          },
+          {
+            timeout: timeoutMs,
+            intervals: [200, 400, 600, 800, 1000]
+          }
+        )
+        .not.toBe('pending');
+    } catch {
+      return { status: 'timeout', sawLoading };
     }
 
-    return { status: 'timeout', sawLoading };
+    if (this.page.url().includes(`${routes.orderSuccessBase}?order_id=`)) {
+      return { status: 'success', sawLoading };
+    }
+
+    return { status: 'error', sawLoading, message: latestMessage };
   }
 
   async submitStripePayment(options: { name: string; email: string; card: { number: string; exp: string; cvc: string; postal?: string }; timeoutMs?: number }): Promise<{ status: 'success' | 'error' | 'timeout'; sawLoading: boolean; message?: string }> {
@@ -287,6 +301,20 @@ export class CheckoutPage extends BasePage {
     if (await this.isMockPayment()) return true;
     if (await this.isStripeFrameVisible()) return true;
     return await this.paymentElement.isVisible().catch(() => false);
+  }
+
+  async waitForPaymentUiReady(timeoutMs = 15_000): Promise<void> {
+    if (await this.isMockPayment()) {
+      await expect(this.mockNote).toBeVisible({ timeout: timeoutMs });
+      return;
+    }
+
+    if ((await this.getStripeFrameCount()) > 0) {
+      await expect(this.stripeIframes.first()).toBeVisible({ timeout: timeoutMs });
+      return;
+    }
+
+    await expect(this.paymentElement).toBeVisible({ timeout: timeoutMs });
   }
 
   async hasOrderSummary(): Promise<boolean> {

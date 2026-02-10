@@ -84,7 +84,7 @@ export class ChaosPage extends BasePage {
       this.page
         .waitForResponse(
           (res) =>
-            res.url().includes('/api/chaos/config') &&
+            res.url().includes(routes.api.chaosConfig) &&
             res.request().method() === 'POST',
           { timeout: 10_000 }
         )

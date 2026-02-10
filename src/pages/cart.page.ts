@@ -28,7 +28,9 @@ export class CartPage extends BasePage {
     this.grandTotalLabel = this.getByTestId('cart-grand-total');
     this.clearCartButton = this.getByTestId('cart-clear');
     this.checkoutButton = this.getByTestId('cart-checkout');
-    this.checkoutLinkFallback = this.page.locator('a[href="/order/place"], a[href="/order/checkout"]').first();
+    this.checkoutLinkFallback = this.page
+      .locator(`a[href="${routes.order.place}"], a[href="${routes.order.checkout}"]`)
+      .first();
     this.alertError = this.page.locator('.alert-error, .error, [role="alert"], [aria-live]').first();
   }
 
@@ -74,6 +76,13 @@ export class CartPage extends BasePage {
     const text = await this.getByTestId(`cart-qty-value-${id}`).innerText();
     const value = Number.parseInt(text, 10);
     return Number.isNaN(value) ? 0 : value;
+  }
+
+  async waitForItemQuantityAtLeast(id: number | string, minQuantity: number, timeoutMs = 5_000): Promise<number> {
+    await expect
+      .poll(async () => await this.getItemQuantity(id), { timeout: timeoutMs })
+      .toBeGreaterThanOrEqual(minQuantity);
+    return await this.getItemQuantity(id);
   }
 
   // อ่าน subtotal
@@ -286,7 +295,7 @@ export class CartPage extends BasePage {
 
     await couponInput.fill(code);
     await applyButton.click();
-    await this.sleep(500);
+    await this.alertError.waitFor({ state: 'visible', timeout: 3_000 }).catch(() => undefined);
     return await this.getFirstAlertText();
   }
 }

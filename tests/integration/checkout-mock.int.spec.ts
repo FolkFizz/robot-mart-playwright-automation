@@ -1,9 +1,10 @@
 import type { APIRequestContext, Page, TestInfo } from '@playwright/test';
 import { test, expect, seedCart } from '@fixtures';
-import { seededProducts, coupons, buildTestEmail, isolatedUserPassword } from '@data';
+import { seededProducts, coupons } from '@data';
 import { CartPage, CheckoutPage } from '@pages';
 import { addToCart, applyCoupon, clearCart, disableChaos } from '@api';
 import { routes, SHIPPING } from '@config';
+import { registerAndLoginIsolatedUser, syncSessionFromApi } from '../helpers/users';
 
 /**
  * =============================================================================
@@ -46,7 +47,9 @@ import { routes, SHIPPING } from '@config';
  * =============================================================================
  */
 
-const checkoutPathPattern = /\/order\/(checkout|place)/;
+const isCheckoutPath = (url: string): boolean => {
+  return url.includes(routes.order.checkout) || url.includes(routes.order.place);
+};
 const emptyCartTextPatterns = [
   'cart is empty',
   'your cart is empty',
@@ -55,46 +58,15 @@ const emptyCartTextPatterns = [
   'go add some bots'
 ];
 
-const syncSessionFromApi = async (api: APIRequestContext, page: Page): Promise<void> => {
-  const storage = await api.storageState();
-  await page.context().addCookies(storage.cookies);
-};
-
-const registerAndLoginIsolatedUser = async (
-  api: APIRequestContext,
-  page: Page,
-  testInfo: TestInfo
-): Promise<void> => {
-  const project = testInfo.project.name.replace(/[^a-z0-9]/gi, '').toLowerCase();
-  const token = `${Date.now()}_${testInfo.workerIndex}_${Math.random().toString(36).slice(2, 8)}`;
-  const username = `int_${project}_${token}`;
-  const email = buildTestEmail(username);
-  const password = isolatedUserPassword;
-
-  const registerRes = await api.post(routes.register, {
-    form: { username, email, password, confirmPassword: password },
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-  });
-  expect([200, 302, 303]).toContain(registerRes.status());
-
-  const loginRes = await api.post(routes.login, {
-    form: { username, password },
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-  });
-  expect([200, 302, 303]).toContain(loginRes.status());
-
-  await syncSessionFromApi(api, page);
-};
-
 const gotoCheckoutFromCart = async (page: Page, cartPage: CartPage, checkoutPage: CheckoutPage): Promise<void> => {
   await cartPage.goto();
   await cartPage.proceedToCheckoutWithFallback();
 
-  if (!checkoutPathPattern.test(page.url())) {
+  if (!isCheckoutPath(page.url())) {
     await checkoutPage.goto();
   }
 
-  await expect(page).toHaveURL(checkoutPathPattern);
+  await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place);
 };
 
 const waitForCheckoutReady = async (checkoutPage: CheckoutPage): Promise<'mock' | 'stripe'> => {
@@ -128,7 +100,11 @@ test.describe('checkout integration @integration @checkout', () => {
   });
 
   test.beforeEach(async ({ api, page }, testInfo) => {
-    await registerAndLoginIsolatedUser(api, page, testInfo);
+    const project = testInfo.project.name.replace(/[^a-z0-9]/gi, '').toLowerCase();
+    await registerAndLoginIsolatedUser(api, {
+      prefix: `int_${project}`,
+      workerIndex: testInfo.workerIndex
+    });
     await seedCart(api, [{ id: firstProduct.id }, { id: secondProduct.id }]);
     await syncSessionFromApi(api, page);
   });
@@ -164,7 +140,7 @@ test.describe('checkout integration @integration @checkout', () => {
       await checkoutPage.goto();
       const url = page.url();
       const redirectedToCart = url.includes(routes.cart);
-      const stayedOnCheckout = checkoutPathPattern.test(url);
+      const stayedOnCheckout = isCheckoutPath(url);
       const guarded = await hasEmptyCartGuard(checkoutPage);
       const paymentMessage = (await checkoutPage.getPaymentMessage().catch(() => '')).toLowerCase();
       const hasPaymentGuard = paymentMessage.includes('cart is empty');
@@ -182,7 +158,7 @@ test.describe('checkout integration @integration @checkout', () => {
 
       const url = page.url();
       const redirectedToCart = url.includes(routes.cart);
-      const stayedOnCheckout = checkoutPathPattern.test(url);
+      const stayedOnCheckout = isCheckoutPath(url);
       const guarded = await hasEmptyCartGuard(checkoutPage);
 
       expect(redirectedToCart || (stayedOnCheckout && guarded)).toBe(true);
@@ -310,7 +286,7 @@ test.describe('checkout integration @integration @checkout', () => {
       await page.context().clearCookies();
       await checkoutPage.goto();
 
-      expect(checkoutPathPattern.test(page.url())).toBe(false);
+      expect(isCheckoutPath(page.url())).toBe(false);
     });
   });
 });

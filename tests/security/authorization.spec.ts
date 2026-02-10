@@ -1,8 +1,9 @@
 import type { APIRequestContext, Page } from '@playwright/test';
 import { test, expect, seedCart } from '@fixtures';
-import { createApiContext, disableChaos, loginAsAdmin, loginAsUser } from '@api';
+import { disableChaos, loginAsAdmin, loginAsUser } from '@api';
 import { routes } from '@config';
-import { seededProducts, buildTestEmail, isolatedUserPassword } from '@data';
+import { seededProducts } from '@data';
+import { createIsolatedUserContext, syncSessionFromApi } from '../helpers/users';
 
 /**
  * =============================================================================
@@ -52,37 +53,6 @@ type OrderCreateResponse = {
   status?: 'success' | 'error';
   orderId?: string;
   message?: string;
-};
-
-const logoutPath = '/logout';
-
-const syncSessionFromApi = async (api: APIRequestContext, page: Page): Promise<void> => {
-  const storage = await api.storageState();
-  await page.context().addCookies(storage.cookies);
-};
-
-const registerAndLoginIsolatedUserContext = async (label: string): Promise<APIRequestContext> => {
-  const ctx = await createApiContext();
-  const token = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${label}`;
-  const username = `authz_${token}`;
-  const email = buildTestEmail(username);
-  const password = isolatedUserPassword;
-
-  const registerRes = await ctx.post(routes.register, {
-    form: { username, email, password, confirmPassword: password },
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    maxRedirects: 0
-  });
-  expect([200, 302, 303]).toContain(registerRes.status());
-
-  const loginRes = await ctx.post(routes.login, {
-    form: { username, password },
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    maxRedirects: 0
-  });
-  expect([200, 302, 303]).toContain(loginRes.status());
-
-  return ctx;
 };
 
 const createOrderForCurrentSession = async (
@@ -146,7 +116,7 @@ test.describe('authorization security @security @authz', () => {
       expect(notificationsBody.status).toBe('success');
 
       await profilePage.gotoTab('orders');
-      await expect(page).toHaveURL(/\/profile\?tab=orders/);
+      await expect(page).toHaveURL((url) => `${url.pathname}${url.search}` === routes.profileOrders);
     });
   });
 
@@ -155,7 +125,7 @@ test.describe('authorization security @security @authz', () => {
       const res = await api.get(routes.api.notifications, { maxRedirects: 0 });
 
       expect(res.status()).toBe(302);
-      expect(res.headers()['location'] ?? '').toContain('/login');
+      expect(res.headers()['location'] ?? '').toContain(routes.login);
     });
 
     test('AUTHZ-N02: regular user is forbidden from admin notifications API @security @authz @regression', async ({ api }) => {
@@ -212,19 +182,19 @@ test.describe('authorization security @security @authz', () => {
       const beforeLogout = await api.get(routes.api.notifications, { maxRedirects: 0 });
       expect(beforeLogout.status()).toBe(200);
 
-      const logoutRes = await api.get(logoutPath, { maxRedirects: 0 });
+      const logoutRes = await api.get(routes.logout, { maxRedirects: 0 });
       expect([302, 303]).toContain(logoutRes.status());
 
       const afterLogout = await api.get(routes.api.notifications, { maxRedirects: 0 });
       expect(afterLogout.status()).toBe(302);
-      expect(afterLogout.headers()['location'] ?? '').toContain('/login');
+      expect(afterLogout.headers()['location'] ?? '').toContain(routes.login);
     });
 
     test('AUTHZ-N07: anonymous cannot access profile orders page @security @authz @regression', async ({ page, profilePage, loginPage }) => {
       await page.context().clearCookies();
       await profilePage.gotoTab('orders');
 
-      const redirectedToLogin = /\/login/.test(page.url());
+      const redirectedToLogin = page.url().includes(routes.login);
       const hasLoginForm = await loginPage.hasAnyLoginInputVisible();
       expect(redirectedToLogin || hasLoginForm).toBe(true);
     });
@@ -232,16 +202,16 @@ test.describe('authorization security @security @authz', () => {
 
   test.describe('edge cases', () => {
     test('AUTHZ-E01: invoice access is restricted to order owner @security @authz @regression @destructive', async () => {
-      const ownerCtx = await registerAndLoginIsolatedUserContext('owner');
-      const otherCtx = await registerAndLoginIsolatedUserContext('other');
+      const ownerCtx = await createIsolatedUserContext({ prefix: 'authz', label: 'owner' });
+      const otherCtx = await createIsolatedUserContext({ prefix: 'authz', label: 'other' });
 
       try {
         const orderId = await createOrderForCurrentSession(ownerCtx, [{ id: seededProducts[0].id, quantity: 1 }]);
 
-        const ownerInvoice = await ownerCtx.get(`/order/invoice/${orderId}`, { maxRedirects: 0 });
+        const ownerInvoice = await ownerCtx.get(routes.order.invoice(orderId), { maxRedirects: 0 });
         expect(ownerInvoice.status()).toBe(200);
 
-        const otherInvoice = await otherCtx.get(`/order/invoice/${orderId}`, { maxRedirects: 0 });
+        const otherInvoice = await otherCtx.get(routes.order.invoice(orderId), { maxRedirects: 0 });
         expect(otherInvoice.status()).toBe(403);
         expect(await otherInvoice.text()).toContain('Unauthorized');
       } finally {
@@ -253,7 +223,7 @@ test.describe('authorization security @security @authz', () => {
     test('AUTHZ-E02: invalid invoice id returns 404 without stack trace leak @security @authz @regression', async ({ api }) => {
       await loginAsUser(api);
 
-      const res = await api.get('/order/invoice/INVALID_ORDER_999', { maxRedirects: 0 });
+      const res = await api.get(routes.order.invoice('INVALID_ORDER_999'), { maxRedirects: 0 });
       const text = await res.text();
 
       expect(res.status()).toBe(404);

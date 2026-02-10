@@ -1,10 +1,11 @@
-import type { APIRequestContext, TestInfo } from '@playwright/test';
+import type { APIRequestContext } from '@playwright/test';
 import { Client } from 'pg';
 import { test, expect } from '@fixtures';
-import { authInputs, inboxSubjects, buildTestEmail, buildNonExistentEmail, isolatedUserPassword, resetTestData } from '@data';
+import { authInputs, inboxSubjects, buildNonExistentEmail, resetTestData } from '@data';
 import { routes } from '@config';
 import { disableChaos } from '@api';
 import { ResetPasswordPage } from '@pages';
+import { registerIsolatedUser } from '../helpers/users';
 
 /**
  * =============================================================================
@@ -124,29 +125,6 @@ const expireResetTokenByEmail = async (email: string): Promise<void> => {
   });
 };
 
-const registerIsolatedUser = async (
-  api: APIRequestContext,
-  testInfo: TestInfo
-): Promise<{ email: string }> => {
-  const unique = `${Date.now()}_${testInfo.workerIndex}_${Math.random().toString(36).slice(2, 8)}`;
-  const username = `reset_${unique}`.toLowerCase();
-  const email = buildTestEmail(username);
-  const password = isolatedUserPassword;
-
-  const registerRes = await api.post(routes.register, {
-    form: {
-      username,
-      email,
-      password,
-      confirmPassword: password
-    },
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-  });
-
-  expect([200, 302, 303]).toContain(registerRes.status());
-  return { email };
-};
-
 const extractTokenFromLink = (link: string): string => {
   const parsed = new URL(link, 'http://localhost');
   expect(parsed.pathname).toContain(`${routes.resetPasswordBase}/`);
@@ -227,14 +205,14 @@ test.describe('password reset integration @integration @auth', () => {
       expect(isValid).toBe(false);
 
       await forgotPasswordPage.getSubmitButton().click();
-      await expect(page).toHaveURL(/\/forgot-password/);
+      await expect(page).toHaveURL((url) => url.pathname === routes.forgotPassword);
 
       const message = (await forgotPasswordPage.getMessageText().catch(() => '')).trim();
       expect(message).toBe('');
     });
 
     test('RESET-INT-N03: expired reset token is rejected @integration @auth @security @regression', async ({ api, forgotPasswordPage, resetPasswordPage, loginPage }, testInfo) => {
-      const user = await registerIsolatedUser(api, testInfo);
+      const user = await registerIsolatedUser(api, { prefix: 'reset', workerIndex: testInfo.workerIndex });
 
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(user.email);
@@ -248,7 +226,7 @@ test.describe('password reset integration @integration @auth', () => {
     });
 
     test('RESET-INT-N04: used reset token cannot be reused @integration @auth @security @regression', async ({ api, forgotPasswordPage, resetPasswordPage, loginPage }, testInfo) => {
-      const user = await registerIsolatedUser(api, testInfo);
+      const user = await registerIsolatedUser(api, { prefix: 'reset', workerIndex: testInfo.workerIndex });
 
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(user.email);
@@ -267,7 +245,7 @@ test.describe('password reset integration @integration @auth', () => {
 
   test.describe('edge cases', () => {
     test('RESET-INT-E01: repeated reset requests rotate token for same user @integration @auth @regression', async ({ api, forgotPasswordPage }, testInfo) => {
-      const user = await registerIsolatedUser(api, testInfo);
+      const user = await registerIsolatedUser(api, { prefix: 'reset', workerIndex: testInfo.workerIndex });
 
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(user.email);
@@ -296,7 +274,7 @@ test.describe('password reset integration @integration @auth', () => {
     });
 
     test('RESET-INT-E03: reset link is usable from fresh browser context @integration @auth @regression', async ({ api, browser, forgotPasswordPage }, testInfo) => {
-      const user = await registerIsolatedUser(api, testInfo);
+      const user = await registerIsolatedUser(api, { prefix: 'reset', workerIndex: testInfo.workerIndex });
 
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(user.email);

@@ -5,6 +5,10 @@ import path from 'path';
 // โหลดค่า env จาก .env เพียงไฟล์เดียว (Single Source of Truth)
 dotenv.config({path: path.resolve(__dirname, '.env')});
 
+if (!process.env.PW_RUN_ID) {
+    process.env.PW_RUN_ID = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
 // ตั้งค่า Playwright หลักของโปรเจค
 export default defineConfig({
     testDir: './tests',

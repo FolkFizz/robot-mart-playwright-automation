@@ -1,4 +1,4 @@
-import { APIRequestContext, APIResponse } from '@playwright/test';
+﻿import { APIRequestContext, APIResponse } from '@playwright/test';
 import { createApiContext } from '@api/http';
 import { env, routes } from '@config/constants';
 import fs from 'fs';
@@ -6,14 +6,11 @@ import path from 'path';
 import { Client } from 'pg';
 
 type SeedOptions = {
-  // กำหนด stock ให้ทุกสินค้าหลัง seed (เช่น 100 สำหรับ load test)
+  // à¸à¸³à¸«à¸™à¸” stock à¹ƒà¸«à¹‰à¸—à¸¸à¸à¸ªà¸´à¸™à¸„à¹‰à¸²à¸«à¸¥à¸±à¸‡ seed (à¹€à¸Šà¹ˆà¸™ 100 à¸ªà¸³à¸«à¸£à¸±à¸š load test)
   stockAll?: number;
 };
 
-type ResetOptions = SeedOptions & {
-  // true = factory reset (reset + seed), false = reset อย่างเดียว
-  factoryReset?: boolean;
-};
+type ResetOptions = SeedOptions;
 
 const resolveStockAll = (stockAll?: number) => {
   if (typeof stockAll === 'number' && !Number.isNaN(stockAll)) return stockAll;
@@ -28,10 +25,20 @@ const resolveStockAll = (stockAll?: number) => {
   return 100;
 };
 
-const resolveInitSqlPath = () => {
+const resolveInitSqlPath = (): { filePath: string; checked: string[] } => {
   const customPath = process.env.INIT_SQL_PATH;
-  if (customPath) return path.resolve(customPath);
-  return path.resolve(process.cwd(), '..', 'robot-store-sandbox', 'database', 'init.sql');
+  if (customPath) {
+    const filePath = path.resolve(customPath);
+    return { filePath, checked: [filePath] };
+  }
+
+  const checked = [
+    path.resolve(process.cwd(), 'database', 'init.sql'),
+    path.resolve(process.cwd(), '..', 'robot-store-sandbox', 'database', 'init.sql')
+  ];
+
+  const filePath = checked.find((candidate) => fs.existsSync(candidate)) ?? checked[0];
+  return { filePath, checked };
 };
 
 const resolveSsl = () => {
@@ -52,10 +59,10 @@ const resolveSsl = () => {
 };
 
 const seedFromInitSql = async (stockAll?: number) => {
-  const filePath = resolveInitSqlPath();
+  const { filePath, checked } = resolveInitSqlPath();
   if (!fs.existsSync(filePath)) {
     throw new Error(
-      `[test-hooks] init.sql not found: ${filePath}. Set INIT_SQL_PATH if your web repo is in a different location.`
+      `[test-hooks] init.sql not found. Checked: ${checked.join(', ')}. Set INIT_SQL_PATH to your web repo path.`
     );
   }
 
@@ -83,33 +90,36 @@ const isProdBaseUrl = (value: string) => {
   }
 };
 
-// ยิง /api/test/reset หรือ /api/test/seed (factory reset)
+// à¸¢à¸´à¸‡ /api/test/reset à¸«à¸£à¸·à¸­ /api/test/seed (factory reset)
 export const resetDb = async (_ctx: APIRequestContext, options: ResetOptions = {}) => {
   if (isProdBaseUrl(env.baseUrl)) {
-    // ป้องกันการลบข้อมูลจริงเมื่อยิงไป Production
+    // à¸›à¹‰à¸­à¸‡à¸à¸±à¸™à¸à¸²à¸£à¸¥à¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ˆà¸£à¸´à¸‡à¹€à¸¡à¸·à¹ˆà¸­à¸¢à¸´à¸‡à¹„à¸› Production
     console.warn(`[test-hooks] Skip reset/seed on production baseUrl: ${env.baseUrl}`);
     return null;
-  }
-
-  const factoryReset = options.factoryReset ?? true;
-  if (!factoryReset) {
-    console.warn('[test-hooks] factoryReset=false ถูก ignore เพื่อความ deterministic');
   }
 
   await seedFromInitSql(options.stockAll);
   return null;
 };
 
-// ยิง /api/test/seed (reset + seed) และรองรับการปรับ stock หลัง seed
+// à¸¢à¸´à¸‡ /api/test/seed (reset + seed) à¹à¸¥à¸°à¸£à¸­à¸‡à¸£à¸±à¸šà¸à¸²à¸£à¸›à¸£à¸±à¸š stock à¸«à¸¥à¸±à¸‡ seed
 export const seedDb = async (_ctx: APIRequestContext, options: SeedOptions = {}) => {
   if (isProdBaseUrl(env.baseUrl)) {
-    // ป้องกันการ seed เมื่อยิงไป Production
+    // à¸›à¹‰à¸­à¸‡à¸à¸±à¸™à¸à¸²à¸£ seed à¹€à¸¡à¸·à¹ˆà¸­à¸¢à¸´à¸‡à¹„à¸› Production
     console.warn(`[test-hooks] Skip seed on production baseUrl: ${env.baseUrl}`);
     return null;
   }
 
   await seedFromInitSql(options.stockAll);
   return null;
+};
+
+export const setProductStock = async (ctx: APIRequestContext, productId: number, stock: number): Promise<APIResponse> => {
+  return await ctx.post(routes.api.testSetStock, {
+    data: { productId, stock },
+    headers: { Accept: 'application/json' },
+    maxRedirects: 0
+  });
 };
 
 export type ChaosConfig = {
@@ -158,3 +168,4 @@ export const disableChaos = async () => {
 export const resetChaos = async () => {
   return await setChaosConfig({ reset: true, disableAll: true, enabled: false });
 };
+
