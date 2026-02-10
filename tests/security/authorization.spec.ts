@@ -3,7 +3,7 @@ import { test, expect, seedCart } from '@fixtures';
 import { disableChaos, loginAsAdmin, loginAsUser } from '@api';
 import { routes } from '@config';
 import { seededProducts } from '@data';
-import { createIsolatedUserContext, syncSessionFromApi } from '../helpers/users';
+import { createIsolatedUserContext, syncSessionFromApi } from '@test-helpers';
 
 /**
  * =============================================================================

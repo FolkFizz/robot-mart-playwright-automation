@@ -107,4 +107,3 @@ export const recordLangfuseChatTrace = async (trace: LangfuseChatTrace): Promise
     console.warn(`[langfuse] ingestion error: ${String(err)}`);
   }
 };
-

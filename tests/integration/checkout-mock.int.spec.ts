@@ -4,7 +4,7 @@ import { seededProducts, coupons } from '@data';
 import { CartPage, CheckoutPage } from '@pages';
 import { addToCart, applyCoupon, clearCart, disableChaos } from '@api';
 import { routes, SHIPPING } from '@config';
-import { registerAndLoginIsolatedUser, syncSessionFromApi } from '../helpers/users';
+import { registerAndLoginIsolatedUser, syncSessionFromApi } from '@test-helpers';
 
 /**
  * =============================================================================

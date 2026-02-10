@@ -25,6 +25,8 @@
       "@data/*": ["src/data/*"],
       "@utils": ["src/utils"],
       "@utils/*": ["src/utils/*"],
+      "@test-helpers": ["src/test-support"],
+      "@test-helpers/*": ["src/test-support/*"],
       "@app-types": ["src/types"],
       "@app-types/*": ["src/types/*"]
     },

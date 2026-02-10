@@ -54,7 +54,10 @@ export const registerUser = async (api: APIRequestContext, user: TestUser): Prom
   expect([200, 302, 303]).toContain(registerRes.status());
 };
 
-export const loginUser = async (api: APIRequestContext, user: Pick<TestUser, 'username' | 'password'>): Promise<void> => {
+export const loginUser = async (
+  api: APIRequestContext,
+  user: Pick<TestUser, 'username' | 'password'>
+): Promise<void> => {
   const loginRes = await api.post(routes.login, {
     form: { username: user.username, password: user.password },
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -64,7 +67,10 @@ export const loginUser = async (api: APIRequestContext, user: Pick<TestUser, 'us
   expect([200, 302, 303]).toContain(loginRes.status());
 };
 
-export const registerAndLoginUser = async (api: APIRequestContext, user: TestUser): Promise<void> => {
+export const registerAndLoginUser = async (
+  api: APIRequestContext,
+  user: TestUser
+): Promise<void> => {
   await registerUser(api, user);
   await loginUser(api, user);
 };
@@ -87,7 +93,9 @@ export const registerAndLoginIsolatedUser = async (
   return user;
 };
 
-export const createIsolatedUserContext = async (options: IsolatedUserOptions = {}): Promise<APIRequestContext> => {
+export const createIsolatedUserContext = async (
+  options: IsolatedUserOptions = {}
+): Promise<APIRequestContext> => {
   const api = await createApiContext();
   try {
     await registerAndLoginIsolatedUser(api, options);

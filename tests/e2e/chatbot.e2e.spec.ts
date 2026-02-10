@@ -2,7 +2,7 @@ import type { TestInfo } from '@playwright/test';
 import { test, expect, loginAndSyncSession } from '@fixtures';
 import { routes } from '@config';
 import { seededProducts } from '@data';
-import { isLangfuseEnabled, recordLangfuseChatTrace } from '../helpers/langfuse';
+import { isLangfuseEnabled, recordLangfuseChatTrace } from '@test-helpers';
 
 /**
  * =============================================================================

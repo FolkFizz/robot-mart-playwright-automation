@@ -5,7 +5,7 @@ import { authInputs, inboxSubjects, buildNonExistentEmail, resetTestData } from 
 import { routes } from '@config';
 import { disableChaos } from '@api';
 import { ResetPasswordPage } from '@pages';
-import { registerIsolatedUser } from '../helpers/users';
+import { registerIsolatedUser } from '@test-helpers';
 
 /**
  * =============================================================================

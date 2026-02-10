@@ -2,7 +2,7 @@ import type { APIRequestContext, TestInfo } from '@playwright/test';
 import { test, expect } from '@fixtures';
 import { loginAsUser } from '@api';
 import { routes } from '@config';
-import { isLangfuseEnabled, recordLangfuseChatTrace } from '../helpers/langfuse';
+import { isLangfuseEnabled, recordLangfuseChatTrace } from '@test-helpers';
 
 /**
  * =============================================================================
