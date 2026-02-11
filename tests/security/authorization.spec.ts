@@ -3,7 +3,11 @@ import { test, expect, seedCart } from '@fixtures';
 import { disableChaos, loginAsAdmin, loginAsUser } from '@api';
 import { routes } from '@config';
 import { seededProducts } from '@data';
-import { createIsolatedUserContext, syncSessionFromApi } from '@test-helpers';
+import {
+  createIsolatedUserContext,
+  syncSessionFromApi,
+  createOrderWithProviderFallback
+} from '@test-helpers';
 
 /**
  * =============================================================================
@@ -61,14 +65,10 @@ const createOrderForCurrentSession = async (
 ): Promise<string> => {
   await seedCart(api, items);
 
-  const res = await api.post(routes.api.orderCreate, {
-    data: { items: [] },
-    headers: { Accept: 'application/json' },
-    maxRedirects: 0
-  });
-  expect(res.status()).toBe(200);
+  const result = await createOrderWithProviderFallback(api);
+  expect(result.status).toBe(200);
 
-  const body = (await res.json()) as OrderCreateResponse;
+  const body = result.body as OrderCreateResponse;
   expect(body.status).toBe('success');
   expect(body.orderId).toMatch(/^ORD-/);
 

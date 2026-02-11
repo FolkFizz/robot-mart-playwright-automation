@@ -18,7 +18,15 @@ export class NotificationsPage extends BasePage {
 
   // Open notifications dropdown.
   async open(): Promise<void> {
-    await this.bellButton.click();
+    await this.bellButton.waitFor({ state: 'visible' });
+    if (await this.dropdown.isVisible().catch(() => false)) return;
+
+    try {
+      await this.bellButton.click({ timeout: 5_000 });
+    } catch {
+      // Navbar animation can keep the trigger "unstable" in some runs.
+      await this.bellButton.click({ force: true, timeout: 5_000 });
+    }
     await this.dropdown.waitFor({ state: 'visible' });
   }
 

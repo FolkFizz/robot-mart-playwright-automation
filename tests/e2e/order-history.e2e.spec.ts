@@ -3,7 +3,7 @@ import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { disableChaos } from '@api';
 import { routes } from '@config';
 import { seededProducts } from '@data';
-import { registerAndLoginIsolatedUser } from '@test-helpers';
+import { registerAndLoginIsolatedUser, createOrderWithProviderFallback } from '@test-helpers';
 
 /**
  * =============================================================================
@@ -52,13 +52,9 @@ const createOrderForUser = async (
 ): Promise<string> => {
   await seedCart(api, items);
 
-  const createOrderRes = await api.post(routes.api.orderCreate, {
-    data: { items: [] },
-    headers: { Accept: 'application/json' }
-  });
-
-  expect(createOrderRes.status()).toBe(200);
-  const createOrderBody = await createOrderRes.json();
+  const orderResult = await createOrderWithProviderFallback(api);
+  expect(orderResult.status).toBe(200);
+  const createOrderBody = orderResult.body;
   expect(createOrderBody.status).toBe('success');
   expect(typeof createOrderBody.orderId).toBe('string');
   expect(createOrderBody.orderId).toContain('ORD-');

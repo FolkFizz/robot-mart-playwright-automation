@@ -118,7 +118,11 @@ test.describe('mobile viewport @e2e @mobile', () => {
       // Interact: Increase quantity via mobile controls
       const beforeQty = await cartPage.getItemQuantity(seededProducts[0].id);
       await cartPage.increaseQtyById(seededProducts[0].id);
-      const afterQty = await cartPage.getItemQuantity(seededProducts[0].id);
+      const afterQty = await cartPage.waitForItemQuantityAtLeast(
+        seededProducts[0].id,
+        beforeQty + 1,
+        3_000
+      );
       expect(afterQty).toBe(beforeQty + 1);
     });
 

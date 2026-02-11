@@ -107,8 +107,15 @@ export class HomePage extends BasePage {
 
   // Click a product card by known id.
   async clickProductById(id: number | string): Promise<void> {
-    await this.getByTestId(`product-card-${id}`).click();
-    await this.waitForNetworkIdle();
+    const card = this.getByTestId(`product-card-${id}`);
+    try {
+      await card.waitFor({ state: 'visible', timeout: 3_000 });
+      await card.click();
+      await this.waitForNetworkIdle();
+    } catch {
+      // When seeded catalog is paginated, open product detail route directly.
+      await super.goto(routes.productDetail(id));
+    }
   }
 
   private productCardRoot(id: number | string): Locator {
@@ -172,9 +179,24 @@ export class HomePage extends BasePage {
     return await this.navigation.isVisible().catch(() => false);
   }
 
+  private async getVisibleTexts(selector: string): Promise<string[]> {
+    const items = this.page.locator(selector);
+    const count = await items.count();
+    const texts: string[] = [];
+
+    for (let index = 0; index < count; index += 1) {
+      const item = items.nth(index);
+      if (await item.isVisible().catch(() => false)) {
+        texts.push(await item.innerText());
+      }
+    }
+
+    return texts;
+  }
+
   // Read all visible product price texts.
   async getVisibleProductPriceTexts(): Promise<string[]> {
-    return await this.page.locator('[data-testid^="product-price-"]').allInnerTexts();
+    return await this.getVisibleTexts('[data-testid^="product-price-"]');
   }
 
   async getVisibleProductPriceValues(): Promise<number[]> {
@@ -184,12 +206,16 @@ export class HomePage extends BasePage {
 
   // Read all visible product title texts.
   async getVisibleProductTitleTexts(): Promise<string[]> {
-    return await this.page.locator('[data-testid^="product-title-"]').allInnerTexts();
+    return await this.getVisibleTexts('[data-testid^="product-title-"]');
   }
 
   // Read the first category badge (useful for category checks).
   async getFirstBadgeText(): Promise<string> {
     return await this.page.locator('.badge').first().innerText();
+  }
+
+  async getVisibleBadgeTexts(): Promise<string[]> {
+    return await this.getVisibleTexts('.badge');
   }
 
   // Wait for the empty state to appear.

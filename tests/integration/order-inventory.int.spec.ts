@@ -3,7 +3,11 @@ import { test, expect, seedCart } from '@fixtures';
 import { disableChaos, loginAsUser } from '@api';
 import { routes } from '@config';
 import { seededProducts } from '@data';
-import { ensureProductStock, createIsolatedUserContext } from '@test-helpers';
+import {
+  ensureProductStock,
+  createIsolatedUserContext,
+  createOrderWithProviderFallback
+} from '@test-helpers';
 
 /**
  * =============================================================================
@@ -102,14 +106,11 @@ const addToCartRaw = async (api: APIRequestContext, id: number, quantity: number
 };
 
 const createOrderFromCart = async (api: APIRequestContext) => {
-  const res = await api.post(routes.api.orderCreate, {
-    data: { items: [] },
-    headers: { Accept: 'application/json' },
-    maxRedirects: 0
-  });
-
-  const body = (await res.json().catch(() => ({}))) as OrderCreateResponse;
-  return { status: res.status(), body };
+  const result = await createOrderWithProviderFallback(api);
+  return {
+    status: result.status,
+    body: result.body as OrderCreateResponse
+  };
 };
 
 test.describe('order to inventory integration @integration @orders @inventory', () => {

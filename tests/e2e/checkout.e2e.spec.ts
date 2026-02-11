@@ -124,7 +124,7 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
       expect(emailValue.length).toBeGreaterThan(0);
     });
 
-    test('CHK-P03: complete stripe payment redirects to success and appears in profile @smoke @e2e @checkout @destructive', async ({
+    test('CHK-P03: complete stripe payment redirects to success and appears in profile @e2e @checkout @regression @destructive @stripe', async ({
       api,
       page,
       cartPage,
@@ -139,6 +139,10 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
       await cartPage.goto();
       await cartPage.proceedToCheckout();
       await expect(page).toHaveURL((url) => url.pathname === routes.order.checkout);
+
+      if (await checkoutPage.isMockPayment()) {
+        test.skip(true, 'Stripe-only test skipped when PAYMENT_PROVIDER=mock.');
+      }
 
       // Act: Submit payment (with retry logic)
       let result = await checkoutPage.submitStripePayment({

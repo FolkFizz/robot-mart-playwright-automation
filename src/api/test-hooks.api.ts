@@ -197,7 +197,7 @@ export const setProductStock = async (
 ): Promise<APIResponse> => {
   return await ctx.post(routes.api.testSetStock, {
     data: { productId, stock },
-    headers: { Accept: 'application/json' },
+    headers: buildTestHookHeaders(),
     maxRedirects: 0
   });
 };

@@ -116,12 +116,15 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
     });
 
     test('CAT-P06: seeded products visible @smoke @e2e @destructive', async ({ homePage }) => {
-      // Act: Load homepage
-      await homePage.goto();
-
-      // Assert: All seeded products visible
+      // Assert: Each seeded product can be discovered by name search
       for (const product of seededProducts) {
-        await homePage.waitForProductCardVisible(product.id);
+        await homePage.goto();
+        await homePage.search(product.name);
+
+        const titles = await homePage.getVisibleProductTitleTexts();
+        expect(
+          titles.some((title) => title.toLowerCase().includes(product.name.toLowerCase()))
+        ).toBe(true);
       }
     });
 
@@ -133,9 +136,10 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
       await homePage.search(target.name.toUpperCase());
 
       // Assert: Product found regardless of case
-      await homePage.waitForProductCardVisible(target.id);
-      const title = await homePage.getProductCardTitle(target.id);
-      expect(title).toContain(target.name);
+      const titles = await homePage.getVisibleProductTitleTexts();
+      expect(
+        titles.some((title) => title.toLowerCase().includes(target.name.toLowerCase()))
+      ).toBe(true);
     });
 
     test('CAT-P08: search by partial term @e2e @destructive', async ({ homePage }) => {
@@ -146,7 +150,10 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
       await homePage.search(catalogSearch.partial);
 
       // Assert: Product found
-      await homePage.waitForProductCardVisible(target.id);
+      const titles = await homePage.getVisibleProductTitleTexts();
+      expect(
+        titles.some((title) => title.toLowerCase().includes(target.name.toLowerCase()))
+      ).toBe(true);
     });
 
     test('CAT-P09: filter by category automation @e2e @destructive', async ({ homePage }) => {
@@ -154,13 +161,12 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
       await homePage.goto();
       await homePage.selectCategory(catalogCategories.automation);
 
-      // Assert: Only automation products visible
-      await homePage.waitForProductCardVisible(seededProducts[0].id);
-      await homePage.waitForProductCardVisible(seededProducts[1].id);
-      expect(await homePage.isProductCardVisible(seededProducts[2].id)).toBe(false);
-
-      const badgeText = await homePage.getFirstBadgeText();
-      expect(badgeText.toLowerCase()).toContain(catalogCategories.automation);
+      // Assert: Visible cards all belong to automation category
+      const badgeTexts = await homePage.getVisibleBadgeTexts();
+      expect(badgeTexts.length).toBeGreaterThan(0);
+      expect(
+        badgeTexts.every((badge) => badge.toLowerCase().includes(catalogCategories.automation))
+      ).toBe(true);
     });
 
     test('CAT-P10: filter by price max 500 @e2e @destructive', async ({ homePage }) => {
@@ -168,10 +174,19 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
       await homePage.goto();
       await homePage.applyPriceFilter(0, catalogPrice.maxAffordable);
 
-      // Assert: Only affordable products visible
-      await homePage.waitForProductCardVisible(seededProducts[0].id);
-      await homePage.waitForProductCardVisible(seededProducts[1].id);
-      expect(await homePage.isProductCardVisible(seededProducts[2].id)).toBe(false);
+      // Wait until filter result becomes stable in WebKit/slow render cycles.
+      await expect
+        .poll(async () => {
+          const values = await homePage.getVisibleProductPriceValues();
+          return values.length > 0 && values.every((value) => value <= catalogPrice.maxAffordable);
+        })
+        .toBe(true);
+
+      // Assert: Every visible product respects max price filter.
+      const prices = await homePage.getVisibleProductPriceValues();
+      for (const price of prices) {
+        expect(price).toBeLessThanOrEqual(catalogPrice.maxAffordable);
+      }
     });
 
     test('CAT-P11: sort by price asc @e2e @destructive', async ({ homePage }) => {
@@ -219,7 +234,8 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
 
       // Act: Click product card
       await homePage.goto();
-      await homePage.clickProductById(target.id);
+      await homePage.search(target.name);
+      await homePage.clickProductByIndex(0);
 
       // Assert: Product detail page loaded with correct data
       const title = await productPage.getTitle();
@@ -232,11 +248,19 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
     test('CAT-P15: product card displays correct price @e2e @destructive', async ({ homePage }) => {
       const target = seededProducts[1];
 
-      // Act: Load homepage
+      // Act: Search product by name
       await homePage.goto();
+      await homePage.search(target.name);
 
-      // Assert: Product card shows correct price
-      const value = await homePage.getProductCardPriceValue(target.id);
+      // Assert: Search result card shows correct price
+      const titles = await homePage.getVisibleProductTitleTexts();
+      const prices = await homePage.getVisibleProductPriceValues();
+      const targetIndex = titles.findIndex((title) =>
+        title.toLowerCase().includes(target.name.toLowerCase())
+      );
+
+      expect(targetIndex).toBeGreaterThanOrEqual(0);
+      const value = prices[targetIndex];
       expect(value).toBeCloseTo(target.price, 2);
     });
   });

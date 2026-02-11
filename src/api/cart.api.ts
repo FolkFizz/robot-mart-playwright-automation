@@ -1,5 +1,11 @@
-import { APIRequestContext, expect } from '@playwright/test';
+import { APIRequestContext, APIResponse } from '@playwright/test';
 import { routes } from '@config/constants';
+
+const assertOk = async (res: APIResponse, action: string) => {
+  if (res.ok()) return;
+  const preview = (await res.text().catch(() => '')).slice(0, 500);
+  throw new Error(`[cart.api] ${action} failed status=${res.status()} body=${preview}`);
+};
 
 // Add an item to the cart (JSON payload).
 export const addToCart = async (ctx: APIRequestContext, productId: number, quantity = 1) => {
@@ -8,7 +14,7 @@ export const addToCart = async (ctx: APIRequestContext, productId: number, quant
     headers: { Accept: 'application/json' }
   });
 
-  expect(res.ok()).toBeTruthy();
+  await assertOk(res, 'addToCart');
   return res;
 };
 
@@ -23,7 +29,7 @@ export const updateCartItem = async (
     headers: { Accept: 'application/json' }
   });
 
-  expect(res.ok()).toBeTruthy();
+  await assertOk(res, 'updateCartItem');
   return res;
 };
 
@@ -34,7 +40,7 @@ export const removeCartItem = async (ctx: APIRequestContext, productId: number) 
     headers: { Accept: 'application/json' }
   });
 
-  expect(res.ok()).toBeTruthy();
+  await assertOk(res, 'removeCartItem');
   return res;
 };
 
@@ -43,7 +49,7 @@ export const getCart = async (ctx: APIRequestContext) => {
   const res = await ctx.get(routes.api.cart, {
     headers: { Accept: 'application/json' }
   });
-  expect(res.ok()).toBeTruthy();
+  await assertOk(res, 'getCart');
   return res;
 };
 
@@ -57,7 +63,7 @@ export const clearCart = async (ctx: APIRequestContext) => {
       headers: { Accept: 'application/json' }
     });
   }
-  expect(res.ok()).toBeTruthy();
+  await assertOk(res, 'clearCart');
   return res;
 };
 
@@ -67,7 +73,7 @@ export const applyCoupon = async (ctx: APIRequestContext, code: string) => {
     data: { code },
     headers: { Accept: 'application/json' }
   });
-  expect(res.ok()).toBeTruthy();
+  await assertOk(res, 'applyCoupon');
   return res;
 };
 
@@ -76,6 +82,6 @@ export const removeCoupon = async (ctx: APIRequestContext) => {
   const res = await ctx.delete(routes.api.cartCoupons, {
     headers: { Accept: 'application/json' }
   });
-  expect(res.ok()).toBeTruthy();
+  await assertOk(res, 'removeCoupon');
   return res;
 };

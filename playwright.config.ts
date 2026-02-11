@@ -17,7 +17,7 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.PW_WORKERS ? Number(process.env.PW_WORKERS) : 1,
 
   // Reporter: list + html + allure
   reporter: [['list'], ['html'], ['allure-playwright', { outputFolder: 'allure-results' }]],
@@ -38,5 +38,18 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } }
-  ]
+  ],
+
+  // Start companion web app automatically for local runs.
+  webServer:
+    (process.env.BASE_URL || 'http://localhost:3000').includes('localhost') ||
+    (process.env.BASE_URL || '').includes('127.0.0.1')
+      ? {
+          command: 'npm run dev',
+          cwd: path.resolve(__dirname, '..', 'robot-store-sandbox'),
+          url: process.env.BASE_URL || 'http://localhost:3000',
+          reuseExistingServer: true,
+          timeout: 180_000
+        }
+      : undefined
 });
