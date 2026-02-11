@@ -137,9 +137,9 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
 
       // Assert: Product found regardless of case
       const titles = await homePage.getVisibleProductTitleTexts();
-      expect(
-        titles.some((title) => title.toLowerCase().includes(target.name.toLowerCase()))
-      ).toBe(true);
+      expect(titles.some((title) => title.toLowerCase().includes(target.name.toLowerCase()))).toBe(
+        true
+      );
     });
 
     test('CAT-P08: search by partial term @e2e @destructive', async ({ homePage }) => {
@@ -151,9 +151,9 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
 
       // Assert: Product found
       const titles = await homePage.getVisibleProductTitleTexts();
-      expect(
-        titles.some((title) => title.toLowerCase().includes(target.name.toLowerCase()))
-      ).toBe(true);
+      expect(titles.some((title) => title.toLowerCase().includes(target.name.toLowerCase()))).toBe(
+        true
+      );
     });
 
     test('CAT-P09: filter by category automation @e2e @destructive', async ({ homePage }) => {

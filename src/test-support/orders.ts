@@ -15,10 +15,7 @@ type OrderCreateResult = {
   body: OrderCreateResponseBody;
 };
 
-const postOrder = async (
-  api: APIRequestContext,
-  route: string
-): Promise<OrderCreateResult> => {
+const postOrder = async (api: APIRequestContext, route: string): Promise<OrderCreateResult> => {
   const res = await api.post(route, {
     data: { items: [] },
     headers: { Accept: 'application/json' },

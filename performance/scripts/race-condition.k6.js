@@ -240,8 +240,7 @@ export default function (data) {
     checkoutDuration.add(Date.now() - startedAt);
 
     const handled = check(checkoutRes, {
-      'race checkout handled': (r) =>
-        r.status === 200 || r.status === 400 || isCartRedirect(r),
+      'race checkout handled': (r) => r.status === 200 || r.status === 400 || isCartRedirect(r),
       'race checkout no 5xx': (r) => r.status < 500
     });
 
