@@ -30,7 +30,22 @@ export class InboxPage extends BasePage {
     await this.waitForNetworkIdle();
   }
 
+  async waitForEmailCount(minCount = 1, timeoutMs = 20_000): Promise<number> {
+    const deadline = Date.now() + timeoutMs;
+    let count = 0;
+
+    while (Date.now() < deadline) {
+      count = await this.getEmailCount();
+      if (count >= minCount) return count;
+      await this.reloadDomReady();
+      await this.sleep(750);
+    }
+
+    return count;
+  }
+
   async openEmailBySubject(subject: string): Promise<void> {
+    await this.waitForEmailCount(1, 15_000);
     await this.inboxItems.first().waitFor({ state: 'visible', timeout: 15_000 });
 
     const escaped = subject.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

@@ -9,9 +9,34 @@ export class BasePage {
     this.page = page;
   }
 
+  private isTransientNavigationError(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error ?? '');
+    return [
+      'ERR_INTERNET_DISCONNECTED',
+      'ERR_NETWORK_CHANGED',
+      'ERR_CONNECTION_RESET',
+      'ERR_CONNECTION_CLOSED',
+      'ERR_CONNECTION_ABORTED',
+      'ERR_TIMED_OUT',
+      'ERR_NAME_NOT_RESOLVED',
+      'Navigation timeout'
+    ].some((needle) => message.includes(needle));
+  }
+
   // Navigate to any path and wait for DOM content to load.
   async goto(path: string): Promise<void> {
-    await this.page.goto(path, { waitUntil: 'domcontentloaded' });
+    const maxAttempts = process.env.CI ? 3 : 1;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        await this.page.goto(path, { waitUntil: 'domcontentloaded' });
+        return;
+      } catch (error) {
+        const shouldRetry = attempt < maxAttempts && this.isTransientNavigationError(error);
+        if (!shouldRetry) throw error;
+        await this.page.waitForTimeout(attempt * 1000);
+      }
+    }
   }
 
   // Helper to find an element by data-testid.
