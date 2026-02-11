@@ -1,192 +1,215 @@
 # Robot Store Playwright Automation
 
-Automation test workspace for the Robot Store sandbox application.
-This repository combines Playwright functional testing and k6 performance testing
-in one place, with reproducible evidence artifacts for portfolio and QA reporting.
+Single-source documentation for this repository.
+This project combines Playwright (functional) and k6 (performance) testing for the Robot Store sandbox app.
 
-## Project Scope
+## 1. What This Repo Covers
 
-- UI/API/Integration/Security/A11y coverage with Playwright
-- Load and performance coverage with k6
-- Safe production smoke checks (`@smoke` + `@safe`)
-- Local deterministic reset/seed support for stable test runs
+- UI/API/Integration/Security/A11y tests with Playwright
+- Performance/load tests with k6
+- Safe production smoke checks (`@smoke`, `@safe`)
+- Local deterministic test setup with reset/seed hooks
 
-## Current Snapshot
-
-Verification status: run `npm run ci:quality` and `npm run ci:quick` on the current commit.
-
-- Playwright specs: `27`
-  - `tests/e2e`: 10
-  - `tests/api`: 5
-  - `tests/integration`: 5
-  - `tests/security`: 4
-  - `tests/a11y`: 3
-- k6 scripts: `10` in `performance/scripts/`
-- Latest performance evidence:
-  - Portfolio: `performance/results/20260209-121019-portfolio/manifest.md`
-  - Gate: `performance/results/20260209-122753-gate/manifest.md`
-- CI status:
-  - Active workflows under `.github/workflows/`:
-    - `quick-regression.yml`
-    - `ui-smoke.yml`
-    - `api.yml`
-    - `a11y.yml`
-    - `regression-nightly.yml`
-    - `k6-nightly.yml`
-  - Automatic CI excludes `@chat/@ai` by default to avoid external LLM dependency/cost in routine runs
-
-## Tech Stack
+## 2. Tech Stack
 
 - Node.js + TypeScript
 - Playwright (`@playwright/test`)
-- k6 (performance tests)
-- Allure reporter (`allure-playwright`)
-- axe-core integration for accessibility
-- ESLint + Prettier (quality gates)
-- PostgreSQL client (`pg`) for reset/seed hooks
-- Docker / Docker Compose (portable local execution)
+- k6
+- Allure (`allure-playwright`, `allure-commandline`)
+- axe (`@axe-core/playwright`)
+- ESLint + Prettier
+- PostgreSQL client (`pg`)
 
-## Prerequisites
+## 3. Prerequisites
 
-1. Install dependencies
+1. Install dependencies:
 
 ```bash
 npm install
 ```
 
-2. Configure environment profile
-   - Copy `.env.local.example` to `.env.local` for local development
-   - Copy `.env.prod.example` to `.env.prod` for hosted safe checks
-   - Activate one profile into `.env` with `npm run env:use:local` or `npm run env:use:prod`
-3. Ensure target application is reachable
-   - Local mode: run companion app repo `robot-store-sandbox` with `npm run dev`
-   - Hosted mode: point to deployed URL
-4. Optional for performance testing:
-   - Install k6
-   - Provide `RESET_KEY` for stock reset endpoint
-5. Optional for containerized execution:
-   - Docker Desktop (or Docker Engine + Compose v2)
+2. Prepare environment profiles:
 
-## Required Environment Variables
-
-- `BASE_URL` (defaults to `http://localhost:3000` if not set in Playwright)
-- `DATABASE_URL`
-- `TEST_API_KEY`
-- `RESET_KEY`
-- `USER_USERNAME`
-- `USER_PASSWORD`
-- `ADMIN_USERNAME`
-- `ADMIN_PASSWORD`
-
-## Environment Profiles (Important)
-
-- `.env.local`:
-  - Playwright target: `http://localhost:3000`
-  - Recommended DB: Neon `test_db` branch
-  - `SEED_DATA=true` (destructive seed/reset allowed only for localhost target)
-- `.env.prod`:
-  - Playwright target: `https://robot-store-sandbox.onrender.com`
-  - Hosted safe checks only
-  - `SEED_DATA=false` (destructive seed/reset disabled)
-
-Profile switch commands:
+- Copy `.env.local.example` -> `.env.local`
+- Copy `.env.prod.example` -> `.env.prod`
+- Activate one profile into `.env`:
 
 ```bash
 npm run env:use:local
+# or
 npm run env:use:prod
 ```
 
-## URL Strategy (Important)
+3. If using local mode, run the companion app (`robot-store-sandbox`) at `http://localhost:3000`.
+
+4. If using performance tests, install k6.
+
+## 4. Environment Strategy
+
+### Profiles
+
+- `.env.local`
+  - `BASE_URL=http://localhost:3000`
+  - Recommended DB branch: Neon `test_db`
+  - `SEED_DATA=true` for deterministic local runs
+- `.env.prod`
+  - `BASE_URL=https://robot-store-sandbox.onrender.com`
+  - Intended for hosted safe checks
+  - `SEED_DATA=false`
+
+### URL Resolution
 
 - Playwright target:
-  - Uses `BASE_URL` only
-  - Fallback: `http://localhost:3000`
-- k6 target (priority order):
-  1. `PERF_BASE_URL` (recommended)
-  2. `REAL_URL` (legacy alias)
+  1. `BASE_URL`
+  2. fallback `http://localhost:3000`
+
+- k6 target:
+  1. `PERF_BASE_URL`
+  2. `REAL_URL` (legacy)
   3. `BASE_URL`
-  4. `http://localhost:3000`
+  4. fallback `http://localhost:3000`
 
-Quick check:
-
-```bash
-npm run env:targets
-```
-
-## Run Modes (Recommended)
-
-1. Quick Review Mode (no companion repo required)
-   - Use hosted target
-   - Example `.env`:
-     - `BASE_URL="https://robot-store-sandbox.onrender.com"`
-     - `PERF_BASE_URL="https://robot-store-sandbox.onrender.com"`
-   - Best for portfolio reviewers who want fast validation
-
-2. Local Dev Mode (with companion app repo)
-   - In `robot-store-sandbox` repo:
-     - `npm install`
-     - `npm run dev`
-   - In this repo `.env`:
-     - `BASE_URL="http://localhost:3000"`
-     - `PERF_BASE_URL` optional (set only if k6 should hit a different target)
-   - Best for debugging and development feedback loop
-
-Optional:
-
-- `SEED_DATA` (`false` to skip auto seed/reset)
-- `SEED_STOCK` (override stock value after seed/reset)
-- `ALLOW_DESTRUCTIVE_TEST_HOOKS` (force-enable destructive seed/reset for non-localhost targets; default `false`)
-- `INIT_SQL_PATH` (custom path to fallback SQL file, e.g. `database/init.sql`)
-- `PERF_BASE_URL` (optional k6-only override target)
-- `PERF_STOCK_ALL` (stock baseline for perf stock reset; default `300`)
-- `REAL_URL` (legacy k6 override, keep empty in new setups)
-
-## Quick Start
-
-1. Verify target URL resolution (recommended before running)
+Inspect active targets:
 
 ```bash
 npm run env:targets
 ```
 
-2. Run smoke tests
+### Safety Rules
+
+- Destructive hooks (`/api/test/reset`, `/api/test/seed`) are allowed only for localhost by default.
+- Override only when intentional:
+  - `ALLOW_DESTRUCTIVE_TEST_HOOKS=true`
+
+## 5. Run Modes
+
+### Quick reviewer mode (hosted, no companion repo)
 
 ```bash
+npm run env:use:prod
+npm run env:targets
 npm run test:smoke
 ```
 
-3. Run quality gates
+### Local dev mode
+
+In `robot-store-sandbox`:
 
 ```bash
-npm run ci:quality
+npm install
+npm run dev
 ```
 
-4. Run full Playwright suite
+In this repo:
 
 ```bash
+npm run env:use:local
+npm run env:targets
+npm run ci:quick
 npm run test
 ```
 
-5. Run production-safe suite
+### Safe production check
 
 ```bash
 npm run test:prod
 ```
 
-## Command Reference
+`test:prod` runs only `@smoke|@safe` tests.
 
-Playwright:
+## 6. Test Architecture
+
+### Layering
+
+1. `tests/**`
+
+- Own flow and assertions
+- Keep specs readable and intent-focused
+
+2. `src/pages/**`
+
+- Page Objects hold selectors and UI interactions
+
+3. `src/fixtures/**`
+
+- Typed shared setup/context (API, auth, seed lifecycle)
+
+4. `src/test-support/**`
+
+- Cross-spec helpers
+
+5. `src/api/**`
+
+- Reusable API clients and request wrappers
+
+6. `src/config/**`, `src/data/**`
+
+- Env, routes, constants, test data
+
+7. `performance/**`
+
+- k6 shared libraries, scenarios, thresholds, scripts
+
+### Repository structure
+
+```text
+src/
+tests/
+performance/
+scripts/
+.github/workflows/
+```
+
+## 7. Test Taxonomy and Tags
+
+### Taxonomy
+
+- Functional: `tests/api`, `tests/integration`, `tests/e2e`
+- Non-functional: `tests/a11y`, `tests/security`
+- Performance: `performance/scripts/*.k6.js`
+
+### Core tags
+
+- `@smoke`: fast checks
+- `@regression`: broader coverage
+- `@api`, `@a11y`, `@security`
+
+### Safety tags
+
+- `@safe`: non-destructive
+- `@destructive`: data-mutating
+
+Guideline:
+
+- Use `@safe` for read-only tests.
+- Use `@destructive` when changing data (seed/reset/checkout/admin writes).
+
+## 8. Command Reference
+
+### Playwright
 
 - `npm run test`
 - `npm run test:smoke`
 - `npm run test:regression`
 - `npm run test:api`
 - `npm run test:a11y`
-- `npm run test:prod`
 - `npm run test:quick-regression`
 - `npm run test:quick-regression:stable`
+- `npm run test:prod`
 
-Quality:
+Run single file:
+
+```bash
+npx playwright test tests/e2e/catalog.e2e.spec.ts --project=chromium
+```
+
+Run by tag:
+
+```bash
+npx playwright test --grep "@smoke"
+```
+
+### Quality gates
 
 - `npm run format`
 - `npm run format:check`
@@ -196,13 +219,13 @@ Quality:
 - `npm run ci:quality`
 - `npm run ci:quick`
 
-Reporting:
+### Reporting
 
 - `npm run allure:clean`
 - `npm run report:allure`
 - `npm run report:open`
 
-Utilities:
+### Environment and stock utilities
 
 - `npm run env:use:local`
 - `npm run env:use:prod`
@@ -211,7 +234,7 @@ Utilities:
 - `npm run stock:reset:local`
 - `npm run stock:reset:prod`
 
-k6 performance:
+### k6
 
 - `npm run test:perf:smoke`
 - `npm run test:perf:auth`
@@ -228,58 +251,126 @@ k6 performance:
 - `npm run test:perf:suite`
 - `npm run test:perf:suite:gate`
 
-Docker:
+### Docker
 
-- `docker compose run --rm qa-playwright` (safe smoke via container)
-- `docker compose run --rm qa-k6` (k6 smoke via container)
-- For local app target from container, set `BASE_URL=http://host.docker.internal:3000`
+- `docker compose run --rm qa-playwright`
+- `docker compose run --rm qa-k6`
 
-## Project Structure
+For container -> local app testing:
 
-```text
-src/                    # fixtures, page objects, api clients, utilities
-tests/                  # Playwright specs (a11y/api/e2e/integration/security)
-performance/            # k6 scripts, data, thresholds, results, perf docs
-docs/                   # focused runbooks and conventions
-scripts/                # helper runners (run-k6, run-perf-suite)
-.github/workflows/      # active GitHub Actions workflows (PR checks + weekly schedules)
+- `BASE_URL=http://host.docker.internal:3000`
+
+## 9. Accessibility and Allure
+
+### Accessibility (axe)
+
+```bash
+npm run test:a11y
+# or
+npx playwright test tests/a11y --grep "@a11y"
 ```
 
-## Documentation Index
+A11y helper behavior is centralized in `src/utils/a11y.ts`.
 
-General docs:
+### Allure
 
-- `docs/quick-guide.md`
-- `docs/environments.md`
-- `docs/test-architecture.md`
-- `docs/tagging-convention.md`
-- `docs/test-taxonomy.md`
-- `docs/a11y-guide.md`
-- `docs/allure-guide.md`
-- `docs/ci-pipeline.md`
+```bash
+npm run report:allure
+npm run report:open
+```
 
-Performance docs:
+Allure artifacts are generated from `allure-results`.
 
-- `performance/README.md`
-- `performance/final-report.md`
-- `performance/issues/performance-backlog-2026-02-09.md`
+## 10. CI/CD Coverage in This Repo
 
-## Documentation Consolidation Decision
+### Active CI workflows
 
-- Kept all `docs/*.md` files because each has a focused purpose (runbook, env, tags, taxonomy, reporting)
-- Updated root `README.md` as the single onboarding entry point
-- Kept one canonical performance summary at `performance/final-report.md`
-- Removed duplicate summary copy in `performance/results/` to avoid drift
+- `.github/workflows/quick-regression.yml`
+- `.github/workflows/ui-smoke.yml`
+- `.github/workflows/api.yml`
+- `.github/workflows/a11y.yml`
+- `.github/workflows/regression-nightly.yml`
+- `.github/workflows/k6-nightly.yml`
 
-## Notes
+### CI behavior summary
 
-- Playwright npm test commands auto-clean `allure-results` and `allure-report` before each run, so generated reports reflect the latest execution only.
-- Destructive reset/seed hooks run only on localhost targets by default. For remote targets they are skipped unless `ALLOW_DESTRUCTIVE_TEST_HOOKS=true` is explicitly set.
-- Performance suites can fail by design when thresholds expose real bottlenecks; this is treated as evidence, not script failure
+- `quick-regression`: `ci:quality` + quick smoke/regression subset
+- `ui-smoke`: safe UI/security/a11y slice
+- `api`: API smoke/security slice
+- `a11y`: accessibility smoke slice
+- `regression-nightly`: wider regression subset
+- `k6-nightly`: performance gate suite
 
-## Known Limitations
+Common CI defaults:
 
-- `@chat/@ai` tests are excluded from routine CI by default because they can depend on external LLM availability/cost.
-- Some destructive tests (`@destructive`) are intentionally excluded from PR-safe smoke workflows.
-- k6 thresholds can fail on shared environments due to live network variance; this is expected signal, not framework instability.
+- `@chat`/`@ai` excluded in routine runs
+- destructive tests are excluded from PR-safe paths
+- artifacts are uploaded (`playwright-report`, `test-results`, `allure-*`, `performance/results/*`)
 
+## 11. Performance Evidence Snapshot
+
+Latest committed evidence references:
+
+- Portfolio manifest: `performance/results/20260209-121019-portfolio/manifest.md`
+- Gate manifest: `performance/results/20260209-122753-gate/manifest.md`
+- Latest pointer: `performance/results/latest.txt`
+
+Observed bottlenecks from latest gate/portfolio artifacts:
+
+- `checkout-strict`: unexpected outcomes and elevated checkout latency under spike
+- `stress-quick`: p95 response time above threshold
+- `soak-quick`: p95 response time above threshold
+
+Backlog ticket drafts were previously tracked in this repo and are now summarized here as work items:
+
+1. Stabilize checkout under concurrency (`checkout-strict` gate failures).
+2. Reduce stress p95 latency to threshold target.
+3. Improve soak p95 stability over sustained duration.
+
+## 12. Known Limitations / Trade-offs
+
+- `@chat`/`@ai` tests are excluded from routine CI due to external dependency/cost variance.
+- k6 thresholds can fail in shared hosted environments because runtime/network conditions vary.
+- Destructive test paths are intentionally constrained for safety.
+
+## 13. Troubleshooting
+
+### Tests fail with 403 on `/api/test/reset`
+
+Likely causes:
+
+- target is hosted environment where destructive hooks are disabled
+- incorrect `TEST_API_KEY`/`RESET_KEY`
+- backend test hooks not enabled for that environment
+
+### Checkout/perf failures with low stock
+
+Reset stock before stock-sensitive runs:
+
+```bash
+npm run stock:reset:local
+# or
+npm run stock:reset:prod
+```
+
+### Allure generation seems slow/stuck
+
+Clean old artifacts first:
+
+```bash
+npm run allure:clean
+npm run test:smoke
+npm run report:allure
+```
+
+## 14. Portfolio Reviewer Path (Suggested)
+
+For the fastest reproducible review:
+
+1. `npm install`
+2. `npm run env:use:prod`
+3. `npm run ci:quality`
+4. `npm run test:smoke`
+5. `npm run report:allure`
+
+This sequence verifies code quality, smoke stability, and report generation with minimal setup.
