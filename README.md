@@ -138,6 +138,7 @@ Optional:
 - `ALLOW_DESTRUCTIVE_TEST_HOOKS` (force-enable destructive seed/reset for non-localhost targets; default `false`)
 - `INIT_SQL_PATH` (custom path to fallback SQL file, e.g. `database/init.sql`)
 - `PERF_BASE_URL` (optional k6-only override target)
+- `PERF_STOCK_ALL` (stock baseline for perf stock reset; default `300`)
 - `REAL_URL` (legacy k6 override, keep empty in new setups)
 
 ## Quick Start

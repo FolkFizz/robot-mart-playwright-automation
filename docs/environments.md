@@ -60,6 +60,7 @@ npm run env:targets
 - `SEED_STOCK` (stock baseline for seeded data)
 - `ALLOW_DESTRUCTIVE_TEST_HOOKS` (default `false`)
 - `PERF_BASE_URL`
+- `PERF_STOCK_ALL` (k6 stock baseline used by reset-stock flow, default `300`)
 - `REAL_URL` (legacy)
 - `CHAOS_ENABLED`
 - `PAYMENT_MOCK`

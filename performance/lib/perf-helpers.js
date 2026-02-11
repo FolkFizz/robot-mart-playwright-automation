@@ -151,7 +151,12 @@ export const fetchTargetProductIds = (preferredIds, options = {}) => {
   return getInStockAnyIds(products);
 };
 
-export const resetStockIfNeeded = ({ enabled, resetKey, endpoint = 'reset_stock' }) => {
+export const resetStockIfNeeded = ({
+  enabled,
+  resetKey,
+  endpoint = 'reset_stock',
+  stockAll = __ENV.PERF_STOCK_ALL
+}) => {
   if (!enabled) {
     return;
   }
@@ -161,19 +166,26 @@ export const resetStockIfNeeded = ({ enabled, resetKey, endpoint = 'reset_stock'
     return;
   }
 
-  const resetRes = http.post(`${app.baseURL}/api/products/reset-stock`, null, {
-    headers: { 'X-RESET-KEY': resetKey },
-    redirects: 0,
-    tags: { endpoint },
-    responseCallback: http.expectedStatuses(200, 403)
-  });
+  const resolvedStockAll = toPositiveInt(stockAll, 300);
+  const resetRes = http.post(
+    `${app.baseURL}/api/products/reset-stock`,
+    JSON.stringify({ stockAll: resolvedStockAll }),
+    {
+      headers: { 'X-RESET-KEY': resetKey, 'Content-Type': 'application/json' },
+      redirects: 0,
+      tags: { endpoint },
+      responseCallback: http.expectedStatuses(200, 403)
+    }
+  );
 
   if (resetRes.status === 200) {
-    console.log('[Setup] Stock reset completed.');
+    console.log(`[Setup] Stock reset completed (stockAll=${resolvedStockAll}).`);
     return;
   }
 
-  console.warn(`[Setup] Stock reset returned status=${resetRes.status}. Continuing without reset.`);
+  console.warn(
+    `[Setup] Stock reset returned status=${resetRes.status} (stockAll=${resolvedStockAll}). Continuing without reset.`
+  );
 };
 
 export const getLocation = (res) => {

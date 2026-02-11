@@ -49,6 +49,7 @@ The suite covers these categories:
    - `BASE_URL` (fallback shared with Playwright)
 3. Optional but recommended for stable checkout/load runs
    - `RESET_KEY` for stock reset endpoint
+   - `PERF_STOCK_ALL` to set stock baseline before stock-sensitive runs (default: `300`)
    - or DB access for `npm run setup:stock`
 
 ## Test Modes
@@ -105,6 +106,7 @@ Option A: API reset (if supported by target env)
 
 - Set `PERF_RESET_STOCK=true`
 - Set `RESET_KEY=<your-reset-key>`
+- Optional: set `PERF_STOCK_ALL=300` (or higher for stress tests)
 - `run-perf-suite` enables this automatically for stock-sensitive scripts:
   - `cart`, `race`, `checkout-*`, `load-*`, `stress-*`, `soak-*`
 

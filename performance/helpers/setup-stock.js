@@ -46,7 +46,12 @@ const dbConfig = process.env.DATABASE_URL
     };
 
 // Stock configuration
-const STOCK_AMOUNT = 200; // Increase each product to 200 units (sufficient for load tests)
+// Default to 300 for higher-throughput perf scenarios.
+const STOCK_AMOUNT = (() => {
+  const raw = process.env.PERF_STOCK_ALL;
+  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 300;
+})();
 
 async function setupStock() {
   const client = new Client(dbConfig);

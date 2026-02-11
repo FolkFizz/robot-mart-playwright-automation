@@ -4,7 +4,10 @@ const { spawn } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const RESULTS_ROOT = path.join(ROOT, 'performance', 'results');
-const RESET_STOCK_ENV = { PERF_RESET_STOCK: 'true' };
+const RESET_STOCK_ENV = {
+  PERF_RESET_STOCK: 'true',
+  PERF_STOCK_ALL: process.env.PERF_STOCK_ALL || '300'
+};
 
 const PROFILES = {
   portfolio: [
