@@ -1,6 +1,6 @@
 import { test as base, expect, type APIRequestContext, type Page } from '@playwright/test';
 import { createApiContext } from '@api/http';
-import { resetDb } from '@api/test-hooks.api';
+import { seedDb } from '@api/test-hooks.api';
 import { loginAsUser, loginAsAdmin } from '@api/auth.api';
 import { addToCart, clearCart } from '@api/cart.api';
 import { runA11y, expectNoA11yViolations } from '@utils/a11y';
@@ -35,6 +35,7 @@ const seedRunId = process.env.PW_RUN_ID ?? 'local';
 const seedLockDir = path.join(os.tmpdir(), 'robot-store-playwright-seed');
 const seedDoneFile = path.join(seedLockDir, `${seedRunId}.done`);
 const seedLockFile = path.join(seedLockDir, `${seedRunId}.lock`);
+const seedDataEnabled = String(process.env.SEED_DATA ?? 'true').toLowerCase() !== 'false';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -109,16 +110,18 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   seedData: [false, { scope: 'worker', option: true }],
   _seed: [
     async ({ seedData }, use) => {
-      if (seedData) {
+      if (seedData && seedDataEnabled) {
         await seedOncePerRun(async () => {
           const api = await createApiContext();
           try {
             const stockAll = process.env.SEED_STOCK ? Number(process.env.SEED_STOCK) : undefined;
-            await resetDb(api, { stockAll });
+            await seedDb(api, { stockAll });
           } finally {
             await api.dispose();
           }
         });
+      } else if (seedData && !seedDataEnabled) {
+        console.warn('[fixtures] seedData requested, but SEED_DATA=false so auto seed is skipped.');
       }
       await use();
     },

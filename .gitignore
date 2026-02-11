@@ -1,5 +1,7 @@
 node_modules/
 .env
+.env.local
+.env.prod-safe
 .env.*.local
 
 # Playwright artifacts

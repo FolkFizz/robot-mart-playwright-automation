@@ -11,11 +11,10 @@ npm run env:targets
 npm run test:smoke
 ```
 
-Recommended `.env`:
+Recommended profile:
 
-```env
-BASE_URL=https://robot-store-sandbox.onrender.com
-PERF_BASE_URL=https://robot-store-sandbox.onrender.com
+```bash
+npm run env:use:prod-safe
 ```
 
 ## 2) Local dev mode (with companion app repo)
@@ -32,19 +31,13 @@ npm run dev
 In this test repo:
 
 ```bash
+npm run env:use:local
 npm run env:targets
 npm run ci:quick
 npm run test
 ```
 
-Typical `.env`:
-
-```env
-BASE_URL=http://localhost:3000
-PERF_BASE_URL=
-```
-
-- Uses `.env` as the single source of truth
+- Uses profile templates (`.env.local` / `.env.prod-safe`) and copies active profile to `.env`
 - **Reset/seed runs** (unless `SEED_DATA=false`)
 - Seed path strategy: API test hooks first, SQL fallback from `database/init.sql`
 
@@ -108,6 +101,7 @@ INIT_SQL_PATH=C:\path\to\robot-store-playwright-automation\database\init.sql npx
 - `RESET_KEY`
 - `SEED_DATA`
 - `SEED_STOCK`
+- `ALLOW_DESTRUCTIVE_TEST_HOOKS`
 - `INIT_SQL_PATH`
 
 > Tip: keep `.env` updated and consistent with the web app config.

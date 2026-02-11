@@ -28,6 +28,8 @@
     "format:check": "prettier --check \"{src,tests,performance,scripts,docs}/**/*.{ts,js,cjs,mjs,json,md,yml,yaml}\" \"*.{ts,js,cjs,mjs,json,md}\"",
     "report:allure": "allure generate allure-results -o allure-report --clean",
     "report:open": "allure open allure-report",
+    "env:use:local": "node scripts/switch-env.js local",
+    "env:use:prod-safe": "node scripts/switch-env.js prod-safe",
     "env:targets": "node scripts/show-targets.js",
     "metrics:playwright": "node scripts/playwright-metrics.js",
     "setup:stock": "node performance/helpers/setup-stock.js",
@@ -44,7 +46,8 @@
     "test:perf:soak": "node scripts/run-k6.js performance/scripts/soak.k6.js",
     "test:perf:breakpoint": "node scripts/run-k6.js performance/scripts/breakpoint.k6.js",
     "test:perf:suite": "node scripts/run-perf-suite.js --profile portfolio",
-    "test:perf:suite:gate": "node scripts/run-perf-suite.js --profile gate"
+    "test:perf:suite:gate": "node scripts/run-perf-suite.js --profile gate",
+    "test:quick-regression:stable": "playwright test tests/api tests/e2e tests/security tests/a11y --project=chromium --grep \"@smoke|@regression\" --grep-invert \"@chat|@ai|@chaos|@stripe|@destructive\" --max-failures=10 --workers=1"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.1",

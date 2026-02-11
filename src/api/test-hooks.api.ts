@@ -35,6 +35,8 @@ const buildTestHookPayload = (stockAll?: number) => {
 
 const buildTestHookHeaders = () => ({
   Accept: 'application/json',
+  // Support both legacy and current backend header names.
+  'test-api-key': env.testApiKey,
   'X-TEST-API-KEY': env.testApiKey
 });
 
@@ -99,6 +101,26 @@ const isProdBaseUrl = (value: string) => {
   }
 };
 
+const isLocalBaseUrl = (value: string) => {
+  try {
+    const { hostname } = new URL(value);
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+  } catch {
+    return value.includes('localhost') || value.includes('127.0.0.1');
+  }
+};
+
+const toBool = (value: string | undefined, fallback = false) => {
+  if (value === undefined || value === null || value === '') return fallback;
+  return ['1', 'true', 'yes', 'y', 'on'].includes(value.toLowerCase());
+};
+
+const shouldSkipDestructiveHooks = () => {
+  if (toBool(process.env.ALLOW_DESTRUCTIVE_TEST_HOOKS, false)) return false;
+  if (isProdBaseUrl(env.baseUrl)) return true;
+  return !isLocalBaseUrl(env.baseUrl);
+};
+
 const shouldFallbackToSql = (status: number) => {
   return status === 404 || status === 405 || status === 501 || status >= 500;
 };
@@ -140,9 +162,12 @@ const runResetOrSeed = async (
 
 // Reset test data using API hook first, then SQL fallback if hook is unavailable.
 export const resetDb = async (ctx: APIRequestContext, options: ResetOptions = {}) => {
-  if (isProdBaseUrl(env.baseUrl)) {
-    // Protect production-like targets from destructive test hooks.
-    console.warn(`[test-hooks] Skip reset/seed on production baseUrl: ${env.baseUrl}`);
+  if (shouldSkipDestructiveHooks()) {
+    // Destructive hooks are allowed only for localhost targets unless explicitly overridden.
+    console.warn(
+      `[test-hooks] Skip destructive reset/seed on baseUrl: ${env.baseUrl}. ` +
+        `Use localhost or set ALLOW_DESTRUCTIVE_TEST_HOOKS=true intentionally.`
+    );
     return null;
   }
 
@@ -152,9 +177,12 @@ export const resetDb = async (ctx: APIRequestContext, options: ResetOptions = {}
 
 // Seed test data using API hook first, then SQL fallback if hook is unavailable.
 export const seedDb = async (ctx: APIRequestContext, options: SeedOptions = {}) => {
-  if (isProdBaseUrl(env.baseUrl)) {
-    // Protect production-like targets from destructive test hooks.
-    console.warn(`[test-hooks] Skip seed on production baseUrl: ${env.baseUrl}`);
+  if (shouldSkipDestructiveHooks()) {
+    // Destructive hooks are allowed only for localhost targets unless explicitly overridden.
+    console.warn(
+      `[test-hooks] Skip destructive seed on baseUrl: ${env.baseUrl}. ` +
+        `Use localhost or set ALLOW_DESTRUCTIVE_TEST_HOOKS=true intentionally.`
+    );
     return null;
   }
 

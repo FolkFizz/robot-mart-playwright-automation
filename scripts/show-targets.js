@@ -30,10 +30,14 @@ function resolveK6Target() {
 
 const pw = resolvePlaywrightTarget();
 const k6 = resolveK6Target();
+const seedData = pick('SEED_DATA') || 'true';
+const destructiveOverride = pick('ALLOW_DESTRUCTIVE_TEST_HOOKS') || 'false';
 
 console.log('Resolved test targets');
 console.log(`- Playwright: ${pw.url} (source=${pw.source})`);
 console.log(`- k6:         ${k6.url} (source=${k6.source})`);
+console.log(`- SEED_DATA:  ${seedData}`);
+console.log(`- DESTRUCTIVE_HOOK_OVERRIDE: ${destructiveOverride}`);
 
 if (k6.source === 'REAL_URL (legacy)') {
   console.log('- Note: switch to PERF_BASE_URL to make k6 override explicit.');

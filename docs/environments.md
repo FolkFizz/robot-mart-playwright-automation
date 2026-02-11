@@ -1,80 +1,72 @@
-# Environments & .env (Single Source of Truth)
+# Environments and DB Branch Strategy
 
-This project uses a single `.env` file for both **local app** and **test** runs.
-There is no `.env.test`. Keep everything in `.env`.
+This project uses profile-based env files to prevent accidental cross-environment data changes.
+
+## Profiles
+
+- `.env.local`:
+  - `BASE_URL=http://localhost:3000`
+  - Recommended DB: Neon `test_db` branch
+  - `SEED_DATA=true` for deterministic local runs
+- `.env.prod-safe`:
+  - `BASE_URL=https://robot-store-sandbox.onrender.com`
+  - Hosted read-safe checks
+  - `SEED_DATA=false`
+
+Templates:
+
+- `.env.local.example`
+- `.env.prod-safe.example`
+
+## Profile switch commands
+
+```bash
+npm run env:use:local
+npm run env:use:prod-safe
+npm run env:targets
+```
+
+`env:targets` prints active URL targets and seed safety flags.
 
 ## URL behavior
 
 - Playwright target:
   - Uses `BASE_URL`
-  - Default: `http://localhost:3000`
-- k6 target (priority order):
-  1. `PERF_BASE_URL` (recommended override)
-  2. `REAL_URL` (legacy alias)
+  - Default fallback: `http://localhost:3000`
+- k6 target priority:
+  1. `PERF_BASE_URL`
+  2. `REAL_URL` (legacy)
   3. `BASE_URL`
   4. `http://localhost:3000`
-- Prod-safe Playwright run: `npm run test:prod` (overrides `BASE_URL` to Render)
-- Quick resolution check: `npm run env:targets`
 
-## Practical setup patterns
+## Destructive hook safety
 
-- Quick review (no companion repo): set both `BASE_URL` and `PERF_BASE_URL` to deployed URL
-- Local development: run `robot-store-sandbox` with `npm run dev`, then set `BASE_URL=http://localhost:3000`
+- Destructive hooks (`/api/test/reset`, `/api/test/seed`) are allowed only when target URL is localhost.
+- For non-localhost targets, hooks are skipped by default.
+- Override only intentionally with:
+  - `ALLOW_DESTRUCTIVE_TEST_HOOKS=true`
 
 ## Required variables
 
-These are expected by the test project:
-
-- `BASE_URL` (optional; defaults to `http://localhost:3000`)
-- `DATABASE_URL` (single source of truth for DB)
-- `TEST_API_KEY` (for `/api/test/seed` and `/api/test/reset`)
-- `RESET_KEY` (for reset-stock endpoint)
+- `DATABASE_URL`
+- `TEST_API_KEY`
+- `RESET_KEY`
 - `USER_USERNAME`, `USER_PASSWORD`
 - `ADMIN_USERNAME`, `ADMIN_PASSWORD`
 
 ## Optional variables
 
-- `CHAOS_ENABLED` (true/false)
-- `PAYMENT_MOCK` (e.g. `mock` or `stripe` if UI supports)
 - `SEED_DATA` (`false` to skip auto seed/reset)
-- `SEED_STOCK` (number to override stock after seed)
-- `INIT_SQL_PATH` (absolute path to `init.sql` if the web repo is not at the default location)
-- `PERF_BASE_URL` (k6-only explicit override target)
-- `REAL_URL` (legacy k6 alias; keep empty for new setups)
+- `SEED_STOCK` (stock baseline for seeded data)
+- `ALLOW_DESTRUCTIVE_TEST_HOOKS` (default `false`)
+- `PERF_BASE_URL`
+- `REAL_URL` (legacy)
+- `CHAOS_ENABLED`
+- `PAYMENT_MOCK`
 
-## Seed source (important)
+## Recommended DB branch mapping
 
-- Reset/seed uses API test hooks first (`/api/test/reset`, `/api/test/seed`) with `TEST_API_KEY`.
-- If API hooks are unavailable, fallback uses `database/init.sql` in this repo.
-- Override fallback SQL location with `INIT_SQL_PATH`.
+- Hosted Render app: Neon `production` branch
+- Local automation + local app: Neon `test_db` branch
 
-## Example .env
-
-```env
-BASE_URL=http://localhost:3000
-PERF_BASE_URL=
-REAL_URL=
-DATABASE_URL=postgres://...
-TEST_API_KEY=mytestkey
-RESET_KEY=resetkey
-USER_USERNAME=user
-USER_PASSWORD=user123
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=admin123
-CHAOS_ENABLED=false
-PAYMENT_MOCK=mock
-SEED_DATA=true
-SEED_STOCK=100
-INIT_SQL_PATH=C:\QA-SANDBOX\robot-store-playwright-automation\database\init.sql
-```
-
-## Safety notes
-
-- When `BASE_URL` points to production (`robot-store-sandbox.onrender.com`),
-  the reset/seed logic is automatically **skipped** to avoid destructive actions.
-- For local runs, reset/seed will run (unless `SEED_DATA=false`).
-
-## See also
-
-- [Quick Guide](./quick-guide.md)
-- [Tagging Convention](./tagging-convention.md)
+This keeps portfolio demo data stable while local runs can reset freely.

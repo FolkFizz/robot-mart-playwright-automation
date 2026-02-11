@@ -54,7 +54,10 @@ Verification status: run `npm run ci:quality` and `npm run ci:quick` on the curr
 npm install
 ```
 
-2. Configure `.env` (single source of truth)
+2. Configure environment profile
+   - Copy `.env.local.example` to `.env.local` for local development
+   - Copy `.env.prod-safe.example` to `.env.prod-safe` for hosted safe checks
+   - Activate one profile into `.env` with `npm run env:use:local` or `npm run env:use:prod-safe`
 3. Ensure target application is reachable
    - Local mode: run companion app repo `robot-store-sandbox` with `npm run dev`
    - Hosted mode: point to deployed URL
@@ -74,6 +77,24 @@ npm install
 - `USER_PASSWORD`
 - `ADMIN_USERNAME`
 - `ADMIN_PASSWORD`
+
+## Environment Profiles (Important)
+
+- `.env.local`:
+  - Playwright target: `http://localhost:3000`
+  - Recommended DB: Neon `test_db` branch
+  - `SEED_DATA=true` (destructive seed/reset allowed only for localhost target)
+- `.env.prod-safe`:
+  - Playwright target: `https://robot-store-sandbox.onrender.com`
+  - Hosted safe checks only
+  - `SEED_DATA=false` (destructive seed/reset disabled)
+
+Profile switch commands:
+
+```bash
+npm run env:use:local
+npm run env:use:prod-safe
+```
 
 ## URL Strategy (Important)
 
@@ -113,7 +134,8 @@ npm run env:targets
 Optional:
 
 - `SEED_DATA` (`false` to skip auto seed/reset)
-- `SEED_STOCK` (override stock value after seed)
+- `SEED_STOCK` (override stock value after seed/reset)
+- `ALLOW_DESTRUCTIVE_TEST_HOOKS` (force-enable destructive seed/reset for non-localhost targets; default `false`)
 - `INIT_SQL_PATH` (custom path to fallback SQL file, e.g. `database/init.sql`)
 - `PERF_BASE_URL` (optional k6-only override target)
 - `REAL_URL` (legacy k6 override, keep empty in new setups)
@@ -161,6 +183,7 @@ Playwright:
 - `npm run test:a11y`
 - `npm run test:prod`
 - `npm run test:quick-regression`
+- `npm run test:quick-regression:stable`
 
 Quality:
 
@@ -180,6 +203,8 @@ Reporting:
 
 Utilities:
 
+- `npm run env:use:local`
+- `npm run env:use:prod-safe`
 - `npm run env:targets`
 
 k6 performance:
@@ -245,7 +270,7 @@ Performance docs:
 ## Notes
 
 - Playwright npm test commands auto-clean `allure-results` and `allure-report` before each run, so generated reports reflect the latest execution only.
-- Production protection is built into reset/seed hooks: destructive resets are skipped when `BASE_URL` points to `robot-store-sandbox.onrender.com`
+- Destructive reset/seed hooks run only on localhost targets by default. For remote targets they are skipped unless `ALLOW_DESTRUCTIVE_TEST_HOOKS=true` is explicitly set.
 - Performance suites can fail by design when thresholds expose real bottlenecks; this is treated as evidence, not script failure
 
 ## Known Limitations

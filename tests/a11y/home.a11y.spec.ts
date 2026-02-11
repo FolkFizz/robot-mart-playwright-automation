@@ -1,4 +1,5 @@
-﻿import { test, expect } from '@fixtures';
+﻿import { seededProducts } from '@data';
+import { test, expect } from '@fixtures';
 
 /**
  * =============================================================================
@@ -105,7 +106,7 @@ test.describe('home accessibility @a11y @safe', () => {
 
       // Assert: Product list is populated
       const productCount = await homePage.getProductCount();
-      expect(productCount).toBeGreaterThan(5);
+      expect(productCount).toBeGreaterThanOrEqual(seededProducts.length);
 
       // Act: Run accessibility audit
       const results = await runA11y(page, { exclude: homePage.getA11yExcludeSelectors() });
