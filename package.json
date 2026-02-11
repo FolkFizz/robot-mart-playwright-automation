@@ -31,6 +31,11 @@
     "metrics:playwright": "node scripts/playwright-metrics.js",
     "setup:stock": "npm run stock:reset",
     "k6:run": "node scripts/run-k6.js",
+    "monitor:up": "docker compose -f docker-compose.monitor.yml up -d",
+    "monitor:down": "docker compose -f docker-compose.monitor.yml down",
+    "monitor:down:volumes": "docker compose -f docker-compose.monitor.yml down -v",
+    "monitor:status": "docker compose -f docker-compose.monitor.yml ps",
+    "monitor:logs": "docker compose -f docker-compose.monitor.yml logs -f",
     "test:perf:auth": "npm run k6:run -- performance/scripts/auth.k6.js",
     "test:perf:smoke": "npm run k6:run -- performance/scripts/smoke.k6.js",
     "test:perf:browse": "npm run k6:run -- performance/scripts/browse.k6.js",
@@ -45,6 +50,9 @@
     "test:perf:breakpoint": "npm run k6:run -- performance/scripts/breakpoint.k6.js",
     "test:perf:suite": "node scripts/run-perf-suite.js --profile portfolio",
     "test:perf:suite:gate": "node scripts/run-perf-suite.js --profile gate",
+    "test:perf:smoke:monitor": "cross-env K6_OUT=experimental-prometheus-rw=http://localhost:9090/api/v1/write K6_PROMETHEUS_RW_TREND_STATS=p(95),p(99),avg,min,max npm run test:perf:smoke",
+    "test:perf:suite:monitor": "cross-env K6_OUT=experimental-prometheus-rw=http://localhost:9090/api/v1/write K6_PROMETHEUS_RW_TREND_STATS=p(95),p(99),avg,min,max npm run test:perf:suite",
+    "test:perf:suite:gate:monitor": "cross-env K6_OUT=experimental-prometheus-rw=http://localhost:9090/api/v1/write K6_PROMETHEUS_RW_TREND_STATS=p(95),p(99),avg,min,max npm run test:perf:suite:gate",
     "test:quick-regression:stable": "npm run pw:test -- tests/api tests/e2e tests/security tests/a11y --project=chromium --grep \"@smoke|@regression\" --grep-invert \"@chat|@ai|@chaos|@stripe|@destructive\" --max-failures=10 --workers=1"
   },
   "devDependencies": {

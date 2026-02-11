@@ -69,7 +69,25 @@ if (target.source === 'REAL_URL (legacy)') {
   );
 }
 
-const k6 = spawn('k6', ['run', ...args], {
+const hasOutputArg = args.includes('--out') || args.some((arg) => String(arg).startsWith('--out='));
+const outFromEnv = String(process.env.K6_OUT || '').trim();
+const k6Args = ['run'];
+
+if (!hasOutputArg && outFromEnv) {
+  k6Args.push('--out', outFromEnv);
+  console.log(`[run-k6] Output sink: ${outFromEnv} (source=K6_OUT)`);
+}
+
+if (outFromEnv.includes('prometheus-rw')) {
+  const trendStats = String(process.env.K6_PROMETHEUS_RW_TREND_STATS || '').trim();
+  if (trendStats) {
+    console.log(`[run-k6] Prometheus trend stats: ${trendStats}`);
+  }
+}
+
+k6Args.push(...args);
+
+const k6 = spawn('k6', k6Args, {
   stdio: 'inherit',
   shell: true,
   env: buildK6Env(process.env)

@@ -15,6 +15,7 @@ This project combines Playwright (functional) and k6 (performance) testing for t
 - Node.js + TypeScript
 - Playwright (`@playwright/test`)
 - k6
+- Prometheus + Grafana (optional k6 live monitoring stack)
 - Allure (`allure-playwright`, `allure-commandline`)
 - axe (`@axe-core/playwright`)
 - ESLint + Prettier
@@ -43,6 +44,8 @@ npm run env:use:prod
 3. If using local mode, run the companion app (`robot-store-sandbox`) at `http://localhost:3000`.
 
 4. If using performance tests, install k6.
+
+5. Optional (for live k6 monitoring dashboard): Docker Desktop / Docker Engine.
 
 ## 4. Environment Strategy
 
@@ -250,11 +253,20 @@ npx playwright test --grep "@smoke"
 - `npm run test:perf:breakpoint`
 - `npm run test:perf:suite`
 - `npm run test:perf:suite:gate`
+- `npm run test:perf:smoke:monitor`
+- `npm run test:perf:suite:monitor`
+- `npm run test:perf:suite:gate:monitor`
+- `npm run monitor:up`
+- `npm run monitor:status`
+- `npm run monitor:logs`
+- `npm run monitor:down`
+- `npm run monitor:down:volumes`
 
 ### Docker
 
 - `docker compose run --rm qa-playwright`
 - `docker compose run --rm qa-k6`
+- `docker compose -f docker-compose.monitor.yml up -d`
 
 For container -> local app testing:
 
@@ -281,7 +293,47 @@ npm run report:open
 
 Allure artifacts are generated from `allure-results`.
 
-## 10. CI/CD Coverage in This Repo
+## 10. Performance Monitoring (Prometheus + Grafana)
+
+This repository now includes a ready-to-run local monitoring stack for k6:
+
+- Prometheus receives k6 metrics via remote write
+- Grafana auto-provisions datasource + dashboard on startup
+- Dashboard file is versioned at `monitoring/grafana/dashboards/k6-overview.json`
+
+Start stack:
+
+```bash
+npm run monitor:up
+npm run monitor:status
+```
+
+Run k6 with remote-write output:
+
+```bash
+npm run test:perf:smoke:monitor
+# or
+npm run test:perf:suite:monitor
+```
+
+Open UIs:
+
+- Grafana: `http://localhost:3001` (default login `admin` / `admin`)
+- Prometheus: `http://localhost:9090`
+
+Stop stack:
+
+```bash
+npm run monitor:down
+```
+
+Notes:
+
+- Grafana is on port `3001` to avoid conflict with local app (`localhost:3000`).
+- This does not replace Allure.
+- Allure = Playwright functional test report, Prometheus/Grafana = k6 runtime metrics.
+
+## 11. CI/CD Coverage in This Repo
 
 ### Active CI workflows
 
@@ -307,7 +359,7 @@ Common CI defaults:
 - destructive tests are excluded from PR-safe paths
 - artifacts are uploaded (`playwright-report`, `test-results`, `allure-*`, `performance/results/*`)
 
-## 11. Performance Evidence Snapshot
+## 12. Performance Evidence Snapshot
 
 Latest committed evidence references:
 
@@ -327,13 +379,13 @@ Backlog ticket drafts were previously tracked in this repo and are now summarize
 2. Reduce stress p95 latency to threshold target.
 3. Improve soak p95 stability over sustained duration.
 
-## 12. Known Limitations / Trade-offs
+## 13. Known Limitations / Trade-offs
 
 - `@chat`/`@ai` tests are excluded from routine CI due to external dependency/cost variance.
 - k6 thresholds can fail in shared hosted environments because runtime/network conditions vary.
 - Destructive test paths are intentionally constrained for safety.
 
-## 13. Troubleshooting
+## 14. Troubleshooting
 
 ### Tests fail with 403 on `/api/test/reset`
 
@@ -363,7 +415,7 @@ npm run test:smoke
 npm run report:allure
 ```
 
-## 14. Portfolio Reviewer Path (Suggested)
+## 15. Portfolio Reviewer Path (Suggested)
 
 For the fastest reproducible review:
 

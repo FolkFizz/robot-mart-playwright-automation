@@ -29,5 +29,13 @@ module.exports = {
         varsIgnorePattern: '^_'
       }
     ]
-  }
+  },
+  overrides: [
+    {
+      files: ['scripts/**/*.js'],
+      rules: {
+        '@typescript-eslint/no-require-imports': 'off'
+      }
+    }
+  ]
 };
