@@ -26,6 +26,7 @@ module.exports = {
       'error',
       {
         argsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
         varsIgnorePattern: '^_'
       }
     ]
@@ -35,6 +36,15 @@ module.exports = {
       files: ['scripts/**/*.js'],
       rules: {
         '@typescript-eslint/no-require-imports': 'off'
+      }
+    },
+    {
+      files: ['performance/**/*.js'],
+      globals: {
+        __ENV: 'readonly',
+        __VU: 'readonly',
+        __ITER: 'readonly',
+        open: 'readonly'
       }
     }
   ]
