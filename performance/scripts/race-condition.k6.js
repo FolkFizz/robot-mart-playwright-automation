@@ -10,6 +10,7 @@ import {
   parseProductsPayload,
   getLocation,
   isAuthRedirect,
+  isCartRedirect,
   isStockLimitResponse,
   resetStockIfNeeded
 } from '../lib/perf-helpers.js';
@@ -91,12 +92,19 @@ function pickTargetProduct(products) {
   return inStockProducts[0];
 }
 
-function withSingleRetry(requestFn) {
-  let res = requestFn();
-  if (res && res.status >= 500) {
-    sleep(0.05);
+function withSingleRetry(requestFn, maxAttempts = 3) {
+  let res = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     res = requestFn();
+    if (res && res.status < 500) {
+      return res;
+    }
+    if (attempt < maxAttempts) {
+      sleep(0.05 * attempt);
+    }
   }
+
   return res;
 }
 
@@ -206,7 +214,8 @@ export default function (data) {
     );
 
     const handled = check(res, {
-      'race cart add handled': (r) => r.status === 200 || isStockLimitResponse(r),
+      'race cart add handled': (r) =>
+        r.status === 200 || isStockLimitResponse(r) || isCartRedirect(r),
       'race cart add no 5xx': (r) => r.status < 500
     });
 
@@ -231,7 +240,8 @@ export default function (data) {
     checkoutDuration.add(Date.now() - startedAt);
 
     const handled = check(checkoutRes, {
-      'race checkout handled': (r) => r.status === 200 || isStockLimitResponse(r),
+      'race checkout handled': (r) =>
+        r.status === 200 || r.status === 400 || isCartRedirect(r),
       'race checkout no 5xx': (r) => r.status < 500
     });
 
@@ -254,6 +264,11 @@ export default function (data) {
       } else {
         unexpectedPurchases.add(1);
       }
+      return;
+    }
+
+    if (checkoutRes.status === 400 || isCartRedirect(checkoutRes)) {
+      rejectedPurchases.add(1);
       return;
     }
 

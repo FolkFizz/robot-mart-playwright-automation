@@ -12,6 +12,7 @@ import {
   resetStockIfNeeded,
   isAuthFailureResponse,
   isStockLimitResponse,
+  isCartRedirect,
   getLocation
 } from '../lib/perf-helpers.js';
 
