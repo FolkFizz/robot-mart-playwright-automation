@@ -56,8 +56,8 @@ npm install
 
 2. Configure environment profile
    - Copy `.env.local.example` to `.env.local` for local development
-   - Copy `.env.prod-safe.example` to `.env.prod-safe` for hosted safe checks
-   - Activate one profile into `.env` with `npm run env:use:local` or `npm run env:use:prod-safe`
+   - Copy `.env.prod.example` to `.env.prod` for hosted safe checks
+   - Activate one profile into `.env` with `npm run env:use:local` or `npm run env:use:prod`
 3. Ensure target application is reachable
    - Local mode: run companion app repo `robot-store-sandbox` with `npm run dev`
    - Hosted mode: point to deployed URL
@@ -84,7 +84,7 @@ npm install
   - Playwright target: `http://localhost:3000`
   - Recommended DB: Neon `test_db` branch
   - `SEED_DATA=true` (destructive seed/reset allowed only for localhost target)
-- `.env.prod-safe`:
+- `.env.prod`:
   - Playwright target: `https://robot-store-sandbox.onrender.com`
   - Hosted safe checks only
   - `SEED_DATA=false` (destructive seed/reset disabled)
@@ -93,7 +93,7 @@ Profile switch commands:
 
 ```bash
 npm run env:use:local
-npm run env:use:prod-safe
+npm run env:use:prod
 ```
 
 ## URL Strategy (Important)
@@ -205,8 +205,11 @@ Reporting:
 Utilities:
 
 - `npm run env:use:local`
-- `npm run env:use:prod-safe`
+- `npm run env:use:prod`
 - `npm run env:targets`
+- `npm run stock:reset`
+- `npm run stock:reset:local`
+- `npm run stock:reset:prod`
 
 k6 performance:
 
@@ -279,3 +282,4 @@ Performance docs:
 - `@chat/@ai` tests are excluded from routine CI by default because they can depend on external LLM availability/cost.
 - Some destructive tests (`@destructive`) are intentionally excluded from PR-safe smoke workflows.
 - k6 thresholds can fail on shared environments due to live network variance; this is expected signal, not framework instability.
+

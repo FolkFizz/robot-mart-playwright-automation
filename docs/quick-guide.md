@@ -14,7 +14,7 @@ npm run test:smoke
 Recommended profile:
 
 ```bash
-npm run env:use:prod-safe
+npm run env:use:prod
 ```
 
 ## 2) Local dev mode (with companion app repo)
@@ -37,7 +37,7 @@ npm run ci:quick
 npm run test
 ```
 
-- Uses profile templates (`.env.local` / `.env.prod-safe`) and copies active profile to `.env`
+- Uses profile templates (`.env.local` / `.env.prod`) and copies active profile to `.env`
 - **Reset/seed runs** (unless `SEED_DATA=false`)
 - Seed path strategy: API test hooks first, SQL fallback from `database/init.sql`
 
@@ -122,3 +122,4 @@ INIT_SQL_PATH=C:\path\to\robot-store-playwright-automation\database\init.sql npx
 - [CI Pipeline](./ci-pipeline.md)
 - [A11y Guide](./a11y-guide.md)
 - [Allure Guide](./allure-guide.md)
+

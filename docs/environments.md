@@ -8,7 +8,7 @@ This project uses profile-based env files to prevent accidental cross-environmen
   - `BASE_URL=http://localhost:3000`
   - Recommended DB: Neon `test_db` branch
   - `SEED_DATA=true` for deterministic local runs
-- `.env.prod-safe`:
+- `.env.prod`:
   - `BASE_URL=https://robot-store-sandbox.onrender.com`
   - Hosted read-safe checks
   - `SEED_DATA=false`
@@ -16,13 +16,13 @@ This project uses profile-based env files to prevent accidental cross-environmen
 Templates:
 
 - `.env.local.example`
-- `.env.prod-safe.example`
+- `.env.prod.example`
 
 ## Profile switch commands
 
 ```bash
 npm run env:use:local
-npm run env:use:prod-safe
+npm run env:use:prod
 npm run env:targets
 ```
 
@@ -71,3 +71,4 @@ npm run env:targets
 - Local automation + local app: Neon `test_db` branch
 
 This keeps portfolio demo data stable while local runs can reset freely.
+

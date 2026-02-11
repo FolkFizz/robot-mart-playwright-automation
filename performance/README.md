@@ -50,7 +50,7 @@ The suite covers these categories:
 3. Optional but recommended for stable checkout/load runs
    - `RESET_KEY` for stock reset endpoint
    - `PERF_STOCK_ALL` to set stock baseline before stock-sensitive runs (default: `300`)
-   - or DB access for `npm run setup:stock`
+   - and a target that exposes `POST /api/products/reset-stock`
 
 ## Test Modes
 
@@ -112,7 +112,7 @@ Option A: API reset (if supported by target env)
 
 Option B: direct DB setup
 
-- `npm run setup:stock`
+- `npm run setup:stock` (alias of `npm run stock:reset`)
 
 ## Portfolio Artifact Collection
 

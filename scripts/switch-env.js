@@ -3,7 +3,7 @@ const path = require('path');
 
 const PROFILE_MAP = {
   local: '.env.local',
-  'prod-safe': '.env.prod-safe'
+  prod: '.env.prod'
 };
 
 const parseSimpleEnv = (raw) => {
@@ -41,7 +41,7 @@ const profile = String(process.argv[2] || '')
   .trim()
   .toLowerCase();
 if (!profile || !PROFILE_MAP[profile]) {
-  console.error('Usage: node scripts/switch-env.js <local|prod-safe>');
+  console.error('Usage: node scripts/switch-env.js <local|prod>');
   process.exit(1);
 }
 
