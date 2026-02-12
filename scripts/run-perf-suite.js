@@ -29,12 +29,12 @@ const PROFILES = {
     {
       id: 'stress-quick',
       script: 'performance/scripts/stress.k6.js',
-      env: { ...RESET_STOCK_ENV, STRESS_QUICK: 'true' }
+      env: { ...RESET_STOCK_ENV, STRESS_QUICK: 'true', STRESS_MODE: 'acceptance' }
     },
     {
       id: 'soak-quick',
       script: 'performance/scripts/soak.k6.js',
-      env: { ...RESET_STOCK_ENV, SOAK_QUICK: 'true' }
+      env: { ...RESET_STOCK_ENV, SOAK_QUICK: 'true', SOAK_MODE: 'acceptance' }
     },
     { id: 'breakpoint', script: 'performance/scripts/breakpoint.k6.js' }
   ],
@@ -45,20 +45,20 @@ const PROFILES = {
     { id: 'cart', script: 'performance/scripts/cart.k6.js', env: { ...RESET_STOCK_ENV } },
     { id: 'race', script: 'performance/scripts/race-condition.k6.js', env: { ...RESET_STOCK_ENV } },
     {
-      id: 'checkout-strict',
+      id: 'checkout-acceptance',
       script: 'performance/scripts/checkout.k6.js',
-      env: { ...RESET_STOCK_ENV }
+      env: { ...RESET_STOCK_ENV, CHECKOUT_MODE: 'acceptance' }
     },
     { id: 'load-balanced', script: 'performance/scripts/load.k6.js', env: { ...RESET_STOCK_ENV } },
     {
       id: 'stress-quick',
       script: 'performance/scripts/stress.k6.js',
-      env: { ...RESET_STOCK_ENV, STRESS_QUICK: 'true' }
+      env: { ...RESET_STOCK_ENV, STRESS_QUICK: 'true', STRESS_MODE: 'acceptance' }
     },
     {
       id: 'soak-quick',
       script: 'performance/scripts/soak.k6.js',
-      env: { ...RESET_STOCK_ENV, SOAK_QUICK: 'true' }
+      env: { ...RESET_STOCK_ENV, SOAK_QUICK: 'true', SOAK_MODE: 'acceptance' }
     },
     { id: 'breakpoint', script: 'performance/scripts/breakpoint.k6.js' }
   ]

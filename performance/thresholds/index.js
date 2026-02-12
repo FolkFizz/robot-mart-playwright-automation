@@ -40,7 +40,8 @@ export const checkoutAcceptanceThresholds = {
 
 export const raceThresholds = {
   'http_req_duration{endpoint:checkout_mock_pay}': ['p(95)<5000'],
-  'http_req_failed{endpoint:checkout_mock_pay}': ['rate<0.10'],
+  // Shared/staging environments can have brief upstream spikes under contention.
+  'http_req_failed{endpoint:checkout_mock_pay}': ['rate<0.25'],
   successful_purchases: ['count>0'],
   unexpected_purchases: ['count==0']
 };

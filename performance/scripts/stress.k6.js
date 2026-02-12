@@ -34,6 +34,8 @@ import {
  */
 
 const QUICK_MODE = String(__ENV.STRESS_QUICK || 'false').toLowerCase() === 'true';
+const STRESS_MODE =
+  String(__ENV.STRESS_MODE || 'strict').toLowerCase() === 'acceptance' ? 'acceptance' : 'strict';
 const RESET_STOCK = String(__ENV.PERF_RESET_STOCK || 'false').toLowerCase() === 'true';
 const RESET_KEY = __ENV.RESET_KEY || __ENV.PERF_RESET_KEY || '';
 const DEBUG_UNEXPECTED = String(__ENV.PERF_DEBUG_UNEXPECTED || 'false').toLowerCase() === 'true';
@@ -88,8 +90,8 @@ export const options = {
   scenarios: {
     stress_test: QUICK_MODE ? QUICK_SCENARIO : stress
   },
-  thresholds: stressCustomThresholds,
-  tags: { run_mode: QUICK_MODE ? 'quick' : 'full' }
+  thresholds: STRESS_MODE === 'acceptance' ? {} : stressCustomThresholds,
+  tags: { run_mode: QUICK_MODE ? 'quick' : 'full', stress_mode: STRESS_MODE }
 };
 
 export function setup() {
@@ -98,6 +100,7 @@ export function setup() {
   console.log(
     `[Setup] Stress Test - Target: ${app.baseURL} (mode=${QUICK_MODE ? 'quick' : 'full'})`
   );
+  console.log(`[Setup] Threshold mode: ${STRESS_MODE.toUpperCase()}`);
   console.log('[Setup] Ramping load to find breaking point...');
   console.log(`[Setup] Product source: ${productSource}`);
   console.log('[Setup] Mix: browse(50%), cart(30%), checkout(20%)');

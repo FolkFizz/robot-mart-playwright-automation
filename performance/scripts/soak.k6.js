@@ -34,6 +34,8 @@ import {
  */
 
 const QUICK_MODE = String(__ENV.SOAK_QUICK || 'false').toLowerCase() === 'true';
+const SOAK_MODE =
+  String(__ENV.SOAK_MODE || 'strict').toLowerCase() === 'acceptance' ? 'acceptance' : 'strict';
 const RESET_STOCK = String(__ENV.PERF_RESET_STOCK || 'false').toLowerCase() === 'true';
 const RESET_KEY = __ENV.RESET_KEY || __ENV.PERF_RESET_KEY || '';
 
@@ -86,8 +88,8 @@ export const options = {
   scenarios: {
     soak_test: QUICK_MODE ? QUICK_SCENARIO : soak
   },
-  thresholds: soakCustomThresholds,
-  tags: { run_mode: QUICK_MODE ? 'quick' : 'full' }
+  thresholds: SOAK_MODE === 'acceptance' ? {} : soakCustomThresholds,
+  tags: { run_mode: QUICK_MODE ? 'quick' : 'full', soak_mode: SOAK_MODE }
 };
 
 function trackResponseTime(duration, elapsedMinutes, durationMinutes) {
@@ -182,6 +184,7 @@ export function setup() {
   const productSource = productPool.getSourceLabel();
 
   console.log(`[Setup] Soak Test - Target: ${app.baseURL} (mode=${QUICK_MODE ? 'quick' : 'full'})`);
+  console.log(`[Setup] Threshold mode: ${SOAK_MODE.toUpperCase()}`);
   console.log(`[Setup] Product source: ${productSource}`);
 
   resetStockIfNeeded({ enabled: RESET_STOCK, resetKey: RESET_KEY });

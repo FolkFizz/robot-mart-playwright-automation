@@ -70,9 +70,7 @@ const gotoCheckoutFromCart = async (
     await checkoutPage.goto();
   }
 
-  await expect(page).toHaveURL(
-    (url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place
-  );
+  await expect.poll(() => isCheckoutPath(page.url())).toBe(true);
 };
 
 const waitForCheckoutReady = async (checkoutPage: CheckoutPage): Promise<'mock' | 'stripe'> => {

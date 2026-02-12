@@ -73,6 +73,15 @@ type CartStateResponse = {
 const FIXED_STOCK = 20;
 const firstProduct = seededProducts[0];
 const secondProduct = seededProducts[1];
+const canRunStockMutationTests = () => {
+  const key = process.env.TEST_API_KEY?.trim();
+  if (!key) return false;
+
+  const normalized = key.toLowerCase();
+  return (
+    normalized !== 'ci-placeholder' && normalized !== 'placeholder' && normalized !== 'changeme'
+  );
+};
 
 const getProductDetail = async (api: APIRequestContext, productId: number) => {
   const res = await api.get(routes.api.productDetail(productId), {
@@ -115,6 +124,11 @@ const getCartItem = async (api: APIRequestContext, productId: number) => {
 };
 
 test.describe('product to cart integration @integration @cart', () => {
+  test.skip(
+    !canRunStockMutationTests(),
+    'Product-cart stock mutation tests require a real TEST_API_KEY (not placeholder value).'
+  );
+
   test.beforeAll(async () => {
     await disableChaos();
   });
