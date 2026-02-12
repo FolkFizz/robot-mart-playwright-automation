@@ -9,4 +9,12 @@ export const ensureProductStock = async (
 ): Promise<void> => {
   const res = await setProductStock(api, productId, stock);
   expect(res.status()).toBe(200);
+  const body = (await res.json().catch(() => null)) as {
+    status?: string;
+    productId?: number;
+    stock?: number;
+  } | null;
+  expect(body?.status).toBe('ok');
+  expect(body?.productId).toBe(productId);
+  expect(body?.stock).toBe(stock);
 };

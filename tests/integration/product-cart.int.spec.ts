@@ -1,46 +1,13 @@
-import type { APIRequestContext } from '@playwright/test';
+﻿import type { APIRequestContext } from '@playwright/test';
 import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { disableChaos, loginAsUser } from '@api';
 import { routes } from '@config';
 import { seededProducts } from '@data';
-import { ensureProductStock } from '@test-helpers';
-
-/**
- * =============================================================================
- * PRODUCT-CART INTEGRATION TESTS
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Product page to cart data transfer (price, name, quantity)
- * 2. Stock validation on cart add API
- * 3. Visual consistency for product image between pages
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (3 tests):
- *   - PROD-CART-INT-P01: product price matches cart unit price
- *   - PROD-CART-INT-P02: product name transfers correctly to cart row
- *   - PROD-CART-INT-P03: selected quantity is preserved when added to cart
- *
- * NEGATIVE CASES (2 tests):
- *   - PROD-CART-INT-N01: out-of-stock product cannot be added via API
- *   - PROD-CART-INT-N02: quantity above current stock is rejected
- *
- * EDGE CASES (2 tests):
- *   - PROD-CART-INT-E01: product image mapping remains consistent in cart
- *   - PROD-CART-INT-E02: repeated add operations accumulate quantity and total
- *
- * Business Rules Tested:
- * ----------------------
- * - Integration Point: Product detail UI <-> Cart storage/API
- * - Data Consistency: Name, unit price, and quantity must remain consistent
- * - Stock Rule: Add-to-cart is rejected when stock is insufficient
- * - Quantity Rule: Multiple add actions accumulate, not replace
- * - Image Rule: Cart image should represent the same product image set
- *
- * =============================================================================
- */
+import {
+  ensureProductStock,
+  canRunPrivilegedStockTests,
+  privilegedStockSkipReason
+} from '@test-helpers';
 
 type ProductDetailResponse = {
   ok: boolean;
@@ -73,15 +40,8 @@ type CartStateResponse = {
 const FIXED_STOCK = 20;
 const firstProduct = seededProducts[0];
 const secondProduct = seededProducts[1];
-const canRunStockMutationTests = () => {
-  const key = process.env.TEST_API_KEY?.trim();
-  if (!key) return false;
-
-  const normalized = key.toLowerCase();
-  return (
-    normalized !== 'ci-placeholder' && normalized !== 'placeholder' && normalized !== 'changeme'
-  );
-};
+const canRunStockMutationTests = () => canRunPrivilegedStockTests('TEST_API_KEY');
+const stockMutationSkipReason = privilegedStockSkipReason('TEST_API_KEY');
 
 const getProductDetail = async (api: APIRequestContext, productId: number) => {
   const res = await api.get(routes.api.productDetail(productId), {
@@ -124,10 +84,7 @@ const getCartItem = async (api: APIRequestContext, productId: number) => {
 };
 
 test.describe('product to cart integration @integration @cart', () => {
-  test.skip(
-    !canRunStockMutationTests(),
-    'Product-cart stock mutation tests require a real TEST_API_KEY (not placeholder value).'
-  );
+  test.skip(!canRunStockMutationTests(), stockMutationSkipReason);
 
   test.beforeAll(async () => {
     await disableChaos();
@@ -227,7 +184,6 @@ test.describe('product to cart integration @integration @cart', () => {
       await homePage.clickProductById(firstProduct.id);
 
       const productImage = await productPage.getImageSrc();
-
       const product = await getProductDetail(api, firstProduct.id);
       const imageSet = (product.image_set ?? '').toLowerCase();
 

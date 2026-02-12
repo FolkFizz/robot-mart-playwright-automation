@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      BASE_URL: ${{ vars.BASE_URL || 'https://robot-store-sandbox.onrender.com' }}
+      APP_BASE_URL: ${{ vars.APP_BASE_URL || 'https://robot-store-sandbox.onrender.com' }}
       DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgres://ci:ci@localhost:5432/ci' }}
       TEST_API_KEY: ${{ secrets.TEST_API_KEY || 'ci-placeholder' }}
       RESET_KEY: ${{ secrets.RESET_KEY || 'ci-placeholder' }}

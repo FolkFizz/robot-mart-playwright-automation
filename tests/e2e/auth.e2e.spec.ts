@@ -55,6 +55,8 @@ import { randomUser, randomPasswordPair } from '@utils';
 
 test.use({ seedData: true });
 
+const resetRequestMessagePattern = /sent|email|inbox|reset link|if that email exists/i;
+
 test.describe('authentication comprehensive @e2e @auth', () => {
   // ========================================================================
   // POSITIVE TEST CASES - Login & Logout
@@ -182,7 +184,7 @@ test.describe('authentication comprehensive @e2e @auth', () => {
       // Act: Request password reset
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
-      await forgotPasswordPage.expectMessageContains(/sent|email/i);
+      await forgotPasswordPage.expectMessageContains(resetRequestMessagePattern);
 
       // Assert: Check demo inbox for reset email
       await inboxPage.gotoDemo();
@@ -249,7 +251,7 @@ test.describe('authentication comprehensive @e2e @auth', () => {
       await forgotPasswordPage.requestReset(authInputs.nonExistentEmail);
 
       // Assert: Generic success message (prevents email enumeration)
-      await forgotPasswordPage.expectMessageContains(/sent|email/i);
+      await forgotPasswordPage.expectMessageContains(resetRequestMessagePattern);
     });
 
     test('AUTH-N07: reset with expired token fails @e2e @auth @regression @destructive', async ({

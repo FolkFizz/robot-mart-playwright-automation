@@ -5,6 +5,8 @@ import path from 'path';
 // Load env values from a single source-of-truth .env file.
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
+const appBaseUrl = process.env.APP_BASE_URL || process.env.BASE_URL || 'http://localhost:3000';
+
 if (!process.env.PW_RUN_ID) {
   process.env.PW_RUN_ID = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -24,7 +26,7 @@ export default defineConfig({
 
   // Shared defaults used by all tests.
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    baseURL: appBaseUrl,
     testIdAttribute: 'data-testid',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
@@ -42,12 +44,11 @@ export default defineConfig({
 
   // Start companion web app automatically for local runs.
   webServer:
-    (process.env.BASE_URL || 'http://localhost:3000').includes('localhost') ||
-    (process.env.BASE_URL || '').includes('127.0.0.1')
+    appBaseUrl.includes('localhost') || appBaseUrl.includes('127.0.0.1')
       ? {
           command: 'npm run dev',
           cwd: path.resolve(__dirname, '..', 'robot-store-sandbox'),
-          url: process.env.BASE_URL || 'http://localhost:3000',
+          url: appBaseUrl,
           reuseExistingServer: true,
           timeout: 180_000
         }

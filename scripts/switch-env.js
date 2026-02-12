@@ -60,6 +60,6 @@ fs.writeFileSync(destinationPath, content);
 const parsed = parseSimpleEnv(content);
 console.log(`[env] Active profile: ${profile}`);
 console.log(`[env] Source: ${path.basename(source.path)} (${source.kind})`);
-console.log(`[env] BASE_URL=${parsed.BASE_URL || '(unset)'}`);
-console.log(`[env] PERF_BASE_URL=${parsed.PERF_BASE_URL || '(unset)'}`);
+console.log(`[env] APP_BASE_URL=${parsed.APP_BASE_URL || parsed.BASE_URL || '(unset)'}`);
+console.log(`[env] K6_BASE_URL=${parsed.K6_BASE_URL || parsed.PERF_BASE_URL || '(unset)'}`);
 console.log(`[env] SEED_DATA=${parsed.SEED_DATA || '(unset)'}`);

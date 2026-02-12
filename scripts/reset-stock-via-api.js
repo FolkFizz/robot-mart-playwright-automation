@@ -12,6 +12,12 @@ const resolveTargetBaseUrl = () => {
   const explicit = process.env.STOCK_RESET_BASE_URL?.trim();
   if (explicit) return explicit;
 
+  const appBase = process.env.APP_BASE_URL?.trim();
+  if (appBase) return appBase;
+
+  const k6Base = process.env.K6_BASE_URL?.trim();
+  if (k6Base) return k6Base;
+
   const base = process.env.BASE_URL?.trim();
   if (base) return base;
 
@@ -50,6 +56,30 @@ const main = async () => {
   if (!res.ok) {
     console.error(`[stock:reset] failed status=${res.status}`);
     console.error(`[stock:reset] response=${preview}`);
+    process.exit(1);
+  }
+
+  const json = (() => {
+    try {
+      return JSON.parse(body);
+    } catch {
+      return null;
+    }
+  })();
+
+  if (!json || json.ok !== true || json.status !== 'success') {
+    console.error('[stock:reset] response did not pass verification.');
+    console.error(`[stock:reset] response=${preview}`);
+    process.exit(1);
+  }
+  if (typeof json.stockAll === 'number' && json.stockAll !== stockAll) {
+    console.error(
+      `[stock:reset] verification mismatch: requested=${stockAll}, returned=${json.stockAll}`
+    );
+    process.exit(1);
+  }
+  if (typeof json.updatedProducts === 'number' && json.updatedProducts <= 0) {
+    console.error('[stock:reset] verification failed: updatedProducts is 0');
     process.exit(1);
   }
 

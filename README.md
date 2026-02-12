@@ -52,25 +52,30 @@ npm run env:use:prod
 ### Profiles
 
 - `.env.local`
-  - `BASE_URL=http://localhost:3000`
-  - Recommended DB branch: Neon `test_db`
+  - `APP_BASE_URL=http://localhost:3000`
+  - Optional k6-only override: `K6_BASE_URL=...` (usually leave empty to reuse `APP_BASE_URL`)
+  - `DATABASE_URL` is still required for direct-DB integration checks/fallback seeding.
+  - Recommended local setup: Docker Postgres URL (`postgresql://postgres:password_local_docker@localhost:5433/robot_store_sandbox`)
   - `SEED_DATA=true` for deterministic local runs
 - `.env.prod`
-  - `BASE_URL=https://robot-store-sandbox.onrender.com`
+  - `APP_BASE_URL=https://robot-store-sandbox.onrender.com`
+  - Optional k6-only override: `K6_BASE_URL=...` (set only when perf target differs from Playwright target)
+  - `DATABASE_URL` should point to Neon/production branch
   - Intended for hosted safe checks
   - `SEED_DATA=false`
 
 ### URL Resolution
 
 - Playwright target:
-  1. `BASE_URL`
+  1. `APP_BASE_URL`
   2. fallback `http://localhost:3000`
 
 - k6 target:
-  1. `PERF_BASE_URL`
-  2. `REAL_URL` (legacy)
-  3. `BASE_URL`
-  4. fallback `http://localhost:3000`
+  1. `K6_BASE_URL`
+  2. `APP_BASE_URL`
+  3. fallback `http://localhost:3000`
+
+Legacy vars (`BASE_URL`, `PERF_BASE_URL`, `REAL_URL`) are still accepted internally for migration, but avoid using them in new setup.
 
 Inspect active targets:
 
@@ -81,6 +86,7 @@ npm run env:targets
 ### Safety Rules
 
 - Destructive hooks (`/api/test/reset`, `/api/test/seed`) are allowed only for localhost by default.
+- Privileged stock-mutation tests are skipped on hosted targets by default.
 - Override only when intentional:
   - `ALLOW_DESTRUCTIVE_TEST_HOOKS=true`
 
@@ -99,8 +105,21 @@ npm run test:smoke
 In `robot-store-sandbox`:
 
 ```bash
-npm install
-npm run dev
+docker compose up -d
+```
+
+Use this single command as the default local startup (app + db + mailpit).
+
+To stop local stack:
+
+```bash
+docker compose down
+```
+
+To reset local DB volume:
+
+```bash
+docker compose down -v
 ```
 
 In this repo:
@@ -119,6 +138,28 @@ npm run test:prod
 ```
 
 `test:prod` runs only `@smoke|@safe` tests.
+
+### Local vs Production Test Matrix
+
+Playwright:
+
+| Scope                              | Recommended target                                       | Commands                                                                                                                                                    |
+| ---------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Full/active development coverage   | Local (`APP_BASE_URL=http://localhost:3000`)             | `npm run test`, `npm run test:regression`, `npm run test:api`, `npm run test:a11y`, `npm run test:quick-regression`, `npm run test:quick-regression:stable` |
+| Lightweight hosted sanity check    | Production (`APP_BASE_URL=https://...onrender.com`)      | `npm run test:prod`, `npm run test:smoke`                                                                                                                   |
+| Stock-mutation / privileged checks | Local by default (hosted run requires explicit override) | `tests/api/admin.api.spec.ts`, `tests/integration/product-cart.int.spec.ts`                                                                                 |
+
+k6:
+
+| Scope                            | Recommended target                                            | Commands                                                                                                                                                                                                                                                                                                  |
+| -------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Low-risk hosted perf smoke       | Production (`K6_BASE_URL` empty so it follows `APP_BASE_URL`) | `npm run test:perf:smoke`, `npm run test:perf:auth`, `npm run test:perf:browse`, `npm run test:perf:breakpoint`, `npm run test:perf:suite:lite`                                                                                                                                                           |
+| Write-heavy / capacity profiling | Local                                                         | `npm run test:perf:cart`, `npm run test:perf:checkout`, `npm run test:perf:checkout-acceptance`, `npm run test:perf:race`, `npm run test:perf:load`, `npm run test:perf:load-acceptance`, `npm run test:perf:stress`, `npm run test:perf:soak`, `npm run test:perf:suite`, `npm run test:perf:suite:gate` |
+
+Notes:
+
+- `K6_BASE_URL` is optional. Leave it empty to reuse `APP_BASE_URL`.
+- A few Playwright integration flows read `DATABASE_URL` directly. Keep `DATABASE_URL` aligned with the target environment (`local Docker DB` for local runs, `Neon prod` for hosted checks).
 
 ## 6. Test Architecture
 
@@ -252,6 +293,7 @@ npx playwright test --grep "@smoke"
 - `npm run test:perf:soak`
 - `npm run test:perf:breakpoint`
 - `npm run test:perf:suite`
+- `npm run test:perf:suite:lite`
 - `npm run test:perf:suite:gate`
 - `npm run test:perf:smoke:monitor`
 - `npm run test:perf:suite:monitor`
@@ -270,7 +312,7 @@ npx playwright test --grep "@smoke"
 
 For container -> local app testing:
 
-- `BASE_URL=http://host.docker.internal:3000`
+- `APP_BASE_URL=http://host.docker.internal:3000`
 
 ## 9. Accessibility and Allure
 
@@ -358,6 +400,8 @@ Common CI defaults:
 - `@chat`/`@ai` excluded in routine runs
 - destructive tests are excluded from PR-safe paths
 - artifacts are uploaded (`playwright-report`, `test-results`, `allure-*`, `performance/results/*`)
+- nightly schedules run only when repo variable `ENABLE_NIGHTLY=true`
+- `k6-nightly` defaults to `lite` profile to reduce hosted DB load (manual dispatch can run `gate`/`portfolio`)
 
 ## 12. Performance Evidence Snapshot
 

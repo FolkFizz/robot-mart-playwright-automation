@@ -9,21 +9,37 @@ function pick(key) {
 }
 
 function resolvePlaywrightTarget() {
+  const appBaseUrl = pick('APP_BASE_URL');
+  if (appBaseUrl) {
+    return { url: appBaseUrl, source: 'APP_BASE_URL' };
+  }
+
+  const baseUrl = pick('BASE_URL');
+  if (baseUrl) {
+    return { url: baseUrl, source: 'BASE_URL (legacy)' };
+  }
+
   return {
-    url: pick('BASE_URL') || 'http://localhost:3000',
-    source: pick('BASE_URL') ? 'BASE_URL' : 'default'
+    url: 'http://localhost:3000',
+    source: 'default'
   };
 }
 
 function resolveK6Target() {
+  const k6BaseUrl = pick('K6_BASE_URL');
+  if (k6BaseUrl) return { url: k6BaseUrl, source: 'K6_BASE_URL' };
+
+  const appBaseUrl = pick('APP_BASE_URL');
+  if (appBaseUrl) return { url: appBaseUrl, source: 'APP_BASE_URL' };
+
+  const baseUrl = pick('BASE_URL');
+  if (baseUrl) return { url: baseUrl, source: 'BASE_URL (legacy)' };
+
   const perfBaseUrl = pick('PERF_BASE_URL');
-  if (perfBaseUrl) return { url: perfBaseUrl, source: 'PERF_BASE_URL' };
+  if (perfBaseUrl) return { url: perfBaseUrl, source: 'PERF_BASE_URL (legacy)' };
 
   const realUrl = pick('REAL_URL');
   if (realUrl) return { url: realUrl, source: 'REAL_URL (legacy)' };
-
-  const baseUrl = pick('BASE_URL');
-  if (baseUrl) return { url: baseUrl, source: 'BASE_URL' };
 
   return { url: 'http://localhost:3000', source: 'default' };
 }
@@ -39,6 +55,6 @@ console.log(`- k6:         ${k6.url} (source=${k6.source})`);
 console.log(`- SEED_DATA:  ${seedData}`);
 console.log(`- DESTRUCTIVE_HOOK_OVERRIDE: ${destructiveOverride}`);
 
-if (k6.source === 'REAL_URL (legacy)') {
-  console.log('- Note: switch to PERF_BASE_URL to make k6 override explicit.');
+if (k6.source.includes('(legacy)')) {
+  console.log('- Note: legacy target env in use. Prefer APP_BASE_URL and optional K6_BASE_URL.');
 }

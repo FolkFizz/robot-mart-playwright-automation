@@ -8,9 +8,12 @@ const toBool = (value: string | undefined, fallback = false) => {
   return ['1', 'true', 'yes', 'y', 'on'].includes(value.toLowerCase());
 };
 
-const getEnv = (key: string, fallback: string) => {
-  const value = process.env[key];
-  return value && value.length > 0 ? value : fallback;
+const getFirstEnv = (keys: string[], fallback: string) => {
+  for (const key of keys) {
+    const value = process.env[key];
+    if (value && value.length > 0) return value;
+  }
+  return fallback;
 };
 
 const getEnvRequired = (key: string) => {
@@ -22,7 +25,7 @@ const getEnvRequired = (key: string) => {
 };
 
 const buildEnv = () => ({
-  baseUrl: getEnv('BASE_URL', 'http://localhost:3000'),
+  baseUrl: getFirstEnv(['APP_BASE_URL', 'BASE_URL'], 'http://localhost:3000'),
   databaseUrl: getEnvRequired('DATABASE_URL'),
   testApiKey: getEnvRequired('TEST_API_KEY'),
   resetKey: getEnvRequired('RESET_KEY'),

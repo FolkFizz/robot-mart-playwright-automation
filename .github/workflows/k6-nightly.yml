@@ -1,4 +1,4 @@
-name: k6 Nightly (Gate Profile)
+name: k6 Nightly (Lean by Default)
 
 on:
   schedule:
@@ -6,15 +6,16 @@ on:
   workflow_dispatch:
     inputs:
       base_url:
-        description: 'Optional k6 target URL override (mapped to PERF_BASE_URL)'
+        description: 'Optional k6 target URL override (mapped to K6_BASE_URL)'
         required: false
         default: ''
       profile:
         description: 'k6 suite profile'
         required: false
         type: choice
-        default: gate
+        default: lite
         options:
+          - lite
           - gate
           - portfolio
 
@@ -27,16 +28,16 @@ concurrency:
 
 jobs:
   k6-suite:
+    if: ${{ github.event_name != 'schedule' || vars.ENABLE_NIGHTLY == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      BASE_URL: ${{ vars.BASE_URL || 'https://robot-store-sandbox.onrender.com' }}
-      PERF_BASE_URL: ${{ github.event.inputs.base_url || vars.PERF_BASE_URL || vars.REAL_URL || '' }}
-      REAL_URL: ''
+      APP_BASE_URL: ${{ vars.APP_BASE_URL || 'https://robot-store-sandbox.onrender.com' }}
+      K6_BASE_URL: ${{ github.event.inputs.base_url || vars.K6_BASE_URL || '' }}
       RESET_KEY: ${{ secrets.RESET_KEY || '' }}
       PERF_USER: ${{ vars.USER_USERNAME || 'user' }}
       PERF_PASSWORD: ${{ secrets.USER_PASSWORD || vars.USER_PASSWORD || 'user123' }}
-      K6_PROFILE: ${{ github.event.inputs.profile || 'gate' }}
+      K6_PROFILE: ${{ github.event.inputs.profile || 'lite' }}
       CI: 'true'
     steps:
       - name: Checkout
@@ -76,4 +77,4 @@ jobs:
           path: |
             performance/results/latest.txt
             performance/results/${{ steps.latest.outputs.run_id }}
-          retention-days: 14
+          retention-days: 7

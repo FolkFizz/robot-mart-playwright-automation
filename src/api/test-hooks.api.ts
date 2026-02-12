@@ -140,7 +140,25 @@ const runResetOrSeed = async (
     maxRedirects: 0
   });
 
+  const bodyText = await res.text().catch(() => '');
+  const bodyJson = (() => {
+    try {
+      return JSON.parse(bodyText) as { status?: string; products?: number };
+    } catch {
+      return null;
+    }
+  })();
   if (res.ok()) {
+    if (bodyJson?.status && bodyJson.status !== 'ok') {
+      throw new Error(
+        `[test-hooks] ${route} returned unexpected status payload: ${bodyJson.status}`
+      );
+    }
+    if (typeof bodyJson?.products === 'number' && bodyJson.products <= 0) {
+      throw new Error(
+        `[test-hooks] ${route} verification failed: products count is ${bodyJson.products}`
+      );
+    }
     return null;
   }
 
@@ -153,10 +171,10 @@ const runResetOrSeed = async (
     return null;
   }
 
-  const bodyText = await res.text().catch(() => '');
+  const bodyPreview = bodyJson ? JSON.stringify(bodyJson) : bodyText;
   throw new Error(
     `[test-hooks] ${route} failed with status ${status}. ` +
-      `Check TEST_API_KEY/RESET_KEY and backend hook permissions. Response: ${bodyText.slice(0, 500)}`
+      `Check TEST_API_KEY/RESET_KEY and backend hook permissions. Response: ${bodyPreview.slice(0, 500)}`
   );
 };
 

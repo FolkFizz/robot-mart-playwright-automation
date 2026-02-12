@@ -8,8 +8,8 @@ services:
       - .env
     environment:
       # Default to hosted sandbox for portability.
-      # If you want local app from container, use BASE_URL=http://host.docker.internal:3000
-      BASE_URL: ${BASE_URL:-https://robot-store-sandbox.onrender.com}
+      # If you want local app from container, use APP_BASE_URL=http://host.docker.internal:3000
+      APP_BASE_URL: ${APP_BASE_URL:-https://robot-store-sandbox.onrender.com}
       SEED_DATA: ${SEED_DATA:-false}
       CI: "true"
     extra_hosts:
@@ -25,10 +25,9 @@ services:
     env_file:
       - .env
     environment:
-      # k6 target priority in scripts: PERF_BASE_URL -> REAL_URL (legacy) -> BASE_URL
-      BASE_URL: ${BASE_URL:-https://robot-store-sandbox.onrender.com}
-      PERF_BASE_URL: ${PERF_BASE_URL:-}
-      REAL_URL: ${REAL_URL:-}
+      # k6 target priority in scripts: K6_BASE_URL -> APP_BASE_URL -> legacy vars
+      APP_BASE_URL: ${APP_BASE_URL:-https://robot-store-sandbox.onrender.com}
+      K6_BASE_URL: ${K6_BASE_URL:-}
       RESET_KEY: ${RESET_KEY:-}
       PERF_USER: ${USER_USERNAME:-user}
       PERF_PASSWORD: ${USER_PASSWORD:-user123}

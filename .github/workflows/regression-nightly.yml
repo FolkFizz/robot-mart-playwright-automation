@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       base_url:
-        description: 'Optional BASE_URL override'
+        description: 'Optional APP_BASE_URL override'
         required: false
         default: ''
       include_destructive:
@@ -29,10 +29,11 @@ concurrency:
 
 jobs:
   regression:
+    if: ${{ github.event_name != 'schedule' || vars.ENABLE_NIGHTLY == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      BASE_URL: ${{ github.event.inputs.base_url || vars.BASE_URL || 'https://robot-store-sandbox.onrender.com' }}
+      APP_BASE_URL: ${{ github.event.inputs.base_url || vars.APP_BASE_URL || 'https://robot-store-sandbox.onrender.com' }}
       DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgres://ci:ci@localhost:5432/ci' }}
       TEST_API_KEY: ${{ secrets.TEST_API_KEY || 'ci-placeholder' }}
       RESET_KEY: ${{ secrets.RESET_KEY || 'ci-placeholder' }}
@@ -116,4 +117,4 @@ jobs:
             test-results
             allure-results
             allure-report
-          retention-days: 14
+          retention-days: 7
