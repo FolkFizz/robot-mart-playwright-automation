@@ -1,39 +1,12 @@
-import { test, expect, loginAndSyncSession } from '@fixtures';
+﻿import { test, expect, loginAndSyncSession } from '@fixtures';
 import { routes } from '@config';
 import { seededProducts } from '@data';
 import { isLangfuseEnabled } from '@test-helpers';
-import { withTracedChatbotE2eCase as withTracedCase } from '@test-helpers/helpers/chat-ui';
+import { withTracedChatbotE2eCase as withTracedCase } from '@test-helpers/helpers/chat';
 
 /**
- * =============================================================================
- * CHATBOT E2E TESTS
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Widget interaction flow (open/close, input/send)
- * 2. Message rendering for user and bot turns
- * 3. Error handling and resilience on network/API failures
- * 4. Multi-turn and long-message UI behavior
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (3 tests):
- *   - CHAT-E2E-P01: chat widget opens and closes from home page
- *   - CHAT-E2E-P02: sending a message renders user and bot messages
- *   - CHAT-E2E-P03: pressing Enter submits chat message
- *
- * NEGATIVE CASES (3 tests):
- *   - CHAT-E2E-N01: whitespace-only input is ignored
- *   - CHAT-E2E-N02: network abort shows fallback error message
- *   - CHAT-E2E-N03: malformed server response shows fallback error message
- *
- * EDGE CASES (3 tests):
- *   - CHAT-E2E-E01: long user message is rendered and input is cleared
- *   - CHAT-E2E-E02: multi-turn conversation keeps message history
- *   - CHAT-E2E-E03: widget remains available after page navigation
- *
- * =============================================================================
+ * Overview: End-to-end chatbot widget validation for user interaction and response rendering.
+ * Summary: Covers open/close UX, send actions, multi-turn history, and graceful fallback behavior under route-level failures.
  */
 
 test.use({ seedData: true });
@@ -273,3 +246,6 @@ test.describe('chatbot e2e @e2e @chat @ai @ai-mock', () => {
     });
   });
 });
+
+
+

@@ -1,36 +1,10 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { seededProducts } from '@data';
 import { ChatApiClient } from '@api';
 
 /**
- * =============================================================================
- * CHAT AI LIVE CANARY TESTS
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Live model response for core shopping questions (price/stock/recommendation)
- * 2. Safety guard behavior for dangerous prompts in live mode
- * 3. Operational latency check for live AI endpoint
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (2 tests):
- *   - CHAT-AI-LIVE-P01: price and stock question returns answer
- *   - CHAT-AI-LIVE-P02: recommendation prompt returns non-empty response
- *
- * NEGATIVE CASES (1 test):
- *   - CHAT-AI-LIVE-N01: dangerous prompt remains blocked
- *
- * EDGE CASES (1 test):
- *   - CHAT-AI-LIVE-E01: live latency stays under budget
- *
- * Notes:
- * ------
- * - This suite is gated by RUN_AI_LIVE=true to protect free-tier quota.
- * - API calls are made via ChatApiClient (API POM/client abstraction).
- *
- * =============================================================================
+ * Overview: Live AI chat canary tests against the real model path under quota gating.
+ * Summary: Checks real prompt-response quality, safety refusal behavior, and latency guardrails when RUN_AI_LIVE is enabled.
  */
 
 test.describe('chat api live canary @api @chat @ai', () => {
@@ -87,3 +61,5 @@ test.describe('chat api live canary @api @chat @ai', () => {
     }
   );
 });
+
+

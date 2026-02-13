@@ -1,4 +1,4 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { loginAsUser, clearCart, addToCart } from '@api';
 import { users, authInputs, authErrors, inboxSubjects, seededProducts, resetTestData } from '@data';
 import { routes } from '@config';
@@ -6,52 +6,8 @@ import { randomUser, randomPasswordPair } from '@utils';
 import { resetRequestMessagePattern } from '@test-helpers/constants/auth';
 
 /**
- * =============================================================================
- * AUTHENTICATION E2E TESTS - Comprehensive Coverage
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Login & Logout Operations
- * 2. User Registration & Validation
- * 3. Password Reset Flow (Request → Email → Reset)
- * 4. Token Security & Expiry Handling
- * 5. Cart Merge on Login (Session → Database)
- * 6. Email Notification System
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (5 tests):
- *   - AUTH-P01: login with valid credentials succeeds
- *   - AUTH-P02: logout clears session successfully
- *   - AUTH-P03: register new user with unique credentials
- *   - AUTH-P05: request reset with valid email sends link
- *   - AUTH-P06: reset password with valid token succeeds
- *
- * NEGATIVE CASES (8 tests):
- *   - AUTH-N02: login with wrong password fails
- *   - AUTH-N01: login with invalid username fails
- *   - AUTH-N04: register with password mismatch fails
- *   - AUTH-N03: register with duplicate username or email fails
- *   - AUTH-N06: reset request with non-existent email shows generic message
- *   - AUTH-N07: reset with expired token fails
- *   - AUTH-N08: reset with invalid token redirects to login
- *   - AUTH-N09: password mismatch during reset shows error
- *
- * EDGE CASES (2 tests):
- *   - AUTH-E05: token cannot be reused after successful reset (security)
- *   - AUTH-E04: guest cart merges with DB cart on login
- *
- * Business Rules Tested:
- * ----------------------
- * - Authentication: bcrypt password hashing, session management
- * - Registration: Username AND email must be unique
- * - Password Reset: Token expires after 1 hour, one-time use only
- * - Cart Persistence: Guest carts stored in session, authenticated in database
- * - Cart Merge: On login, session cart items merge with DB cart (respects stock limits)
- * - Security Best Practice: Don't reveal if email exists during reset request
- *
- * =============================================================================
+ * Overview: End-to-end authentication journeys for login, registration, password reset, and session transitions.
+ * Summary: Validates full user flows including reset token handling, inbox-assisted recovery, and guest-to-user cart continuity.
  */
 
 test.use({ seedData: true });
@@ -379,3 +335,5 @@ test.describe('authentication comprehensive @e2e @auth', () => {
     });
   });
 });
+
+

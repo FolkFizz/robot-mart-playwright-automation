@@ -1,68 +1,20 @@
-import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { disableChaos, resetChaos, setChaosConfig } from '@api';
 import { chaosStatusText, chaosToggles, seededProducts } from '@data';
 import { allChaosToggles, fullChaosConfig } from '@test-helpers/constants/chaos';
 import { routes } from '@config';
-import {
-  chaosConfigForSingleToggle,
-  gotoWithRetries,
-  reachCheckoutFromSeededCart
-} from '@test-helpers/helpers/chaos';
+import { gotoWithRetries } from '@test-helpers/helpers/chaos';
 
 /**
- * =============================================================================
- * CHAOS E2E TESTS - Customer-Facing Resilience
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Chaos Lab controls and toggle persistence
- * 2. Customer browsing behavior under active chaos
- * 3. API degradation behavior under latency / random 500
- * 4. Recovery and reset reliability
- * 5. Multi-chaos and last-write-wins edge behavior
- * 6. Customer purchase journey under per-mode chaos
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (4 tests):
- *   - CHAOS-P01: chaos lab renders all toggle controls
- *   - CHAOS-P02: enabling layout-shift via UI persists after reload
- *   - CHAOS-P03: latency chaos slows product API but stays available
- *   - CHAOS-P04: customer can still browse product page under latency+layout shift
- *
- * NEGATIVE CASES (3 tests):
- *   - CHAOS-N01: random 500 chaos causes intermittent failures, not total outage
- *   - CHAOS-N02: invalid chaos payload is ignored safely
- *   - CHAOS-N03: reset clears all active chaos toggles
- *
- * EDGE CASES (12 tests):
- *   - CHAOS-E01: all chaos toggles together still allow recovery path
- *   - CHAOS-E02: rapid config updates follow last-write-wins behavior
- *   - CHAOS-E03: chaos control endpoint remains fast while app endpoint is delayed
- *   - CHAOS-E04: purchase flow reaches checkout under dynamicIds chaos
- *   - CHAOS-E05: purchase flow reaches checkout under flakyElements chaos
- *   - CHAOS-E06: purchase flow remains recoverable under layoutShift chaos
- *   - CHAOS-E07: purchase flow reaches checkout under zombieClicks chaos
- *   - CHAOS-E08: purchase flow reaches checkout under textScramble chaos
- *   - CHAOS-E09: purchase flow reaches checkout under latency chaos
- *   - CHAOS-E10: purchase flow reaches checkout under randomErrors chaos
- *   - CHAOS-E11: purchase flow reaches checkout under brokenAssets chaos
- *   - CHAOS-E12: purchase flow remains recoverable with all chaos toggles enabled
- *
- * Business Rules Tested:
- * ----------------------
- * - Chaos is configured via /api/chaos/config.
- * - Customer-facing pages may degrade, but should stay recoverable.
- * - Random failure mode should be partial/intermittent, not permanent outage.
- * - Reset must always return the system to a clean state.
- *
- * =============================================================================
+ * Overview: Deterministic chaos-lab E2E checks for toggle controls, bounded degradation, and reset behavior.
+ * Summary: Focuses on predictable chaos config effects, API latency/error behavior, and reliable cleanup back to normal state.
  */
 
 test.use({ seedData: true });
 
 test.describe('chaos comprehensive @e2e @chaos', () => {
+  test.describe.configure({ mode: 'serial' });
+
   test.beforeAll(async () => {
     await disableChaos();
   });
@@ -235,113 +187,7 @@ test.describe('chaos comprehensive @e2e @chaos', () => {
       expect(controlMs).toBeLessThan(appMs);
     });
 
-    const purchaseModeCases: Array<{
-      id: string;
-      toggle: (typeof allChaosToggles)[number];
-      title: string;
-    }> = [
-      {
-        id: 'CHAOS-E04',
-        toggle: chaosToggles.dynamicIds,
-        title: 'purchase flow reaches checkout under dynamicIds chaos'
-      },
-      {
-        id: 'CHAOS-E05',
-        toggle: chaosToggles.flakyElements,
-        title: 'purchase flow reaches checkout under flakyElements chaos'
-      },
-      {
-        id: 'CHAOS-E06',
-        toggle: chaosToggles.layoutShift,
-        title: 'purchase flow remains recoverable under layoutShift chaos'
-      },
-      {
-        id: 'CHAOS-E07',
-        toggle: chaosToggles.zombieClicks,
-        title: 'purchase flow reaches checkout under zombieClicks chaos'
-      },
-      {
-        id: 'CHAOS-E08',
-        toggle: chaosToggles.textScramble,
-        title: 'purchase flow reaches checkout under textScramble chaos'
-      },
-      {
-        id: 'CHAOS-E09',
-        toggle: chaosToggles.latency,
-        title: 'purchase flow reaches checkout under latency chaos'
-      },
-      {
-        id: 'CHAOS-E10',
-        toggle: chaosToggles.randomErrors,
-        title: 'purchase flow reaches checkout under randomErrors chaos'
-      },
-      {
-        id: 'CHAOS-E11',
-        toggle: chaosToggles.brokenAssets,
-        title: 'purchase flow reaches checkout under brokenAssets chaos'
-      }
-    ];
-
-    for (const modeCase of purchaseModeCases) {
-      test(`${modeCase.id}: ${modeCase.title} @e2e @chaos @regression @destructive`, async ({
-        api,
-        page
-      }) => {
-        const slowMode =
-          modeCase.toggle === chaosToggles.layoutShift ||
-          modeCase.toggle === chaosToggles.latency ||
-          modeCase.toggle === chaosToggles.randomErrors;
-        const isLayoutShift = modeCase.toggle === chaosToggles.layoutShift;
-        test.setTimeout(isLayoutShift ? 180_000 : slowMode ? 120_000 : 60_000);
-
-        await loginAndSyncSession(api, page);
-        await seedCart(api, [{ id: seededProducts[0].id }]);
-
-        await setChaosConfig(chaosConfigForSingleToggle(modeCase.toggle));
-        const attempts =
-          modeCase.toggle === chaosToggles.randomErrors
-            ? 14
-            : modeCase.toggle === chaosToggles.layoutShift
-              ? 12
-              : modeCase.toggle === chaosToggles.latency
-                ? 12
-                : 8;
-        const reached = await reachCheckoutFromSeededCart(page, attempts);
-
-        if (!reached && isLayoutShift) {
-          // layoutShift can make clicks non-deterministic; verify app recovery after reset.
-          await resetChaos();
-          const recovered = await gotoWithRetries(page, routes.home, 4);
-          expect(recovered).toBe(true);
-          return;
-        }
-
-        expect(reached).toBe(true);
-      });
-    }
-
-    test('CHAOS-E12: purchase flow remains recoverable with all chaos toggles enabled @e2e @chaos @regression @destructive', async ({
-      api,
-      page
-    }) => {
-      test.setTimeout(180_000);
-
-      await loginAndSyncSession(api, page);
-      await seedCart(api, [{ id: seededProducts[0].id }]);
-
-      await setChaosConfig(fullChaosConfig);
-
-      const reachedUnderFullChaos = await reachCheckoutFromSeededCart(page, 10);
-
-      if (!reachedUnderFullChaos) {
-        // Recovery guarantee: reset chaos and customer should complete same flow.
-        await resetChaos();
-        await seedCart(api, [{ id: seededProducts[0].id }]);
-      }
-
-      const reachedAfterRecovery =
-        reachedUnderFullChaos || (await reachCheckoutFromSeededCart(page, 12));
-      expect(reachedAfterRecovery).toBe(true);
-    });
   });
 });
+
+

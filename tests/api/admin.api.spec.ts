@@ -1,4 +1,4 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { resetStockSafe, loginAsAdmin, loginAsUser } from '@api';
 import { routes } from '@config';
 import { securityTestData } from '@data';
@@ -9,45 +9,11 @@ import {
   expectAdminForbidden,
   fetchAdminNotifications,
   fetchProducts
-} from '@test-helpers/helpers/admin-api';
+} from '@test-helpers/helpers/api';
 
 /**
- * =============================================================================
- * ADMIN API TESTS - Comprehensive Coverage
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Privileged maintenance endpoint behavior (safe stock reset)
- * 2. Admin notification visibility and response contract
- * 3. Access control for admin-only endpoints
- * 4. Concurrent and pagination stability behavior
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (4 tests):
- *   - ADMIN-API-P01: reset stock safely via API
- *   - ADMIN-API-P02: admin notifications list returns data
- *   - ADMIN-API-P03: products API returns current stock levels
- *   - ADMIN-API-P04: stock reset returns confirmation
- *
- * NEGATIVE CASES (3 tests):
- *   - ADMIN-API-N01: regular user cannot access admin endpoints
- *   - ADMIN-API-N02: unauthenticated access to admin API rejected
- *   - ADMIN-API-N03: invalid reset key rejected by reset API
- *
- * EDGE CASES (2 tests):
- *   - ADMIN-API-E01: admin notifications pagination handles large dataset
- *   - ADMIN-API-E02: concurrent stock resets handled gracefully
- *
- * Business Rules Tested:
- * ----------------------
- * - Admin APIs require an authenticated admin session.
- * - Safe stock reset endpoint requires a valid `X-RESET-KEY`.
- * - Admin notifications and products endpoints return stable JSON contracts.
- * - Concurrent reset operations should not fail unpredictably.
- *
- * =============================================================================
+ * Overview: Admin API validation for privileged stock operations, notifications, and protected endpoints.
+ * Summary: Ensures admin-only routes enforce role checks while reset-stock and product/admin notification contracts remain stable.
  */
 
 test.use({ seedData: true });
@@ -171,3 +137,6 @@ test.describe('admin api @api @admin', () => {
     });
   });
 });
+
+
+

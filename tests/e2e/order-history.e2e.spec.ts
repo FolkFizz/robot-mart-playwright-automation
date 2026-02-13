@@ -1,49 +1,13 @@
-import { test, expect, loginAndSyncSession } from '@fixtures';
+﻿import { test, expect, loginAndSyncSession } from '@fixtures';
 import { disableChaos } from '@api';
 import { routes } from '@config';
 import { seededProducts } from '@data';
 import { registerAndLoginIsolatedUser } from '@test-helpers';
-import { createOrderForUser, expectOnOrdersTab } from '@test-helpers/helpers/order-history';
+import { createOrderForUser, expectOnOrdersTab } from '@test-helpers/helpers/orders';
 
 /**
- * =============================================================================
- * ORDER HISTORY E2E TESTS
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Accessing order history through profile orders tab
- * 2. Verifying newly created orders are displayed correctly
- * 3. Verifying order card data (status, date, total, items)
- * 4. Validating invoice navigation from order history
- * 5. Handling unauthorized and empty-history states
- * 6. Validating ordering and refresh behavior with multiple orders
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (4 tests):
- *   - ORD-HIST-P01: orders tab loads and shows list or empty state
- *   - ORD-HIST-P02: newly created order shows correct product details
- *   - ORD-HIST-P03: order card shows status, placed date, and total
- *   - ORD-HIST-P04: view invoice link navigates to order invoice page
- *
- * NEGATIVE CASES (2 tests):
- *   - ORD-HIST-N01: unauthenticated user cannot access order history tab
- *   - ORD-HIST-N02: empty order history shows empty state for a newly registered user
- *
- * EDGE CASES (2 tests):
- *   - ORD-HIST-E01: multiple newly created orders are sorted newest first
- *   - ORD-HIST-E02: refreshing orders tab preserves order visibility
- *
- * Business Rules:
- * ---------------
- * - Order history is accessed via /profile?tab=orders
- * - Authentication is required to access order history
- * - Order cards show order id, status, placed date, items, and total
- * - Newest orders appear first in the list
- * - Empty state appears when user has no orders
- *
- * =============================================================================
+ * Overview: End-to-end order history behavior via profile orders tab and invoice access.
+ * Summary: Validates order visibility, card metadata correctness, authorization boundaries, and refresh/order-sorting consistency.
  */
 
 test.use({ seedData: true });
@@ -204,3 +168,6 @@ test.describe('order history comprehensive @e2e @orders', () => {
     });
   });
 });
+
+
+

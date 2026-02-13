@@ -2,46 +2,8 @@
 import { seededProducts } from '@data';
 
 /**
- * =============================================================================
- * CART PAGE ACCESSIBILITY TESTS
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. WCAG 2.1 AA Compliance for Cart Page
- * 2. Cart Item Accessibility (Controls, Remove)
- * 3. Form Accessibility (Coupon, Checkout)
- * 4. Error & Loading State Accessibility
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (6 tests):
- *   - A11Y-CART-P01: cart page has no critical violations
- *   - A11Y-CART-P02: cart item quantity controls accessible via keyboard
- *   - A11Y-CART-P03: remove item button has proper ARIA label
- *   - A11Y-CART-P04: cart total announced to screen readers
- *   - A11Y-CART-P05: coupon input field accessible with proper labels
- *   - A11Y-CART-P06: proceed to checkout button keyboard accessible
- *
- * NEGATIVE CASES (3 tests):
- *   - A11Y-CART-N01: empty cart state maintains accessibility
- *   - A11Y-CART-N02: stock limit warning announced to screen readers
- *   - A11Y-CART-N03: invalid coupon error accessible
- *
- * EDGE CASES (3 tests):
- *   - A11Y-CART-E01: cart with 10+ items remains accessible
- *   - A11Y-CART-E02: long product names do not break screen reader announcements
- *   - A11Y-CART-E03: cart loading state maintains accessibility
- *
- * Business Rules Tested:
- * ----------------------
- * - Accessibility Standard: WCAG 2.1 Level AA
- * - Interactive Elements: Quantity controls, remove buttons, coupon input
- * - Form Labels: All inputs must have associated labels
- * - ARIA Attributes: Dynamic cart updates announced to screen readers
- * - Focus Management: Logical tab order through cart items
- *
- * =============================================================================
+ * Overview: Accessibility checks for the cart page covering semantics, keyboard flow, and cart action controls.
+ * Summary: Validates WCAG-critical behavior for item rows, quantity/remove controls, coupon form fields, and empty-cart messaging.
  */
 
 test.use({ seedData: true });
@@ -260,3 +222,5 @@ test.describe('cart accessibility @a11y @cart', () => {
     });
   });
 });
+
+

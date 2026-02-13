@@ -14,44 +14,8 @@ import { routes } from '@config';
 import { seededProducts, coupons } from '@data';
 
 /**
- * =============================================================================
- * CART API TESTS - Comprehensive Coverage
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Cart Item Management (Add, Update, Remove)
- * 2. Cart Retrieval (Get Current Cart State)
- * 3. Coupon Application via API
- * 4. Cart Clearing & Reset
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (2 tests):
- *   - CART-API-P01: add, update, remove cart item
- *   - CART-API-P02: apply and remove coupon
- *
- * NEGATIVE CASES (3 tests):
- *   - CART-API-N01: add invalid product ID returns error
- *   - CART-API-N02: quantity exceeds stock limit fails gracefully
- *   - CART-API-N03: negative quantity rejected
- *
- * EDGE CASES (2 tests):
- *   - CART-API-E01: admin user cannot add to cart
- *   - CART-API-E02: adding same product multiple times merges quantities
- *
- * Business Rules Tested:
- * ----------------------
- * - Cart Storage: Database for authenticated users, session for guests
- * - API Endpoints: /api/cart/* (add, update, remove, get, apply-coupon)
- * - Add Response: JSON {ok: true, cart: [...]}
- * - Update Quantity: POST /api/cart/update with productId & quantity
- * - Remove Item: Removes specific product from cart
- * - Coupon Application: Validates code, applies discount to cart total
- * - Admin Restriction: Admin users cannot add items to cart
- * - Cart Structure: Array of {id, name, price, quantity, image}
- *
- * =============================================================================
+ * Overview: Cart API coverage for item mutation, coupon handling, and cart state retrieval.
+ * Summary: Validates add/update/remove flows, stock and quantity validation, and restricted shopping behavior for admin sessions.
  */
 
 test.use({ seedData: true });
@@ -222,3 +186,5 @@ test.describe('cart api @api @cart', () => {
     });
   });
 });
+
+

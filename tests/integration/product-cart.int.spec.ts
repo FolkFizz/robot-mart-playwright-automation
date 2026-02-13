@@ -1,4 +1,4 @@
-import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
+﻿import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { disableChaos, loginAsUser } from '@api';
 import {
   PRODUCT_CART_FIXED_STOCK as FIXED_STOCK,
@@ -14,42 +14,11 @@ import {
   getProductDetail,
   getProductStock,
   stockMutationSkipReason
-} from '@test-helpers/helpers/product-cart';
+} from '@test-helpers/helpers/orders';
 
 /**
- * =============================================================================
- * PRODUCT-CART INTEGRATION TESTS - Comprehensive Coverage
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Product detail data consistency when moved into cart rows
- * 2. Quantity transfer from product page input to cart state
- * 3. Stock guard behavior for out-of-stock and over-limit requests
- * 4. Repeated add operations and cart math stability
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (3 tests):
- *   - PROD-CART-INT-P01: product price matches cart unit price
- *   - PROD-CART-INT-P02: product name transfers correctly to cart row
- *   - PROD-CART-INT-P03: selected quantity is preserved when added to cart
- *
- * NEGATIVE CASES (2 tests):
- *   - PROD-CART-INT-N01: out-of-stock product cannot be added via API
- *   - PROD-CART-INT-N02: quantity above current stock is rejected
- *
- * EDGE CASES (2 tests):
- *   - PROD-CART-INT-E01: product image mapping remains consistent in cart
- *   - PROD-CART-INT-E02: repeated add operations accumulate quantity and total
- *
- * Business Rules Tested:
- * ----------------------
- * - Cart add endpoint enforces current stock constraints.
- * - Cart line item fields (name/price/image) remain consistent with product source.
- * - Quantity and extended total are deterministic across repeated add actions.
- *
- * =============================================================================
+ * Overview: Integration tests for product-detail data fidelity after cart insertion.
+ * Summary: Checks price/name/image consistency, quantity carryover, repeated-add accumulation, and stock-validation error behavior.
  */
 
 test.use({ seedData: true });
@@ -212,3 +181,6 @@ test.describe('product to cart integration @integration @cart', () => {
     });
   });
 });
+
+
+

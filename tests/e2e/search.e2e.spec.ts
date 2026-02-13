@@ -1,44 +1,10 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { disableChaos } from '@api';
 import { catalogSearch, seededProducts } from '@data';
 
 /**
- * =============================================================================
- * PRODUCT SEARCH E2E TESTS
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Valid product search returns results
- * 2. Case-insensitive and partial-name matching
- * 3. Empty and no-result search handling
- * 4. Input safety with special characters and long terms
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (3 tests):
- *   - SEARCH-P01: valid search returns matching product card
- *   - SEARCH-P02: search is case-insensitive
- *   - SEARCH-P03: partial name match returns expected product
- *
- * NEGATIVE CASES (2 tests):
- *   - SEARCH-N01: no-result search shows empty state
- *   - SEARCH-N02: empty search returns default unfiltered list
- *
- * EDGE CASES (3 tests):
- *   - SEARCH-E01: special characters are handled safely
- *   - SEARCH-E02: multiple-space term handled as literal input
- *   - SEARCH-E03: very long search term handled gracefully
- *
- * Business Rules:
- * ---------------
- * - Search uses query parameter: ?q=<term>
- * - Search is case-insensitive
- * - Partial-name search works (e.g., "Rusty")
- * - Empty search (q=) returns default catalog listing
- * - Unsafe/special input must not break the page
- *
- * =============================================================================
+ * Overview: End-to-end search experience checks for query behavior and result rendering.
+ * Summary: Covers exact/partial matching, empty and long query handling, and resilience against unsafe or malformed input text.
  */
 
 test.use({ seedData: true });
@@ -152,3 +118,5 @@ test.describe('product search @e2e @search', () => {
     });
   });
 });
+
+

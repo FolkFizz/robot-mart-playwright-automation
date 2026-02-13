@@ -1,45 +1,12 @@
-import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
+﻿import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { disableChaos, clearCart } from '@api';
 import { seededProducts } from '@data';
 import { CheckoutPage } from '@pages';
-import { expectOnCheckoutPath, gotoCheckoutFromCart } from '@test-helpers/helpers/stripe-checkout';
+import { expectOnCheckoutPath, gotoCheckoutFromCart } from '@test-helpers/helpers/checkout';
 
 /**
- * =============================================================================
- * STRIPE CHECKOUT INTEGRATION TESTS
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Checkout + payment element bootstrapping
- * 2. Cart-to-checkout amount consistency
- * 3. Stripe SDK readiness and form controls
- * 4. Empty-cart and provider-mode fallback behavior
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (3 tests):
- *   - STRIPE-P01: checkout is reachable and payment section is initialized
- *   - STRIPE-P02: checkout total matches cart grand total
- *   - STRIPE-P03: Stripe SDK and payment frame load in stripe mode
- *
- * NEGATIVE CASES (2 tests):
- *   - STRIPE-N01: mock mode shows mock-payment note instead of Stripe
- *   - STRIPE-N02: empty cart blocks real payment entry on checkout
- *
- * EDGE CASES (2 tests):
- *   - STRIPE-E01: checkout total remains stable after page reload
- *   - STRIPE-E02: submit button status exists in both stripe and mock modes
- *
- * Business Rules Tested:
- * ----------------------
- * - Checkout is served at /order/checkout (/order/place redirects there)
- * - Cart grand total must equal checkout displayed total
- * - Stripe-specific assertions run only when provider is not mock
- * - Empty cart must not render active payment entry fields
- * - UI should stay stable across reloads and provider modes
- *
- * =============================================================================
+ * Overview: Stripe checkout E2E verification for provider-specific payment UI readiness.
+ * Summary: Checks cart-to-checkout amount parity, Stripe element presence when applicable, and safe fallback behavior in mock mode.
  */
 
 test.use({ seedData: true });
@@ -178,3 +145,6 @@ test.describe('stripe checkout integration @e2e @checkout @stripe', () => {
     });
   });
 });
+
+
+

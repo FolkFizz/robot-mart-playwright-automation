@@ -1,44 +1,12 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { loginAsUser, addToCart, clearCart, getCart } from '@api';
 import { routes } from '@config';
 import { seededProducts } from '@data';
-import { isMockIntentResponse } from '@test-helpers/helpers/orders-api';
+import { isMockIntentResponse } from '@test-helpers/helpers/api';
 
 /**
- * =============================================================================
- * ORDERS API TESTS - Comprehensive Coverage
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Payment Intent Creation (Stripe Integration)
- * 2. Mock Payment Processing (Test Environment)
- * 3. Checkout Access Control & Server-side Cart Validation
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (2 tests):
- *   - ORD-API-P01: create payment intent responds
- *   - ORD-API-P02: mock pay returns order ID when enabled
- *
- * NEGATIVE CASES (3 tests):
- *   - ORD-API-N01: empty cart checkout fails
- *   - ORD-API-N02: invalid payload items do not bypass empty-cart validation
- *   - ORD-API-N03: unauthenticated checkout is redirected to login
- *
- * EDGE CASES (1 test):
- *   - ORD-API-E01: concurrent payment-intent requests stay stable and keep cart intact
- *
- * Business Rules Tested:
- * ----------------------
- * - Payment Provider: Stripe (production) or Mock (testing)
- * - Payment Intent API: /order/api/create-payment-intent
- * - Mock Payment API: /order/api/mock-pay (when PAYMENT_PROVIDER=mock)
- * - Auth Requirement: Checkout APIs require authenticated session
- * - Validation Source: Server validates against persisted cart state (not client payload)
- * - Cart Persistence: Creating payment intent does not clear cart
- *
- * =============================================================================
+ * Overview: Orders API checks for payment-intent creation and checkout preconditions.
+ * Summary: Covers mock-vs-stripe intent behavior, empty-cart protections, auth redirects, and concurrent intent request stability.
  */
 
 test.use({ seedData: true });
@@ -218,3 +186,6 @@ test.describe('orders api @api @orders', () => {
     });
   });
 });
+
+
+

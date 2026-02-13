@@ -2,66 +2,8 @@
 import { seededProducts, catalogSearch, catalogCategories, catalogSort, catalogPrice } from '@data';
 
 /**
- * =============================================================================
- * CATALOG & PRODUCT DISCOVERY TESTS - Comprehensive Coverage
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Product Search (Keywords, Partial Terms, Case-Insensitive)
- * 2. Category Filtering (Automation, High-Tech)
- * 3. Price Range Filtering (Min/Max Boundaries)
- * 4. Sorting (Price Asc/Desc, Name Asc/Desc)
- * 5. Product Detail Navigation
- * 6. Empty State Handling (No Results)
- * 7. URL Query Parameter Management
- * 8. Boundary and malformed query handling
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (15 tests):
- *   - CAT-P01: home shows main controls
- *   - CAT-P02: search updates URL query
- *   - CAT-P03: sort updates URL query
- *   - CAT-P04: category selection updates URL
- *   - CAT-P05: price filter updates URL
- *   - CAT-P06: seeded products visible
- *   - CAT-P07: search is case-insensitive
- *   - CAT-P08: search by partial term
- *   - CAT-P09: filter by category automation
- *   - CAT-P10: filter by price max 500
- *   - CAT-P11: sort by price asc
- *   - CAT-P12: sort by price desc
- *   - CAT-P13: sort by name asc
- *   - CAT-P14: open product detail by clicking card
- *   - CAT-P15: product card displays correct price
- *
- * NEGATIVE CASES (8 tests):
- *   - CAT-N01: search with no results shows empty state
- *   - CAT-N02: invalid category shows empty state
- *   - CAT-N03: price range min > max shows empty state
- *   - CAT-N04: search + category mismatch shows empty state
- *   - CAT-N05: search with special chars shows empty state
- *   - CAT-N06: invalid sort query does not break catalog rendering
- *   - CAT-N07: non-numeric price query falls back gracefully
- *   - CAT-N08: whitespace-padded search term returns no results
- *
- * EDGE CASES (4 tests):
- *   - CAT-E01: exact price boundary (min=max) is inclusive
- *   - CAT-E02: deep-link with combined filters resolves deterministically
- *   - CAT-E03: repeated same search remains idempotent
- *   - CAT-E04: filter+sort combination preserves both constraints
- *
- * Business Rules Tested:
- * ----------------------
- * - Search: Case-insensitive, partial term matching, searches name and description
- * - Category Filter: Products belong to one or more categories
- * - Price Filter: Filters by product price (inclusive ranges)
- * - Sort: Client-side or server-side sorting by price/name
- * - URL State: All filters reflected in URL query params (shareable links)
- * - Empty State: User-friendly message when no products match criteria
- *
- * =============================================================================
+ * Overview: End-to-end catalog browsing for listing, filters, sorting, and product detail navigation.
+ * Summary: Checks discoverability and consistency of product cards, category/search interactions, and detail-page transitions.
  */
 
 test.use({ seedData: true });
@@ -441,3 +383,5 @@ test.describe('catalog comprehensive @e2e @catalog', () => {
     });
   });
 });
+
+

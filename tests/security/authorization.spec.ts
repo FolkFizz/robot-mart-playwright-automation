@@ -1,53 +1,14 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { disableChaos, loginAsAdmin, loginAsUser } from '@api';
 import { routes } from '@config';
 import { seededProducts } from '@data';
 import { hasPotentialStackTrace } from '@utils';
 import { createIsolatedUserContext, syncSessionFromApi } from '@test-helpers';
-import { createOrderForCurrentSession } from '@test-helpers/helpers/authorization';
+import { createOrderForCurrentSession } from '@test-helpers/helpers/orders';
 
 /**
- * =============================================================================
- * AUTHORIZATION & ACCESS CONTROL SECURITY TESTS
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Anonymous access control for protected routes
- * 2. Role-based access control (user vs admin)
- * 3. Admin business restrictions (cannot shop)
- * 4. Session invalidation and role transition
- * 5. Cross-user data isolation (invoice ownership)
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (2 tests):
- *   - AUTHZ-P01: admin can access admin dashboard and admin notifications API
- *   - AUTHZ-P02: authenticated user can access own protected resources
- *
- * NEGATIVE CASES (7 tests):
- *   - AUTHZ-N01: anonymous is redirected from notifications API
- *   - AUTHZ-N02: regular user is forbidden from admin notifications API
- *   - AUTHZ-N03: admin dashboard rejects anonymous and regular users
- *   - AUTHZ-N04: admin is blocked from cart add API
- *   - AUTHZ-N05: reset-stock endpoint rejects requests without reset key
- *   - AUTHZ-N06: logout invalidates protected API access
- *   - AUTHZ-N07: anonymous cannot access profile orders page
- *
- * EDGE CASES (3 tests):
- *   - AUTHZ-E01: invoice access is restricted to order owner
- *   - AUTHZ-E02: invalid invoice id returns 404 without stack trace leak
- *   - AUTHZ-E03: role switch in same API context updates authorization
- *
- * Business Rules Tested:
- * ----------------------
- * - Protected User API: /notifications/list requires authenticated session
- * - Admin API and UI: /admin/notifications/list and /admin/dashboard require admin role
- * - Admin Business Guard: admin users cannot add items to cart
- * - Secret Endpoint Guard: /api/products/reset-stock requires X-RESET-KEY
- * - Order Privacy: invoice endpoint is owner-only
- *
- * =============================================================================
+ * Overview: Security authorization tests for role-based access control and ownership boundaries.
+ * Summary: Validates anon/user/admin route protections, admin business restrictions, logout invalidation, and invoice ownership isolation.
  */
 
 test.use({ seedData: true });
@@ -249,3 +210,6 @@ test.describe('authorization security @security @authz', () => {
     });
   });
 });
+
+
+

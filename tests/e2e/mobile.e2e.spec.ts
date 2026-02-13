@@ -1,52 +1,12 @@
-import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
+﻿import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { disableChaos } from '@api';
 import { routes } from '@config';
 import { seededProducts, catalogSearch, coupons, uiMessages } from '@data';
 import { mobileViewport } from '@test-helpers/constants/ui';
 
 /**
- * =============================================================================
- * MOBILE VIEWPORT E2E TESTS
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Mobile navigation functionality
- * 2. Mobile cart operations
- * 3. Mobile product browsing
- * 4. Mobile checkout flow
- * 5. Responsive layout verification
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (4 tests):
- *   - MOBILE-P01: Mobile navigation menu works
- *   - MOBILE-P02: Add product to cart on mobile
- *   - MOBILE-P03: View and update cart quantity on mobile viewport
- *   - MOBILE-P04: Mobile checkout accessible
- *
- * NEGATIVE CASES (4 tests):
- *   - MOBILE-N01: Empty-cart checkout is blocked on mobile
- *   - MOBILE-N02: Invalid coupon shows validation error on mobile cart
- *   - MOBILE-N03: No-result search shows empty state on mobile
- *   - MOBILE-N04: Invalid checkout email blocked by HTML5 validation on mobile
- *
- * EDGE CASES (4 tests):
- *   - MOBILE-E01: Product cards remain usable on small screens
- *   - MOBILE-E02: Landscape rotation keeps checkout flow accessible
- *   - MOBILE-E03: Rapid quantity updates remain consistent on mobile cart
- *   - MOBILE-E04: Coupon apply/remove lifecycle works on mobile cart
- *
- * Business Rules:
- * ---------------
- * - Mobile viewport: 375x667 (iPhone SE)
- * - Core shopping flow remains usable on mobile viewport
- * - Cart and checkout pages stay functional after touch-style interactions
- * - Product cards remain visible within small-screen layout bounds
- * - Empty cart cannot proceed to successful checkout
- * - Form and coupon validations still enforced on mobile UI
- *
- * =============================================================================
+ * Overview: Mobile viewport E2E checks for responsive navigation and core shopping flows.
+ * Summary: Verifies touch-friendly layout behavior, mobile menu interactions, and critical customer actions on small-screen dimensions.
  */
 
 test.use({
@@ -331,3 +291,5 @@ test.describe('mobile viewport @e2e @mobile', () => {
     });
   });
 });
+
+

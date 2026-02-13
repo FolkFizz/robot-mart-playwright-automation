@@ -1,4 +1,4 @@
-import { test, expect, seedCart } from '@fixtures';
+﻿import { test, expect, seedCart } from '@fixtures';
 import { seededProducts, coupons } from '@data';
 import { addToCart, applyCoupon, clearCart, disableChaos } from '@api';
 import { routes, SHIPPING } from '@config';
@@ -9,47 +9,11 @@ import {
   hasEmptyCartGuard,
   isCheckoutPath,
   waitForCheckoutReady
-} from '@test-helpers/helpers/checkout-flow';
+} from '@test-helpers/helpers/checkout';
 
 /**
- * =============================================================================
- * CHECKOUT INTEGRATION TESTS
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Cart-to-checkout data integrity (totals, shipping, discounts)
- * 2. Multi-page flow validation (cart changes, session, empty-cart guards)
- * 3. Payment mode bootstrap (mock vs stripe rendering)
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (2 tests):
- *   - CHK-INT-P01: checkout total matches cart grand total
- *   - CHK-INT-P02: checkout initializes payment UI for active provider
- *
- * NEGATIVE CASES (3 tests):
- *   - CHK-INT-N01: checkout blocks empty cart access
- *   - CHK-INT-N02: cart cleared during checkout is blocked on refresh
- *   - CHK-INT-N03: expired coupon does not change checkout total
- *
- * EDGE CASES (5 tests):
- *   - CHK-INT-E01: below-threshold order keeps shipping fee in checkout
- *   - CHK-INT-E02: high-value order keeps free shipping in checkout
- *   - CHK-INT-E03: valid coupon discount persists from cart to checkout
- *   - CHK-INT-E04: cart quantity updates propagate to checkout total
- *   - CHK-INT-E05: session expiry redirects away from checkout
- *
- * Business Rules Tested:
- * ----------------------
- * - Integration Point: Cart page -> Checkout page
- * - Grand Total Formula: Subtotal + Discount + Shipping
- * - Shipping Rule: FREE if (Subtotal + Discount) >= threshold, else shipping fee
- * - Data Consistency: Cart totals must match checkout totals
- * - State Propagation: Cart mutations must be reflected at checkout
- * - Access Guard: Empty cart and expired session must not proceed to checkout
- *
- * =============================================================================
+ * Overview: Integration tests for cart-to-checkout consistency in mock payment mode.
+ * Summary: Validates totals, shipping, coupon propagation, session continuity, and empty-cart guarding across page/API boundaries.
  */
 
 test.use({ seedData: true });
@@ -294,3 +258,6 @@ test.describe('checkout integration @integration @checkout', () => {
     });
   });
 });
+
+
+

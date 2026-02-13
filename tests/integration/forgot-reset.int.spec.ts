@@ -1,4 +1,4 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { authInputs, inboxSubjects, buildNonExistentEmail, resetTestData } from '@data';
 import { routes } from '@config';
 import { disableChaos } from '@api';
@@ -13,45 +13,8 @@ import {
 } from '@test-helpers/helpers/password-reset';
 
 /**
- * =============================================================================
- * PASSWORD RESET INTEGRATION TESTS
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Forgot Password flow (UI -> Email -> Reset link)
- * 2. Token validation (format, expiry, one-time use)
- * 3. Security behavior (generic response, invalid route handling)
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (3 tests):
- *   - RESET-INT-P01: forgot password sends reset link to demo inbox
- *   - RESET-INT-P02: reset email has expected subject pattern
- *   - RESET-INT-P03: reset link uses valid URL and token format
- *
- * NEGATIVE CASES (4 tests):
- *   - RESET-INT-N01: non-existent email shows generic success message
- *   - RESET-INT-N02: invalid email format blocked by HTML5 validation
- *   - RESET-INT-N03: expired reset token is rejected
- *   - RESET-INT-N04: used reset token cannot be reused
- *
- * EDGE CASES (5 tests):
- *   - RESET-INT-E01: repeated reset requests rotate token for same user
- *   - RESET-INT-E02: reset link contains hex token in route param
- *   - RESET-INT-E03: reset link is usable from fresh browser context
- *   - RESET-INT-E04: reset email body includes reset instructions
- *   - RESET-INT-E05: query-param token route is not accepted
- *
- * Business Rules Tested:
- * ----------------------
- * - Integration: Forgot Password page -> Email service -> Demo inbox
- * - Link Format: /reset-password/{token}
- * - Token Format: 64-char hex token generated server-side
- * - Security: Generic response for unknown email, one-time token use
- * - Expiry: Expired token must be rejected by reset page guard
- *
- * =============================================================================
+ * Overview: Integration tests for forgot/reset password flow spanning UI, email inbox, and data persistence.
+ * Summary: Confirms token issuance/rotation/expiry rules, reset link integrity, and secure handling of invalid or reused token paths.
  */
 
 test.use({ seedData: true });
@@ -276,3 +239,5 @@ test.describe('password reset integration @integration @auth', () => {
     });
   });
 });
+
+

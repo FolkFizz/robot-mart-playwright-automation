@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+﻿import type { Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 import { routes } from '@config';
 import { emptyCartTextPatterns } from '@test-helpers/constants/checkout';
@@ -9,19 +9,25 @@ export const isCheckoutPath = (url: string): boolean => {
   return url.includes(routes.order.checkout) || url.includes(routes.order.place);
 };
 
+export const expectOnCheckoutPath = async (page: Page) => {
+  await expect(page).toHaveURL(
+    (url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place
+  );
+};
+
 export const gotoCheckoutFromCart = async (
   page: Page,
   cartPage: CartPage,
-  checkoutPage: CheckoutPage
+  checkoutPage?: CheckoutPage
 ): Promise<void> => {
   await cartPage.goto();
   await cartPage.proceedToCheckoutWithFallback();
 
-  if (!isCheckoutPath(page.url())) {
+  if (checkoutPage && !isCheckoutPath(page.url())) {
     await checkoutPage.goto();
   }
 
-  await expect.poll(() => isCheckoutPath(page.url())).toBe(true);
+  await expectOnCheckoutPath(page);
 };
 
 export const waitForCheckoutReady = async (

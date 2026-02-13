@@ -1,40 +1,15 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { loginAsUser, ChatApiClient } from '@api';
 import { routes } from '@config';
 import { isLangfuseEnabled } from '@test-helpers';
 import {
   expectBlockedSafetyReply,
   withTracedChatSecurityCase as withTracedCase
-} from '@test-helpers/helpers/chat-security';
+} from '@test-helpers/helpers/chat';
 
 /**
- * =============================================================================
- * CHAT SECURITY TESTS
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Prompt safety filters for sensitive/harmful requests
- * 2. Endpoint hardening for malformed or tampered requests
- * 3. Consistency of guard behavior across session states
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (2 tests):
- *   - CHAT-SEC-P01: password/credential extraction prompt is blocked
- *   - CHAT-SEC-P02: credit-card data extraction prompt is blocked
- *
- * NEGATIVE CASES (3 tests):
- *   - CHAT-SEC-N01: SQL-like prompt does not produce server error
- *   - CHAT-SEC-N02: malformed JSON payload is rejected without 5xx
- *   - CHAT-SEC-N03: GET method tampering is not exposed
- *
- * EDGE CASES (3 tests):
- *   - CHAT-SEC-E01: burst of dangerous prompts stays blocked
- *   - CHAT-SEC-E02: blocked output does not leak sensitive keywords
- *   - CHAT-SEC-E03: blocked behavior is consistent for anon and logged-in user
- *
- * =============================================================================
+ * Overview: Security-focused chat tests for prompt abuse resistance and hardened endpoint behavior.
+ * Summary: Covers blocked sensitive prompts, malformed request handling, leak-prevention assertions, and consistency across auth states.
  */
 
 test.use({ seedData: true });
@@ -242,3 +217,6 @@ test.describe('chat security @security @chat @ai @ai-mock', () => {
     });
   });
 });
+
+
+

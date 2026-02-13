@@ -5,59 +5,8 @@ import { seededProducts, coupons, customer, validCard, paymentInputs, uiMessages
 import { CheckoutPage } from '@pages';
 
 /**
- * =============================================================================
- * CHECKOUT E2E TESTS - Comprehensive Coverage
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Navigation & Page Loading (Stripe Integration, Cart Totals)
- * 2. Form Validation (Name, Email, Required Fields)
- * 3. Shipping Calculation Logic (THB 1000 threshold)
- * 4. Coupon Impact on Shipping and Totals
- * 5. Payment Processing (Stripe Mock Payment)
- * 6. Order Completion & Confirmation
- * 7. Stock Validation During Checkout
- * 8. Empty Cart Checkout Guard
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (9 tests):
- *   - CHK-P01: setup cart with 2 items and verify subtotal
- *   - CHK-P02: checkout page shows stripe ready and total matches cart
- *   - CHK-P03: complete stripe payment redirects to success and appears in profile
- *   - CHK-P04: order below THB 1000 adds THB 50 shipping
- *   - CHK-P05: order at or above THB 1000 has free shipping
- *   - CHK-P06: apply WELCOME10 on low-value order updates totals
- *   - CHK-P07: apply ROBOT99 on high-value order keeps free shipping
- *   - CHK-P08: remove coupon restores totals
- *   - CHK-P09: coupon input hidden after applying (no re-apply)
- *
- * NEGATIVE CASES (6 tests):
- *   - CHK-N01: empty cart checkout is blocked (redirect or guard message)
- *   - CHK-N02: empty name prevents submit (HTML5 validation)
- *   - CHK-N03: invalid email prevents submit
- *   - CHK-N04: empty email prevents submit
- *   - CHK-N05: expired coupon rejected, totals unchanged
- *   - CHK-N06: stock validation prevents successful checkout
- *
- * EDGE CASES (4 tests):
- *   - CHK-E01: discount crossing shipping threshold recalculates correctly
- *   - CHK-E02: quantity change crossing threshold updates shipping immediately
- *   - CHK-E03: subtotal below threshold keeps shipping fee applied
- *   - CHK-E04: high-value order with coupon remains free shipping when still above threshold
- *
- * Business Rules Tested:
- * ----------------------
- * - Shipping Formula: FREE if (Subtotal + Discount) >= THB 1000, else THB 50
- * - Grand Total Formula: Subtotal + Discount + Shipping
- * - Stripe Integration: Payment element loads with data-stripe-ready
- * - Form Validation: Name and Email required (HTML5 + server-side)
- * - Stock Validation: Order fails if product stock < cart quantity
- * - Coupon Application: Discount applies BEFORE shipping calculation
- * - Cart Persistence: Cleared after successful order completion
- *
- * =============================================================================
+ * Overview: End-to-end checkout journey validation from cart handoff through payment-ready state.
+ * Summary: Ensures checkout routing, totals integrity, form readiness, and blocking behavior for invalid or empty-cart conditions.
  */
 
 test.use({ seedData: true });
@@ -640,3 +589,5 @@ test.describe('checkout comprehensive @e2e @checkout', () => {
     });
   });
 });
+
+

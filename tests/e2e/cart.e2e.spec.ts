@@ -4,59 +4,8 @@ import { SHIPPING, routes } from '@config';
 import { seededProducts, coupons, uiMessages } from '@data';
 
 /**
- * =============================================================================
- * CART E2E TESTS - Comprehensive Coverage
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Basic Cart Operations (Add, Update, Remove, Clear)
- * 2. Stock Validation & Inventory Management
- * 3. Admin Shopping Restrictions (Security)
- * 4. Coupon Application & Validation
- * 5. Shipping Calculation (Free shipping threshold)
- * 6. Cart Persistence (Session vs Database)
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (9 tests):
- *   - CART-P01: add first product to empty cart
- *   - CART-P02: add second product and verify subtotal calculation
- *   - CART-P03: increase quantity updates totals and enables free shipping
- *   - CART-P04: apply valid coupon reduces grand total
- *   - CART-P05: remove coupon restores original totals
- *   - CART-P06: remove product from cart updates totals
- *   - CART-P07: clear cart empties all items
- *   - CART-P08: cannot decrease quantity below 1
- *   - COUP-P02: coupon code is case-insensitive
- *
- * NEGATIVE CASES (9 tests):
- *   - CART-N01: cannot add quantity exceeding stock limit
- *   - CART-N02: admin cannot add items to cart via API (security)
- *   - CART-N02-UI: admin cannot add items to cart via UI
- *   - CART-N03: add non-existent product returns 404
- *   - CART-N04: cannot update quantity to 0 (minimum is 1)
- *   - CART-N05: cannot update cart item beyond available stock
- *   - CART-N07: update cart when empty returns error
- *   - COUP-N01: invalid coupon code shows error
- *   - COUP-N02: expired coupon rejected with error
- *
- * EDGE CASES (4 tests):
- *   - CART-E01: add at exact stock limit succeeds, adding one more fails
- *   - COUP-E01: coupon code with whitespace is trimmed
- *   - COUP-E05: coupon cleared when cart is cleared
- *   - COUP-N04: empty coupon code rejected
- *
- * Business Rules Tested:
- * ----------------------
- * - Stock Validation: Cannot add/update beyond available stock
- * - Admin Restriction: Admin role CANNOT perform shopping operations (Security)
- * - Shipping Threshold: FREE shipping when subtotal >= THB 1000, else THB 50 fee
- * - Coupon Calculation: Discount applied to subtotal BEFORE shipping
- * - Cart Formula: Grand Total = Subtotal + Discount + Shipping
- * - Case Sensitivity: Coupon codes are case-insensitive (converted to uppercase)
- *
- * =============================================================================
+ * Overview: End-to-end cart behavior across product selection, quantity changes, coupon use, and checkout entry.
+ * Summary: Confirms UI-level cart math, shipping threshold effects, stock feedback, and access rules in realistic customer flows.
  */
 
 test.use({ seedData: true });
@@ -578,3 +527,5 @@ test.describe('cart comprehensive @e2e @cart', () => {
     });
   });
 });
+
+

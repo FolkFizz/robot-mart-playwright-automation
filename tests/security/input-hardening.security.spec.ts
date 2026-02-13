@@ -1,4 +1,4 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { loginAsUser } from '@api';
 import { routes } from '@config';
 import {
@@ -8,36 +8,8 @@ import {
 import { hasPotentialStackTrace } from '@utils';
 
 /**
- * =============================================================================
- * INPUT HARDENING SECURITY TESTS
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Authentication bypass payload resistance
- * 2. Path traversal and malformed identifier handling
- * 3. Query tampering against admin endpoints
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (1 test):
- *   - SEC-INP-P01: valid login still works after failed malicious attempts
- *
- * NEGATIVE CASES (3 tests):
- *   - SEC-INP-N01: SQL/XSS-like login payloads are rejected
- *   - SEC-INP-N02: admin endpoint query tampering does not bypass role checks
- *   - SEC-INP-N03: anonymous query tampering does not bypass protected API auth
- *
- * EDGE CASES (1 test):
- *   - SEC-INP-E01: malformed invoice ids return controlled 4xx without stack leaks
- *
- * Business Rules Tested:
- * ----------------------
- * - Login endpoint must not authenticate malformed credentials
- * - Admin endpoints must enforce role checks regardless of query parameters
- * - Invoice endpoint must reject malformed ids safely without internal leaks
- *
- * =============================================================================
+ * Overview: Input hardening security tests for injection-like payloads and malformed identifiers.
+ * Summary: Ensures authentication and protected endpoints resist tampering while returning controlled 4xx responses without stack leakage.
  */
 
 test.use({ seedData: true });
@@ -132,3 +104,5 @@ test.describe('input hardening security @security @hardening', () => {
     });
   });
 });
+
+

@@ -1,4 +1,4 @@
-import { test, expect, seedCart } from '@fixtures';
+﻿import { test, expect, seedCart } from '@fixtures';
 import { disableChaos, loginAsUser } from '@api';
 import {
   ORDER_INVENTORY_FIXED_STOCK as FIXED_STOCK,
@@ -15,44 +15,11 @@ import {
   expectStockError,
   extractMessage,
   getProductStock
-} from '@test-helpers/helpers/inventory-orders';
+} from '@test-helpers/helpers/orders';
 
 /**
- * =============================================================================
- * ORDER-INVENTORY INTEGRATION TESTS
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Order creation to stock deduction
- * 2. Stock deduction accuracy vs ordered quantity
- * 3. Out-of-stock and over-limit validations
- * 4. Concurrent checkout and stale-cart validation
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (3 tests):
- *   - ORD-INV-INT-P01: stock decreases after successful order
- *   - ORD-INV-INT-P02: stock reduction equals ordered quantity
- *   - ORD-INV-INT-P03: order is created when quantity is within stock
- *
- * NEGATIVE CASES (2 tests):
- *   - ORD-INV-INT-N01: cart rejects quantity above available stock
- *   - ORD-INV-INT-N02: zero stock blocks adding and checkout
- *
- * EDGE CASES (2 tests):
- *   - ORD-INV-INT-E01: concurrent orders cannot oversell inventory
- *   - ORD-INV-INT-E02: checkout revalidates stale cart against current stock
- *
- * Business Rules Tested:
- * ----------------------
- * - Integration Point: Order service <-> Inventory service
- * - Deduction Rule: successful order deducts stock atomically
- * - Validation Rule: cart and checkout both enforce stock constraints
- * - Concurrency Rule: only one of competing oversubscribed orders succeeds
- * - Consistency Rule: deducted amount equals purchased quantity
- *
- * =============================================================================
+ * Overview: Integration tests for order placement impact on inventory consistency and concurrency.
+ * Summary: Verifies stock deduction correctness, oversell prevention, stale-cart revalidation, and controlled errors on depleted stock.
  */
 
 test.use({ seedData: true });
@@ -221,3 +188,6 @@ test.describe('order to inventory integration @integration @orders @inventory', 
     });
   });
 });
+
+
+

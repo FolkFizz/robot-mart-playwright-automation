@@ -1,47 +1,14 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { ChatApiClient } from '@api';
 import { isLangfuseEnabled } from '@test-helpers';
 import {
   withTracedChatApiCase as withTracedCase,
   expectSafetyBlockedReply
-} from '@test-helpers/helpers/chat-api';
+} from '@test-helpers/helpers/chat';
 
 /**
- * =============================================================================
- * CHAT API TESTS
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Core chat response contract for normal conversations
- * 2. Safety filter behavior for risky prompts
- * 3. Input edge handling and operational stability
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (3 tests):
- *   - CHAT-API-P01: normal prompt returns non-empty reply
- *   - CHAT-API-P02: multilingual prompt returns non-empty reply
- *   - CHAT-API-P03: form-urlencoded payload (widget style) works
- *
- * NEGATIVE CASES (3 tests):
- *   - CHAT-API-N01: credential-extraction prompt is blocked
- *   - CHAT-API-N02: prompt-injection phrase is blocked
- *   - CHAT-API-N03: unsupported GET endpoint is not exposed
- *
- * EDGE CASES (3 tests):
- *   - CHAT-API-E01: empty or missing message still gets controlled reply
- *   - CHAT-API-E02: concurrent requests stay stable and return replies
- *   - CHAT-API-E03: response latency stays under operational budget
- *
- * Business Rules Tested:
- * ----------------------
- * - Endpoint: POST /api/chat
- * - Response Contract: { reply: string }
- * - Safety Guard: risky prompts return refusal-style response
- * - Availability: endpoint should avoid 5xx for standard traffic patterns
- *
- * =============================================================================
+ * Overview: Chat API contract tests for normal prompts, safety blocking, and endpoint robustness.
+ * Summary: Verifies reply schema stability, refusal behavior for risky prompts, and reliability under empty, concurrent, and latency scenarios.
  */
 
 test.use({ seedData: true });
@@ -271,3 +238,6 @@ test.describe('chat api @api @chat @ai @ai-mock', () => {
     });
   });
 });
+
+
+

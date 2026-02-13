@@ -1,50 +1,15 @@
-import { test, expect } from '@fixtures';
+﻿import { test, expect } from '@fixtures';
 import { routes } from '@config';
 import { expectNoServerError, expectSecurityHeaders, hasPotentialStackTrace } from '@utils';
 import {
   getHeaders,
   isLocalTarget,
   isStrictHeaderMode
-} from '@test-helpers/helpers/security-headers';
+} from '@test-helpers/helpers/security';
 
 /**
- * =============================================================================
- * SECURITY HEADERS TESTS
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Response hardening checks for key pages and APIs
- * 2. Security header validation with environment-aware strictness
- * 3. Defensive checks for not-found/error responses
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (6 tests):
- *   - SEC-HDR-P01: key routes return non-5xx responses
- *   - SEC-HDR-P02: key APIs return non-5xx responses
- *   - SEC-HDR-P03: production target includes baseline security headers
- *   - SEC-HDR-P04: CORS credentials are not paired with wildcard origin
- *   - SEC-HDR-P05: CSP directives avoid obviously dangerous patterns
- *   - SEC-HDR-P06: HSTS contains max-age when present
- *
- * NEGATIVE CASES (3 tests):
- *   - SEC-HDR-N01: x-content-type-options is strict when present
- *   - SEC-HDR-N02: x-frame-options blocks framing when present
- *   - SEC-HDR-N03: referrer-policy avoids unsafe-url when present
- *
- * EDGE CASES (3 tests):
- *   - SEC-HDR-E01: not-found responses do not leak stack traces
- *   - SEC-HDR-E02: header values are non-empty when provided
- *   - SEC-HDR-E03: permissions-policy is restrictive when present
- *
- * Business Rules Tested:
- * ----------------------
- * - Deployment-aware strictness: local dev may miss proxy headers; production must enforce baseline headers
- * - Header safety: when present, values must be secure and non-ambiguous
- * - Error hardening: failed routes should not expose internals
- *
- * =============================================================================
+ * Overview: Security header verification for key pages and APIs with environment-aware strictness.
+ * Summary: Checks baseline hardening headers, safe header values, CORS/CSP/HSTS expectations, and non-leaky error responses.
  */
 
 test.describe('security headers @security @headers', () => {
@@ -202,3 +167,6 @@ test.describe('security headers @security @headers', () => {
     });
   });
 });
+
+
+

@@ -1,4 +1,4 @@
-import { test, expect, loginAndSyncSession } from '@fixtures';
+﻿import { test, expect, loginAndSyncSession } from '@fixtures';
 import { disableChaos } from '@api';
 import { routes } from '@config';
 import { HomePage, NotificationsPage } from '@pages';
@@ -6,48 +6,11 @@ import type { NotificationsResponse } from '@test-helpers/types/integration-cont
 import {
   fetchNotifications,
   openDropdownAndGetUiCount
-} from '@test-helpers/helpers/notifications';
+} from '@test-helpers/helpers/api';
 
 /**
- * =============================================================================
- * NOTIFICATIONS INTEGRATION TESTS
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. UI-API synchronization (counts, list rendering)
- * 2. Notification actions (mark all read)
- * 3. Access control and invalid route handling
- * 4. Cross-tab consistency and payload boundaries
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (3 tests):
- *   - NOTIF-INT-P01: dropdown count aligns with notifications list API
- *   - NOTIF-INT-P02: notifications API returns expected response structure
- *   - NOTIF-INT-P03: each notification object has required fields
- *
- * NEGATIVE CASES (2 tests):
- *   - NOTIF-INT-N01: invalid notification read endpoint returns not found
- *   - NOTIF-INT-N02: unauthorized notifications API access is blocked
- *
- * EDGE CASES (6 tests):
- *   - NOTIF-INT-E01: mark-all-read action updates unread count from API
- *   - NOTIF-INT-E02: UI handles bounded notification list size
- *   - NOTIF-INT-E03: rendered dropdown item count matches API list length
- *   - NOTIF-INT-E04: notifications count stays consistent across tabs
- *   - NOTIF-INT-E05: notification timestamps are valid and not stale
- *   - NOTIF-INT-E06: pagination query keeps response contract stable
- *
- * Business Rules Tested:
- * ----------------------
- * - Integration Point: Notification dropdown (UI) <-> /notifications/list (API)
- * - Response Contract: { status: 'success', notifications: [], unreadCount: number }
- * - Access Control: /notifications/list requires authenticated session
- * - UI Count: Dropdown items reflect API list length (bounded by backend limit)
- * - Action Flow: Mark all read updates unread counter without breaking API schema
- *
- * =============================================================================
+ * Overview: Integration checks between notifications API responses and dropdown UI state.
+ * Summary: Ensures unread counts, list payload structure, mark-all-read behavior, and unauthorized access handling stay synchronized.
  */
 
 test.use({ seedData: true });
@@ -228,3 +191,6 @@ test.describe('notifications integration @integration @notifications', () => {
     });
   });
 });
+
+
+

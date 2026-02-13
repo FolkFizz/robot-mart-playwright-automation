@@ -4,47 +4,8 @@ import { seededProducts } from '@data';
 import { CartPage, CheckoutPage } from '@pages';
 
 /**
- * =============================================================================
- * CHECKOUT PAGE ACCESSIBILITY TESTS
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. WCAG 2.1 AA Compliance for Checkout Form
- * 2. Payment Form Accessibility (Name, Email, Card Fields)
- * 3. Stripe Element Integration Accessibility
- * 4. Form Validation & Error Announcements
- * 5. Navigation & Focus Management
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (6 tests):
- *   - A11Y-CHK-P01: checkout page has no critical violations
- *   - A11Y-CHK-P02: address fields have proper autocomplete attributes
- *   - A11Y-CHK-P03: payment method selection accessible
- *   - A11Y-CHK-P04: order summary section screen reader friendly
- *   - A11Y-CHK-P05: keyboard tab order reaches checkout form controls
- *   - A11Y-CHK-P06: skip link functionality
- *
- * NEGATIVE CASES (2 tests):
- *   - A11Y-CHK-N01: form validation errors announced to screen readers
- *   - A11Y-CHK-N02: empty checkout fields block submit with browser validation
- *
- * EDGE CASES (2 tests):
- *   - A11Y-CHK-E01: payment loading states remain accessible
- *   - A11Y-CHK-E02: stripe payment element iframe accessibility
- *
- * Business Rules Tested:
- * ----------------------
- * - Accessibility Standard: WCAG 2.1 Level AA
- * - Form Elements: Name, Email inputs properly labeled, autocomplete support
- * - Dynamic Content: Live regions for errors, loading states
- * - Payment Element: Stripe iframe accessibility (delegated to Stripe)
- * - Error Messages: Validation errors associated with inputs (aria-describedby)
- * - Submit Button: Disabled states communicated to assistive tech
- * - Mock vs Stripe: Both payment modes tested for accessibility
- *
- * =============================================================================
+ * Overview: Accessibility checks for the checkout page and payment form interactions.
+ * Summary: Verifies labels, focus order, validation messaging, and payment section behavior across mock and Stripe-capable states.
  */
 
 test.use({ seedData: true });
@@ -282,3 +243,5 @@ test.describe('checkout accessibility @a11y @checkout', () => {
     });
   });
 });
+
+

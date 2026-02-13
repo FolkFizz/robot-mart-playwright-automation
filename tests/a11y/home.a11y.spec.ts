@@ -2,43 +2,8 @@
 import { test, expect } from '@fixtures';
 
 /**
- * =============================================================================
- * HOME PAGE ACCESSIBILITY TESTS
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. WCAG 2.1 AA Compliance Validation
- * 2. Keyboard Navigation (Nav, Footer, Products)
- * 3. Screen Reader Compatibility (Headings, Semantics)
- * 4. Interactive Elements (Search, Filters)
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES (1 test):
- *   - A11Y-HOME-P01: home page has no critical violations
- *
- * NEGATIVE CASES (2 tests):
- *   - A11Y-HOME-N01: keyboard tab navigation keeps focus on visible interactive elements
- *   - A11Y-HOME-N02: loading state maintains accessibility
- *
- * EDGE CASES (4 tests):
- *   - A11Y-HOME-E01: product grid with many items remains accessible
- *   - A11Y-HOME-E02: search and price filter controls meet color contrast
- *   - A11Y-HOME-E03: search input supports keyboard submit without focus trap
- *   - A11Y-HOME-E04: category and sort filters accessible via keyboard
- *
- * Business Rules Tested:
- * ----------------------
- * - Accessibility Standard: WCAG 2.1 Level AA
- * - Semantics: Proper heading hierarchy, landmark roles
- * - Navigation: Focus management, skip links, keyboard traps prevention
- * - Coverage Areas: Product cards, search input, navigation, filters
- * - Keyboard Access: All interactive elements must be keyboard accessible
- * - Known Legacy UI Debt: stock badge contrast + unlabeled sort select are
- *   excluded from non-blocking page-level audits until fixed in the app
- *
- * =============================================================================
+ * Overview: Accessibility checks for the home catalog experience and global navigation landmarks.
+ * Summary: Covers product grid semantics, keyboard navigation, filter/search controls, and known non-blocking legacy exceptions.
  */
 
 test.describe('home accessibility @a11y @safe', () => {
@@ -177,3 +142,5 @@ test.describe('home accessibility @a11y @safe', () => {
     });
   });
 });
+
+
