@@ -30,3 +30,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# AI live quota budget state (local-only)
+test-results/.ai-live-budget.json

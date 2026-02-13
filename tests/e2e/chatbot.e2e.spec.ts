@@ -58,7 +58,7 @@ const traceCase = async (
 
 test.use({ seedData: true });
 
-test.describe('chatbot e2e @e2e @chat', () => {
+test.describe('chatbot e2e @e2e @chat @ai @ai-mock', () => {
   test.beforeAll(() => {
     if (isLangfuseEnabled()) {
       console.log('[chatbot-e2e] Langfuse tracing is enabled for this run.');

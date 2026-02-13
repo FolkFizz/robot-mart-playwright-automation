@@ -75,7 +75,10 @@ npm run env:use:prod
   2. `APP_BASE_URL`
   3. fallback `http://localhost:3000`
 
-Legacy vars (`BASE_URL`, `PERF_BASE_URL`, `REAL_URL`) are still accepted internally for migration, but avoid using them in new setup.
+Legacy target vars from older versions (`BASE_URL`, `PERF_BASE_URL`, `REAL_URL`) are still read as fallback so old scripts do not break. For new setup, use only:
+
+- `APP_BASE_URL` (main shared target)
+- `K6_BASE_URL` (optional k6-only override)
 
 Inspect active targets:
 
@@ -217,6 +220,8 @@ scripts/
 - `@smoke`: fast checks
 - `@regression`: broader coverage
 - `@api`, `@a11y`, `@security`
+- `@ai-mock`: deterministic chatbot checks (no external LLM quota usage)
+- `@ai-live`: low-volume live canary checks (quota-budgeted)
 
 ### Safety tags
 
@@ -227,6 +232,16 @@ Guideline:
 
 - Use `@safe` for read-only tests.
 - Use `@destructive` when changing data (seed/reset/checkout/admin writes).
+
+### AI Test Lanes
+
+- `@ai-mock` lane:
+  - default lane for chatbot suites
+  - expects deterministic backend responses (price/stock/safety) without consuming Gemini live quota
+- `@ai-live` lane:
+  - small canary-only live suite
+  - gated by daily budget script before execution
+  - runs with `--workers=1` to avoid burst requests
 
 ## 8. Command Reference
 
@@ -240,6 +255,11 @@ Guideline:
 - `npm run test:quick-regression`
 - `npm run test:quick-regression:stable`
 - `npm run test:prod`
+- `npm run test:ai:mock`
+- `npm run test:ai:live`
+- `npm run ai:budget:report`
+- `npm run ai:budget:check`
+- `npm run ai:budget:consume`
 
 Run single file:
 
@@ -268,6 +288,7 @@ npx playwright test --grep "@smoke"
 - `npm run allure:clean`
 - `npm run report:allure`
 - `npm run report:open`
+- `npm run report:snapshots`
 
 ### Environment and stock utilities
 
@@ -375,6 +396,31 @@ Notes:
 - This does not replace Allure.
 - Allure = Playwright functional test report, Prometheus/Grafana = k6 runtime metrics.
 
+### README Visual Gallery (Allure + Grafana + Prometheus)
+
+These images are designed for portfolio/reviewer-friendly README previews.
+
+![Allure Report Overview](assets/readme/allure-overview.png)
+![Grafana k6 Overview](assets/readme/grafana-k6-overview.png)
+![Prometheus k6 Query Overview](assets/readme/prometheus-overview.png)
+
+Refresh snapshots:
+
+```bash
+npm run report:allure
+npm run monitor:up
+npm run test:perf:smoke:monitor
+npm run report:snapshots
+```
+
+Notes:
+
+- Snapshot outputs are saved to `assets/readme/`.
+- If a service is unavailable, snapshot script writes a clean placeholder image so README does not break.
+- Optional env overrides:
+  - `GRAFANA_URL`, `GRAFANA_DASHBOARD_URL`, `GRAFANA_USER`, `GRAFANA_PASSWORD`
+  - `PROMETHEUS_URL`, `PROMETHEUS_GRAPH_URL`
+
 ## 11. CI/CD Coverage in This Repo
 
 ### Active CI workflows
@@ -383,6 +429,7 @@ Notes:
 - `.github/workflows/ui-smoke.yml`
 - `.github/workflows/api.yml`
 - `.github/workflows/a11y.yml`
+- `.github/workflows/ai-live-manual.yml`
 - `.github/workflows/regression-nightly.yml`
 - `.github/workflows/k6-nightly.yml`
 
@@ -392,12 +439,14 @@ Notes:
 - `ui-smoke`: safe UI/security/a11y slice
 - `api`: API smoke/security slice
 - `a11y`: accessibility smoke slice
+- `ai-live-manual`: manual low-volume live AI canary suite (`@ai-live`) with budget gate (state cached per UTC day)
 - `regression-nightly`: wider regression subset
 - `k6-nightly`: performance gate suite
 
 Common CI defaults:
 
 - `@chat`/`@ai` excluded in routine runs
+- `@ai-live` is intended for manual/controlled runs with budget gate (`npm run test:ai:live`)
 - destructive tests are excluded from PR-safe paths
 - artifacts are uploaded (`playwright-report`, `test-results`, `allure-*`, `performance/results/*`)
 - nightly schedules run only when repo variable `ENABLE_NIGHTLY=true`
@@ -470,3 +519,56 @@ For the fastest reproducible review:
 5. `npm run report:allure`
 
 This sequence verifies code quality, smoke stability, and report generation with minimal setup.
+
+## 16. Final QA Checklist (Project Close-Out)
+
+Use this checklist before declaring the project complete:
+
+- [ ] Select target profile and verify:
+  - `npm run env:use:local` or `npm run env:use:prod`
+  - `npm run env:targets`
+- [ ] Local stack health (when testing local):
+  - in `robot-store-sandbox`: `docker compose up -d`
+  - confirm app opens at `http://localhost:3000`
+- [ ] Quality gates pass:
+  - `npm run ci:quality`
+- [ ] Core regression pass (Chromium, safe slice):
+  - `npm run ci:quick`
+- [ ] Hosted safe check pass:
+  - `npm run test:prod`
+- [ ] Functional report generated:
+  - `npm run report:allure`
+- [ ] Performance suite pass (local preferred for heavy profiles):
+  - `npm run test:perf:suite:lite`
+  - `npm run test:perf:suite:gate` (optional for capacity evidence)
+- [ ] Monitoring evidence captured (k6 + Grafana):
+  - run stack: `npm run monitor:up`
+  - `npm run report:snapshots`
+  - keep dashboard/result artifacts in `performance/results/*`
+- [ ] CI workflows show at least one green run:
+  - `quick-regression`, `ui-smoke`, `api`, `a11y`, `regression-nightly`, `k6-nightly`
+- [ ] Cleanup temporary files before commit:
+  - e.g. unneeded local-only result files under `performance/results/`
+- [ ] Update portfolio evidence pointers in this README if needed.
+
+Exit criteria:
+
+- Playwright safe/quick suites are green
+- k6 lite (and optionally gate) has expected pass/fail signals documented
+- Allure + Grafana evidence is available for reviewer walkthrough
+
+## 17. Portfolio Summary (TH/EN)
+
+### Thai (for CV / Portfolio)
+
+QA Automation Portfolio Project: ออกแบบและพัฒนาระบบทดสอบอัตโนมัติแบบครบวงจรสำหรับ Robot Store โดยครอบคลุม UI, API, Integration, Security และ Accessibility ด้วย Playwright + TypeScript พร้อมระบบ Performance Testing ด้วย k6 และการมอนิเตอร์ผ่าน Prometheus/Grafana. โครงการนี้มีการจัดโครงสร้าง environment ให้รองรับทั้ง local และ production อย่างปลอดภัย, สร้าง quality gates สำหรับ CI, และจัดทำรายงานผลผ่าน Allure เพื่อให้ทีมสามารถตรวจสอบคุณภาพและวิเคราะห์ปัญหาได้อย่างเป็นระบบ.
+
+### English (for CV / Portfolio)
+
+Built an end-to-end QA automation portfolio project for a Robot Store sandbox using Playwright + TypeScript across UI, API, integration, security, and accessibility layers, with k6 for performance testing and Prometheus/Grafana for runtime observability. Implemented environment-safe test execution for local and hosted targets, CI quality gates, and Allure reporting to provide reproducible quality evidence and clear debugging signals for reviewers and engineering teams.
+
+### Short bullet version
+
+- Designed a full-stack QA automation framework (Playwright + k6) with CI gates, Allure reporting, and Grafana observability.
+- Implemented safe local/production test targeting with deterministic seed/reset workflows.
+- Delivered reproducible smoke/regression/performance evidence for portfolio-grade review.

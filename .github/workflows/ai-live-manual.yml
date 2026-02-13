@@ -1,0 +1,118 @@
+name: AI Live Manual Canary
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Optional APP_BASE_URL override'
+        required: false
+        default: ''
+      ai_rpd_limit:
+        description: 'RPD hard limit for budget gate'
+        required: false
+        default: '20'
+      ai_rpd_reserve:
+        description: 'Requests reserved for manual/debug use'
+        required: false
+        default: '12'
+      ai_automation_daily_budget:
+        description: 'Max automation requests/day for @ai-live'
+        required: false
+        default: '8'
+      ai_live_requests_per_case:
+        description: 'Estimated live requests per @ai-live test case'
+        required: false
+        default: '1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-live-manual
+  cancel-in-progress: false
+
+jobs:
+  ai-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      APP_BASE_URL: ${{ github.event.inputs.base_url || vars.APP_BASE_URL || 'https://robot-store-sandbox.onrender.com' }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgres://ci:ci@localhost:5432/ci' }}
+      TEST_API_KEY: ${{ secrets.TEST_API_KEY || 'ci-placeholder' }}
+      RESET_KEY: ${{ secrets.RESET_KEY || 'ci-placeholder' }}
+      USER_USERNAME: ${{ vars.USER_USERNAME || 'user' }}
+      USER_PASSWORD: ${{ secrets.USER_PASSWORD || vars.USER_PASSWORD || 'user123' }}
+      ADMIN_USERNAME: ${{ vars.ADMIN_USERNAME || 'admin' }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD || vars.ADMIN_PASSWORD || 'admin123' }}
+      SEED_DATA: 'false'
+      CI: 'true'
+      AI_RPD_LIMIT: ${{ github.event.inputs.ai_rpd_limit || '20' }}
+      AI_RPD_RESERVE: ${{ github.event.inputs.ai_rpd_reserve || '12' }}
+      AI_AUTOMATION_DAILY_BUDGET: ${{ github.event.inputs.ai_automation_daily_budget || '8' }}
+      AI_LIVE_REQUESTS_PER_CASE: ${{ github.event.inputs.ai_live_requests_per_case || '1' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Cache Playwright Browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-chromium-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-chromium-
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Resolve UTC day key
+        id: day
+        shell: bash
+        run: echo "utc_day=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore AI budget state cache
+        uses: actions/cache/restore@v4
+        with:
+          path: test-results/.ai-live-budget.json
+          key: ai-live-budget-${{ github.repository }}-${{ github.ref_name }}-${{ steps.day.outputs.utc_day }}-${{ github.run_id }}
+          restore-keys: |
+            ai-live-budget-${{ github.repository }}-${{ github.ref_name }}-${{ steps.day.outputs.utc_day }}-
+
+      - name: Show AI budget status
+        run: npm run ai:budget:report
+
+      - name: Run @ai-live suite (budget-gated)
+        run: npm run test:ai:live
+
+      - name: Generate Allure Report
+        if: always()
+        continue-on-error: true
+        run: npm run report:allure
+
+      - name: Upload AI Live Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-live-artifacts
+          path: |
+            playwright-report
+            test-results
+            allure-results
+            allure-report
+          retention-days: 7
+
+      - name: Save AI budget state cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: test-results/.ai-live-budget.json
+          key: ai-live-budget-${{ github.repository }}-${{ github.ref_name }}-${{ steps.day.outputs.utc_day }}-${{ github.run_id }}

@@ -5,4 +5,5 @@ export * from './auth.api';
 export * from './admin.api';
 export * from './cart.api';
 export * from './orders.api';
+export * from './chat.api';
 export * from './test-hooks.api';

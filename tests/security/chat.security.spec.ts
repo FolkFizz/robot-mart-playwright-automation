@@ -82,7 +82,7 @@ const traceCase = async (
 
 test.use({ seedData: true });
 
-test.describe('chat security @security @chat', () => {
+test.describe('chat security @security @chat @ai @ai-mock', () => {
   test.beforeAll(() => {
     if (isLangfuseEnabled()) {
       console.log('[chat-security] Langfuse tracing is enabled for this run.');
