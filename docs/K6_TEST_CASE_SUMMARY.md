@@ -1,12 +1,31 @@
 ﻿# k6 Performance Test Case Summary
 
+<!-- nav-toc:start -->
+[English](K6_TEST_CASE_SUMMARY.md) | [ภาษาไทย](K6_TEST_CASE_SUMMARY_TH.md)
+
+## Table of Contents
+- [Script Catalog](#k6-script-catalog)
+- [auth.k6.js](#k6-auth)
+- [breakpoint.k6.js](#k6-breakpoint)
+- [browse.k6.js](#k6-browse)
+- [cart.k6.js](#k6-cart)
+- [checkout.k6.js](#k6-checkout)
+- [load.k6.js](#k6-load)
+- [race-condition.k6.js](#k6-race-condition)
+- [smoke.k6.js](#k6-smoke)
+- [soak.k6.js](#k6-soak)
+- [stress.k6.js](#k6-stress)
+<!-- nav-toc:end -->
+
 - Total scripts: 10
 - Total grouped flow blocks: 25
 - Total validation checks: 71
 - Scope: `performance/scripts/*.k6.js`
 
+<a id="k6-script-catalog"></a>
 ## Script Catalog
 
+<a id="k6-auth"></a>
 ### performance/scripts/auth.k6.js
 
 - Overview: Performance checks for authentication session flow using login and post-login profile access.
@@ -17,6 +36,7 @@
 - Validation checks (3): login status is 200/302/303; login not redirected back to /login; profile is accessible after login
 - Key endpoints: /login, /profile
 
+<a id="k6-breakpoint"></a>
 ### performance/scripts/breakpoint.k6.js
 
 - Overview: Arrival-rate breakpoint test to find maximum sustainable throughput on a lightweight catalog endpoint.
@@ -27,6 +47,7 @@
 - Validation checks (3): status is 200; response time < 5s; returns JSON payload
 - Key endpoints: /api/products
 
+<a id="k6-browse"></a>
 ### performance/scripts/browse.k6.js
 
 - Overview: Visitor browse performance journey covering home page, product list API, and product detail API.
@@ -37,6 +58,7 @@
 - Validation checks (10): home status is 200; home has html content; catalog status is 200; catalog returns json; catalog payload has ok=true; catalog payload has products array; detail status is 200; detail returns json; detail payload has ok=true; detail payload contains product.id
 - Key endpoints: /api/products
 
+<a id="k6-cart"></a>
 ### performance/scripts/cart.k6.js
 
 - Overview: Cart performance test for add-to-cart writes and cart read consistency under concurrent shopper traffic.
@@ -47,6 +69,7 @@
 - Validation checks (4): cart add handled; cart add no 5xx; view cart status is 200; view cart returns json
 - Key endpoints: /api/cart/add
 
+<a id="k6-checkout"></a>
 ### performance/scripts/checkout.k6.js
 
 - Overview: Spike-oriented checkout performance test for the critical buyer path from auth to mock payment completion.
@@ -57,6 +80,7 @@
 - Validation checks (11): login status is allowed (200/302/303); login does not redirect back to /login; profile is accessible after login; register status is allowed (200/302/303); register does not loop back to /register; cart add handled; cart add no 5xx; checkout status is 200 or 400; checkout has no server error; successful checkout has orderId; successful checkout has status=success
 - Key endpoints: /api/products, /api/cart/add, /order/api/mock-pay, /login, /profile, /register
 
+<a id="k6-load"></a>
 ### performance/scripts/load.k6.js
 
 - Overview: Configurable end-to-end load journey combining login, browse, cart add, and mock checkout actions.
@@ -67,6 +91,7 @@
 - Validation checks (7): login status is 200/302/303; login not redirected back to /login; cart handled; cart no 5xx; checkout status is 200/400; checkout has no 5xx; checkout success has orderId
 - Key endpoints: /api/cart/add, /order/api/mock-pay, /login
 
+<a id="k6-race-condition"></a>
 ### performance/scripts/race-condition.k6.js
 
 - Overview: Concurrency stress test focused on overselling protection when many users checkout the same product simultaneously.
@@ -77,6 +102,7 @@
 - Validation checks (7): race login status is 200/302/303; race login not redirected back to /login; race profile is accessible; race cart add handled; race cart add no 5xx; race checkout handled; race checkout no 5xx
 - Key endpoints: /api/products, /api/cart/add, /order/api/mock-pay, /login, /profile
 
+<a id="k6-smoke"></a>
 ### performance/scripts/smoke.k6.js
 
 - Overview: Fast smoke performance probe for core availability of home and products API endpoints.
@@ -87,6 +113,7 @@
 - Validation checks (6): home status is 200; home content type is html; products status is 200; products content type is json; products payload has ok=true; products payload has array
 - Key endpoints: /api/products
 
+<a id="k6-soak"></a>
 ### performance/scripts/soak.k6.js
 
 - Overview: Long-duration soak test for endurance stability across browse, cart, and checkout operations.
@@ -97,6 +124,7 @@
 - Validation checks (10): soak login status is 200/302/303; soak login not redirected back to /login; soak profile is accessible; soak browse status is 200; soak browse returns json; soak cart add handled; soak cart add no 5xx; soak checkout handled; soak checkout no 5xx; soak checkout success has orderId
 - Key endpoints: /api/products, /api/cart/add, /order/api/mock-pay, /login, /profile
 
+<a id="k6-stress"></a>
 ### performance/scripts/stress.k6.js
 
 - Overview: Stress workload with weighted browse/cart/checkout mix to locate degradation under rising pressure.

@@ -1,8 +1,39 @@
 # Robot Store Playwright Automation
 
+<!-- nav-toc:start -->
+[English](README.md) | [ภาษาไทย](README_TH.md)
+
+## Table of Contents
+- [1. What This Repo Covers](#sec-01)
+- [2. Tech Stack](#sec-02)
+- [3. Prerequisites](#sec-03)
+- [4. Environment Strategy](#sec-04)
+- [5. Run Modes](#sec-05)
+- [6. Test Architecture](#sec-06)
+- [7. Test Taxonomy and Tags](#sec-07)
+- [8. Command Reference](#sec-08)
+- [9. Accessibility and Allure](#sec-09)
+- [10. Performance Monitoring (Prometheus + Grafana)](#sec-10)
+- [11. CI/CD Coverage](#sec-11)
+- [12. Performance Evidence Snapshot](#sec-12)
+- [13. Known Limitations and Trade-offs](#sec-13)
+- [14. Troubleshooting](#sec-14)
+- [15. Portfolio Reviewer Path](#sec-15)
+- [16. Final QA Checklist (Project Close-Out)](#sec-16)
+
+## Documentation Index
+- [Main README (English)](README.md)
+- [Main README (ภาษาไทย)](README_TH.md)
+- [Playwright Test Case Summary (English)](docs/PLAYWRIGHT_TEST_CASE_SUMMARY.md)
+- [Playwright Test Case Summary (ภาษาไทย)](docs/PLAYWRIGHT_TEST_CASE_SUMMARY_TH.md)
+- [k6 Test Case Summary (English)](docs/K6_TEST_CASE_SUMMARY.md)
+- [k6 Test Case Summary (ภาษาไทย)](docs/K6_TEST_CASE_SUMMARY_TH.md)
+<!-- nav-toc:end -->
+
 The single source of truth for this repository.
 This project combines Playwright (functional) and k6 (performance) testing for the Robot Store sandbox app.
 
+<a id="sec-01"></a>
 ## 1. What This Repo Covers
 
 - UI, API, integration, security, and a11y tests with Playwright
@@ -10,6 +41,7 @@ This project combines Playwright (functional) and k6 (performance) testing for t
 - Safe production smoke checks (`@smoke`, `@safe`)
 - Local deterministic test setup with reset/seed hooks
 
+<a id="sec-02"></a>
 ## 2. Tech Stack
 
 - Node.js + TypeScript
@@ -21,6 +53,7 @@ This project combines Playwright (functional) and k6 (performance) testing for t
 - ESLint + Prettier
 - PostgreSQL client (`pg`)
 
+<a id="sec-03"></a>
 ## 3. Prerequisites
 
 1. Install dependencies:
@@ -47,6 +80,7 @@ npm run env:use:prod
 
 5. Optional (live k6 monitoring dashboard): Docker Desktop or Docker Engine.
 
+<a id="sec-04"></a>
 ## 4. Environment Strategy
 
 ### Profiles
@@ -97,6 +131,7 @@ npm run env:targets
 ALLOW_DESTRUCTIVE_TEST_HOOKS=true
 ```
 
+<a id="sec-05"></a>
 ## 5. Run Modes
 
 ### Quick reviewer mode (hosted, no companion repo)
@@ -167,6 +202,7 @@ npm run test:prod
 - `K6_BASE_URL` is optional. Leave it empty to reuse `APP_BASE_URL`.
 - Some Playwright integration flows read `DATABASE_URL` directly. Keep it aligned with the active environment (`local Docker DB` for local runs, `Neon prod` for hosted checks).
 
+<a id="sec-06"></a>
 ## 6. Test Architecture
 
 ### Layering
@@ -186,9 +222,13 @@ src/
 tests/
 performance/
 scripts/
+docs/
+monitoring/
+assets/
 .github/workflows/
 ```
 
+<a id="sec-07"></a>
 ## 7. Test Taxonomy and Tags
 
 ### Taxonomy
@@ -227,11 +267,13 @@ scripts/
 - Gated by a daily budget script before execution
 - Runs with `--workers=1` to avoid burst requests
 
+<a id="sec-08"></a>
 ## 8. Command Reference
 
 ### Playwright
 
 ```bash
+npm run pw:test
 npm run test
 npm run test:smoke
 npm run test:regression
@@ -271,6 +313,12 @@ npm run ci:quality
 npm run ci:quick
 ```
 
+### Metrics Utilities
+
+```bash
+npm run metrics:playwright -- --input test-results/quick-regression.json
+```
+
 ### Reporting
 
 ```bash
@@ -286,6 +334,7 @@ npm run report:snapshots
 npm run env:use:local
 npm run env:use:prod
 npm run env:targets
+npm run setup:stock
 npm run stock:reset
 npm run stock:reset:local
 npm run stock:reset:prod
@@ -294,6 +343,7 @@ npm run stock:reset:prod
 ### k6
 
 ```bash
+npm run k6:run -- performance/scripts/smoke.k6.js
 npm run test:perf:smoke
 npm run test:perf:auth
 npm run test:perf:browse
@@ -333,6 +383,7 @@ For container → local app testing:
 APP_BASE_URL=http://host.docker.internal:3000
 ```
 
+<a id="sec-09"></a>
 ## 9. Accessibility and Allure
 
 ### Accessibility (axe)
@@ -354,6 +405,7 @@ npm run report:open
 
 Allure artifacts are generated from `allure-results`.
 
+<a id="sec-10"></a>
 ## 10. Performance Monitoring (Prometheus + Grafana)
 
 This repo ships a ready-to-run local monitoring stack for k6:
@@ -412,6 +464,7 @@ npm run report:snapshots
 - If a service is unavailable, the snapshot script writes a clean placeholder so the README never breaks.
 - Optional env overrides: `GRAFANA_URL`, `GRAFANA_DASHBOARD_URL`, `GRAFANA_USER`, `GRAFANA_PASSWORD`, `PROMETHEUS_URL`, `PROMETHEUS_GRAPH_URL`
 
+<a id="sec-11"></a>
 ## 11. CI/CD Coverage
 
 ### Active Workflows
@@ -435,13 +488,14 @@ npm run report:snapshots
 - Nightly schedules run only when the repo variable `ENABLE_NIGHTLY=true`
 - `k6-nightly` defaults to the `lite` profile to reduce hosted DB load; manual dispatch supports `gate` and `portfolio`
 
+<a id="sec-12"></a>
 ## 12. Performance Evidence Snapshot
 
 Latest committed evidence:
 
 - Portfolio manifest: `performance/results/20260209-121019-portfolio/manifest.md`
 - Gate manifest: `performance/results/20260209-122753-gate/manifest.md`
-- Latest pointer: `performance/results/latest.txt`
+- Latest pointer (generated by perf-suite runs and may be absent in committed snapshots): `performance/results/latest.txt`
 
 **Observed bottlenecks from the latest gate/portfolio run:**
 
@@ -455,12 +509,14 @@ Latest committed evidence:
 2. Reduce stress p95 latency to meet threshold target
 3. Improve soak p95 stability over sustained duration
 
+<a id="sec-13"></a>
 ## 13. Known Limitations and Trade-offs
 
 - `@chat`/`@ai` tests are excluded from routine CI due to external dependency variance and cost unpredictability.
 - k6 thresholds may fail in shared hosted environments where runtime and network conditions vary.
 - Destructive test paths are intentionally constrained to minimize production risk.
 
+<a id="sec-14"></a>
 ## 14. Troubleshooting
 
 ### 403 on `/api/test/reset`
@@ -491,6 +547,7 @@ npm run test:smoke
 npm run report:allure
 ```
 
+<a id="sec-15"></a>
 ## 15. Portfolio Reviewer Path
 
 For the fastest reproducible review:
@@ -505,6 +562,7 @@ npm run report:allure
 
 This sequence validates code quality, smoke stability, and report generation with minimal setup overhead.
 
+<a id="sec-16"></a>
 ## 16. Final QA Checklist (Project Close-Out)
 
 Run through this checklist before declaring the project complete.

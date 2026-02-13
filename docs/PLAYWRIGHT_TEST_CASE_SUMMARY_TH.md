@@ -1,5 +1,19 @@
 ﻿# สรุป Test Case ฝั่ง Playwright
 
+<!-- nav-toc:start -->
+[English](PLAYWRIGHT_TEST_CASE_SUMMARY.md) | [ภาษาไทย](PLAYWRIGHT_TEST_CASE_SUMMARY_TH.md)
+
+## Table of Contents
+- [Legend (P/N/E)](#pw-th-legend)
+- [Coverage By Area](#pw-th-coverage)
+- [Suite Catalog](#pw-th-suite-catalog)
+- [A11y Suites](#pw-th-a11y-suites)
+- [API Suites](#pw-th-api-suites)
+- [E2E Suites](#pw-th-e2e-suites)
+- [Integration Suites](#pw-th-integration-suites)
+- [Security Suites](#pw-th-security-suites)
+<!-- nav-toc:end -->
+
 - จำนวน Test Suite ทั้งหมด: 29
 - จำนวน Test Case ทั้งหมด: 303
 - จำนวน Positive cases: 114
@@ -8,12 +22,14 @@
 - ขอบเขต: `tests/**/*.spec.ts`
 - หมายเหตุ: ชื่อ Test ID/Case คงภาษาอังกฤษเพื่อให้อ้างอิงกับไฟล์เทสได้ตรงกัน
 
+<a id="pw-th-legend"></a>
 ## คำอธิบาย P/N/E
 
 - `P` = Positive case: เส้นทางปกติ (happy path) หรือพฤติกรรมที่คาดว่าจะสำเร็จ
 - `N` = Negative case: input ไม่ถูกต้อง เส้นทางที่ไม่อนุญาต หรือผลลัพธ์ที่ควรถูกปฏิเสธ
 - `E` = Edge case: เคสขอบเขต การทำงานพร้อมกัน (concurrency) ความทนทาน หรือสถานการณ์ที่พบไม่บ่อย
 
+<a id="pw-th-coverage"></a>
 ## สรุปตามหมวด
 
 | หมวด | จำนวนไฟล์ | จำนวนเคส | Positive | Negative | Edge |
@@ -24,7 +40,11 @@
 | integration | 5 | 47 | 14 | 13 | 20 |
 | security | 4 | 37 | 11 | 16 | 10 |
 
+<a id="pw-th-suite-catalog"></a>
 ## รายละเอียดรายไฟล์เทส
+
+<a id="pw-th-a11y-suites"></a>
+### A11y Suites
 
 ### tests/a11y/cart.a11y.spec.ts (12 เคส)
 
@@ -99,6 +119,9 @@
 - A11Y-HOME-E04: หมวดหมู่และตัว sort สามารถใช้งานผ่าน keyboard ได้
 
 ---
+
+<a id="pw-th-api-suites"></a>
+### API Suites
 
 ### tests/api/admin.api.spec.ts (9 เคส)
 
@@ -233,6 +256,9 @@
 - ORD-API-E01: Concurrent payment intent request มีความเสถียรและไม่ทำให้ตะกร้าเสียหาย
 
 ---
+
+<a id="pw-th-e2e-suites"></a>
+### E2E Suites
 
 ### tests/e2e/auth.e2e.spec.ts (15 เคส)
 
@@ -541,6 +567,9 @@
 
 ---
 
+<a id="pw-th-integration-suites"></a>
+### Integration Suites
+
 ### tests/integration/checkout-mock.int.spec.ts (10 เคส)
 
 - **ภาพรวม:** Integration test สำหรับความสอดคล้องระหว่าง cart และ checkout ใน mock payment mode
@@ -662,6 +691,9 @@
 - PROD-CART-INT-E02: การเพิ่มซ้ำจะสะสมจำนวนและยอดรวม
 
 ---
+
+<a id="pw-th-security-suites"></a>
+### Security Suites
 
 ### tests/security/authorization.spec.ts (12 เคส)
 

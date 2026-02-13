@@ -1,15 +1,34 @@
 ﻿# สรุป Test Case ฝั่ง k6 Performance
 
+<!-- nav-toc:start -->
+[English](K6_TEST_CASE_SUMMARY.md) | [ภาษาไทย](K6_TEST_CASE_SUMMARY_TH.md)
+
+## Table of Contents
+- [Script Catalog](#k6-th-script-catalog)
+- [auth.k6.js](#k6-th-auth)
+- [breakpoint.k6.js](#k6-th-breakpoint)
+- [browse.k6.js](#k6-th-browse)
+- [cart.k6.js](#k6-th-cart)
+- [checkout.k6.js](#k6-th-checkout)
+- [load.k6.js](#k6-th-load)
+- [race-condition.k6.js](#k6-th-race-condition)
+- [smoke.k6.js](#k6-th-smoke)
+- [soak.k6.js](#k6-th-soak)
+- [stress.k6.js](#k6-th-stress)
+<!-- nav-toc:end -->
+
 - จำนวนสคริปต์ทั้งหมด: 10
 - จำนวน Flow blocks รวม: 25
 - จำนวน Validation checks รวม: 71
 - ขอบเขต: `performance/scripts/*.k6.js`
 - หมายเหตุ: ชื่อ check/group คงภาษาอังกฤษเพื่อให้อ้างอิงกับสคริปต์ k6 ตรงกัน
 
+<a id="k6-th-script-catalog"></a>
 ## รายละเอียดรายสคริปต์
 
 ---
 
+<a id="k6-th-auth"></a>
 ### performance/scripts/auth.k6.js
 
 - **ภาพรวม:** ตรวจสอบ performance ของ authentication session flow ครอบคลุม login และการเข้าถึง profile หลัง login
@@ -25,6 +44,7 @@
 
 ---
 
+<a id="k6-th-breakpoint"></a>
 ### performance/scripts/breakpoint.k6.js
 
 - **ภาพรวม:** Arrival rate breakpoint test เพื่อหา maximum sustainable throughput ของ catalog endpoint แบบ lightweight
@@ -40,6 +60,7 @@
 
 ---
 
+<a id="k6-th-browse"></a>
 ### performance/scripts/browse.k6.js
 
 - **ภาพรวม:** Guest browse performance path ครอบคลุม home page, product list API และ product detail API
@@ -62,6 +83,7 @@
 
 ---
 
+<a id="k6-th-cart"></a>
 ### performance/scripts/cart.k6.js
 
 - **ภาพรวม:** Cart performance test สำหรับ write ของ add-to-cart และ read consistency ของ cart ภายใต้ concurrent shopper traffic
@@ -78,6 +100,7 @@
 
 ---
 
+<a id="k6-th-checkout"></a>
 ### performance/scripts/checkout.k6.js
 
 - **ภาพรวม:** Stress-focused checkout performance test สำหรับ critical buyer path ตั้งแต่ authentication จนถึง mock payment สำเร็จ
@@ -101,6 +124,7 @@
 
 ---
 
+<a id="k6-th-load"></a>
 ### performance/scripts/load.k6.js
 
 - **ภาพรวม:** Configurable E2E load journey รวม login, browse, add-to-cart และ mock checkout
@@ -120,6 +144,7 @@
 
 ---
 
+<a id="k6-th-race-condition"></a>
 ### performance/scripts/race-condition.k6.js
 
 - **ภาพรวม:** Concurrent stress test มุ่งเน้นการป้องกัน oversell เมื่อ user จำนวนมาก checkout สินค้าเดิมพร้อมกัน
@@ -139,6 +164,7 @@
 
 ---
 
+<a id="k6-th-smoke"></a>
 ### performance/scripts/smoke.k6.js
 
 - **ภาพรวม:** Quick smoke performance check สำหรับ core availability ของ home และ product API endpoint
@@ -157,6 +183,7 @@
 
 ---
 
+<a id="k6-th-soak"></a>
 ### performance/scripts/soak.k6.js
 
 - **ภาพรวม:** Long-duration soak test เพื่อตรวจสอบ endurance stability ของ browse, cart และ checkout operation
@@ -179,6 +206,7 @@
 
 ---
 
+<a id="k6-th-stress"></a>
 ### performance/scripts/stress.k6.js
 
 - **ภาพรวม:** Stress workload ด้วย weighted browse/cart/checkout mix เพื่อหา degradation ภายใต้แรงกดดันที่เพิ่มขึ้น

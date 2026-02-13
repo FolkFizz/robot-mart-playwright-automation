@@ -1,5 +1,19 @@
 ﻿# Playwright Test Case Summary
 
+<!-- nav-toc:start -->
+[English](PLAYWRIGHT_TEST_CASE_SUMMARY.md) | [ภาษาไทย](PLAYWRIGHT_TEST_CASE_SUMMARY_TH.md)
+
+## Table of Contents
+- [Legend (P/N/E)](#pw-legend)
+- [Coverage By Area](#pw-coverage)
+- [Suite Catalog](#pw-suite-catalog)
+- [A11y Suites](#pw-a11y-suites)
+- [API Suites](#pw-api-suites)
+- [E2E Suites](#pw-e2e-suites)
+- [Integration Suites](#pw-integration-suites)
+- [Security Suites](#pw-security-suites)
+<!-- nav-toc:end -->
+
 - Total suites: 29
 - Total test cases: 303
 - Positive cases: 114
@@ -7,12 +21,14 @@
 - Edge cases: 89
 - Scope: `tests/**/*.spec.ts`
 
+<a id="pw-legend"></a>
 ## Legend (P/N/E)
 
 - `P` = Positive case: happy path / expected success behavior
 - `N` = Negative case: invalid input / forbidden path / expected rejection
 - `E` = Edge case: boundary, concurrency, resilience, or uncommon scenario
 
+<a id="pw-coverage"></a>
 ## Coverage By Area
 
 | Area | Files | Cases | Positive | Negative | Edge |
@@ -23,7 +39,11 @@
 | integration | 5 | 47 | 14 | 13 | 20 |
 | security | 4 | 37 | 11 | 16 | 10 |
 
+<a id="pw-suite-catalog"></a>
 ## Suite Catalog
+
+<a id="pw-a11y-suites"></a>
+### A11y Suites
 
 ### tests/a11y/cart.a11y.spec.ts (12 cases)
 
@@ -86,6 +106,9 @@
   - A11Y-HOME-E02: search and price filter controls meet color contrast
   - A11Y-HOME-E03: search input supports keyboard submit without focus trap
   - A11Y-HOME-E04: category and sort filters accessible via keyboard
+
+<a id="pw-api-suites"></a>
+### API Suites
 
 ### tests/api/admin.api.spec.ts (9 cases)
 
@@ -196,6 +219,9 @@
   - ORD-API-N03: unauthenticated checkout is redirected to login
 - Edge 1 cases:
   - ORD-API-E01: concurrent payment-intent requests stay stable and keep cart intact
+
+<a id="pw-e2e-suites"></a>
+### E2E Suites
 
 ### tests/e2e/auth.e2e.spec.ts (15 cases)
 
@@ -466,6 +492,9 @@
   - STRIPE-E01: checkout total remains stable after page reload
   - STRIPE-E02: submit button status exists in both stripe and mock modes
 
+<a id="pw-integration-suites"></a>
+### Integration Suites
+
 ### tests/integration/checkout-mock.int.spec.ts (10 cases)
 
 - Overview: Integration tests for cart-to-checkout consistency in mock payment mode.
@@ -567,6 +596,9 @@
 - Edge 2 cases:
   - PROD-CART-INT-E01: product image mapping remains consistent in cart
   - PROD-CART-INT-E02: repeated add operations accumulate quantity and total
+
+<a id="pw-security-suites"></a>
+### Security Suites
 
 ### tests/security/authorization.spec.ts (12 cases)
 
