@@ -1,10 +1,16 @@
-import { Client } from 'pg';
 import { test, expect } from '@fixtures';
 import { authInputs, inboxSubjects, buildNonExistentEmail, resetTestData } from '@data';
 import { routes } from '@config';
 import { disableChaos } from '@api';
 import { ResetPasswordPage } from '@pages';
 import { registerIsolatedUser } from '@test-helpers';
+import {
+  expireResetTokenByEmail,
+  extractTokenFromLink,
+  readResetTokenByEmail,
+  requestResetAndOpenInboxEmail,
+  resetTokenPattern
+} from '@test-helpers/helpers/password-reset';
 
 /**
  * =============================================================================
@@ -48,89 +54,6 @@ import { registerIsolatedUser } from '@test-helpers';
  * =============================================================================
  */
 
-type ResetTokenRow = {
-  reset_password_token: string | null;
-  reset_password_expires: string | null;
-};
-
-const resetTokenPattern = /^[a-f0-9]{64}$/i;
-
-const getDatabaseUrl = (): string => {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl || databaseUrl.trim().length === 0) {
-    throw new Error('Missing DATABASE_URL for reset-token integration checks.');
-  }
-  return databaseUrl;
-};
-
-const resolveSsl = (databaseUrl: string) => {
-  try {
-    const url = new URL(databaseUrl);
-    const isLocal =
-      url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '::1';
-    const sslMode = url.searchParams.get('sslmode');
-    if (!isLocal || sslMode === 'require') {
-      return { rejectUnauthorized: false };
-    }
-  } catch {
-    return undefined;
-  }
-  return undefined;
-};
-
-const withDb = async <T>(run: (client: Client) => Promise<T>): Promise<T> => {
-  const databaseUrl = getDatabaseUrl();
-  const client = new Client({
-    connectionString: databaseUrl,
-    ssl: resolveSsl(databaseUrl)
-  });
-
-  await client.connect();
-  try {
-    return await run(client);
-  } finally {
-    await client.end();
-  }
-};
-
-const readResetTokenByEmail = async (email: string): Promise<string> => {
-  return await withDb(async (client) => {
-    const res = await client.query<ResetTokenRow>(
-      `SELECT reset_password_token, reset_password_expires
-       FROM users
-       WHERE email = $1`,
-      [email]
-    );
-
-    expect(res.rowCount).toBe(1);
-    const token = res.rows[0]?.reset_password_token ?? null;
-    expect(token).toBeTruthy();
-    expect(token ?? '').toMatch(resetTokenPattern);
-    return token as string;
-  });
-};
-
-const expireResetTokenByEmail = async (email: string): Promise<void> => {
-  await withDb(async (client) => {
-    const res = await client.query(
-      `UPDATE users
-       SET reset_password_expires = NOW() - INTERVAL '1 minute'
-       WHERE email = $1`,
-      [email]
-    );
-    expect(res.rowCount).toBe(1);
-  });
-};
-
-const extractTokenFromLink = (link: string): string => {
-  const parsed = new URL(link, 'http://localhost');
-  expect(parsed.pathname).toContain(`${routes.resetPasswordBase}/`);
-
-  const token = parsed.pathname.split('/').filter(Boolean).pop() ?? '';
-  expect(token).toMatch(resetTokenPattern);
-  return token;
-};
-
 test.use({ seedData: true });
 
 test.describe('password reset integration @integration @auth', () => {
@@ -143,15 +66,18 @@ test.describe('password reset integration @integration @auth', () => {
       forgotPasswordPage,
       inboxPage
     }) => {
+      // Arrange: Request reset for seeded user.
       await forgotPasswordPage.goto();
       await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
 
+      // Act: Verify UI message and open reset email.
       const message = (await forgotPasswordPage.getMessageText()).toLowerCase();
       expect(message).toContain('inbox');
 
       await inboxPage.gotoDemo();
       await inboxPage.openEmailBySubject(inboxSubjects.resetPassword);
 
+      // Assert: Reset link contains valid token format.
       const link = await inboxPage.getFirstEmailLinkHref();
       expect(link).toBeTruthy();
       extractTokenFromLink(link ?? '');
@@ -161,10 +87,7 @@ test.describe('password reset integration @integration @auth', () => {
       forgotPasswordPage,
       inboxPage
     }) => {
-      await forgotPasswordPage.goto();
-      await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
-
-      await inboxPage.gotoDemo();
+      await requestResetAndOpenInboxEmail(forgotPasswordPage, inboxPage, authInputs.duplicateEmail);
       const subject = (await inboxPage.getLatestSubjectText()).toLowerCase();
       expect(subject).toContain('reset');
       expect(subject).toContain('password');
@@ -174,11 +97,7 @@ test.describe('password reset integration @integration @auth', () => {
       forgotPasswordPage,
       inboxPage
     }) => {
-      await forgotPasswordPage.goto();
-      await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
-
-      await inboxPage.gotoDemo();
-      await inboxPage.openEmailBySubject(inboxSubjects.resetPassword);
+      await requestResetAndOpenInboxEmail(forgotPasswordPage, inboxPage, authInputs.duplicateEmail);
       const link = await inboxPage.getFirstEmailLinkHref();
 
       expect(link).toBeTruthy();
@@ -297,11 +216,7 @@ test.describe('password reset integration @integration @auth', () => {
       forgotPasswordPage,
       inboxPage
     }) => {
-      await forgotPasswordPage.goto();
-      await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
-
-      await inboxPage.gotoDemo();
-      await inboxPage.openEmailBySubject(inboxSubjects.resetPassword);
+      await requestResetAndOpenInboxEmail(forgotPasswordPage, inboxPage, authInputs.duplicateEmail);
       const link = await inboxPage.getFirstEmailLinkHref();
 
       expect(link).toBeTruthy();
@@ -339,11 +254,7 @@ test.describe('password reset integration @integration @auth', () => {
       forgotPasswordPage,
       inboxPage
     }) => {
-      await forgotPasswordPage.goto();
-      await forgotPasswordPage.requestReset(authInputs.duplicateEmail);
-
-      await inboxPage.gotoDemo();
-      await inboxPage.openEmailBySubject(inboxSubjects.resetPassword);
+      await requestResetAndOpenInboxEmail(forgotPasswordPage, inboxPage, authInputs.duplicateEmail);
       const body = (await inboxPage.getEmailBodyText()).toLowerCase();
 
       expect(body).toContain('you requested to reset your password');

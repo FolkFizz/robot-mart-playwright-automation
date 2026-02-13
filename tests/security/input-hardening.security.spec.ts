@@ -1,6 +1,11 @@
 import { test, expect } from '@fixtures';
 import { loginAsUser } from '@api';
 import { routes } from '@config';
+import {
+  malformedInvoiceIds,
+  maliciousLoginPayloads
+} from '@test-helpers/constants/security';
+import { hasPotentialStackTrace } from '@utils';
 
 /**
  * =============================================================================
@@ -34,19 +39,6 @@ import { routes } from '@config';
  *
  * =============================================================================
  */
-
-const maliciousLoginPayloads = ["' OR '1'='1", "admin' --", '<script>alert(1)</script>'] as const;
-
-const malformedInvoiceIds = [
-  '%2e%2e%2f%2e%2e%2fetc%2fpasswd',
-  '<script>alert(1)</script>',
-  'ORD-DOES-NOT-EXIST',
-  'INVALID_ORDER_999999999999999999999999'
-] as const;
-
-const hasStackTraceSignature = (text: string): boolean => {
-  return /(referenceerror|typeerror|syntaxerror|node_modules|\bat\s+\S+\s*\()/i.test(text);
-};
 
 test.use({ seedData: true });
 
@@ -135,7 +127,7 @@ test.describe('input hardening security @security @hardening', () => {
 
         expect(res.status()).toBeGreaterThanOrEqual(400);
         expect(res.status()).toBeLessThan(500);
-        expect(hasStackTraceSignature(text)).toBe(false);
+        expect(hasPotentialStackTrace(text)).toBe(false);
       }
     });
   });

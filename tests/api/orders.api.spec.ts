@@ -1,7 +1,8 @@
-﻿import { test, expect } from '@fixtures';
+import { test, expect } from '@fixtures';
 import { loginAsUser, addToCart, clearCart, getCart } from '@api';
 import { routes } from '@config';
 import { seededProducts } from '@data';
+import { isMockIntentResponse } from '@test-helpers/helpers/orders-api';
 
 /**
  * =============================================================================
@@ -41,13 +42,6 @@ import { seededProducts } from '@data';
  */
 
 test.use({ seedData: true });
-
-const isMockIntentResponse = (status: number, body: Record<string, unknown>): boolean => {
-  if (status !== 200) return false;
-  const provider = String(body.provider ?? '').toLowerCase();
-  const message = String(body.message ?? '').toLowerCase();
-  return provider === 'mock' || message.includes('mock');
-};
 
 test.describe('orders api @api @orders', () => {
   test.describe('positive cases', () => {

@@ -2,6 +2,7 @@ import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { disableChaos } from '@api';
 import { routes } from '@config';
 import { seededProducts, catalogSearch, coupons, uiMessages } from '@data';
+import { mobileViewport } from '@test-helpers/constants/ui';
 
 /**
  * =============================================================================
@@ -47,8 +48,6 @@ import { seededProducts, catalogSearch, coupons, uiMessages } from '@data';
  *
  * =============================================================================
  */
-
-const mobileViewport = { width: 375, height: 667 };
 
 test.use({
   seedData: true,

@@ -1,10 +1,15 @@
-import type { Page } from '@playwright/test';
 import { test, expect, seedCart } from '@fixtures';
 import { seededProducts, coupons } from '@data';
-import { CartPage, CheckoutPage } from '@pages';
 import { addToCart, applyCoupon, clearCart, disableChaos } from '@api';
 import { routes, SHIPPING } from '@config';
 import { registerAndLoginIsolatedUser, syncSessionFromApi } from '@test-helpers';
+import {
+  expectCheckoutTotalCloseTo,
+  gotoCheckoutFromCart,
+  hasEmptyCartGuard,
+  isCheckoutPath,
+  waitForCheckoutReady
+} from '@test-helpers/helpers/checkout-flow';
 
 /**
  * =============================================================================
@@ -47,51 +52,6 @@ import { registerAndLoginIsolatedUser, syncSessionFromApi } from '@test-helpers'
  * =============================================================================
  */
 
-const isCheckoutPath = (url: string): boolean => {
-  return url.includes(routes.order.checkout) || url.includes(routes.order.place);
-};
-const emptyCartTextPatterns = [
-  'cart is empty',
-  'your cart is empty',
-  'empty cart',
-  'no items in cart',
-  'go add some bots'
-];
-
-const gotoCheckoutFromCart = async (
-  page: Page,
-  cartPage: CartPage,
-  checkoutPage: CheckoutPage
-): Promise<void> => {
-  await cartPage.goto();
-  await cartPage.proceedToCheckoutWithFallback();
-
-  if (!isCheckoutPath(page.url())) {
-    await checkoutPage.goto();
-  }
-
-  await expect.poll(() => isCheckoutPath(page.url())).toBe(true);
-};
-
-const waitForCheckoutReady = async (checkoutPage: CheckoutPage): Promise<'mock' | 'stripe'> => {
-  await checkoutPage.waitForDomReady();
-  await checkoutPage.expectSubmitVisible();
-
-  if (await checkoutPage.isMockPayment()) return 'mock';
-
-  if ((await checkoutPage.getStripeFrameCount()) > 0) {
-    expect(await checkoutPage.isStripeFrameVisible()).toBe(true);
-    return 'stripe';
-  }
-
-  await checkoutPage.expectPaymentElementVisible();
-  return 'stripe';
-};
-
-const hasEmptyCartGuard = async (checkoutPage: CheckoutPage): Promise<boolean> => {
-  return await checkoutPage.hasEmptyCartGuard(emptyCartTextPatterns);
-};
-
 test.use({ seedData: true });
 
 test.describe('checkout integration @integration @checkout', () => {
@@ -125,8 +85,7 @@ test.describe('checkout integration @integration @checkout', () => {
       await gotoCheckoutFromCart(page, cartPage, checkoutPage);
       await waitForCheckoutReady(checkoutPage);
 
-      const checkoutTotal = CheckoutPage.parsePrice(await checkoutPage.getTotal());
-      expect(checkoutTotal).toBeCloseTo(cartGrandTotal, 2);
+      await expectCheckoutTotalCloseTo(checkoutPage, cartGrandTotal, 2);
     });
 
     test('CHK-INT-P02: checkout initializes payment UI for active provider @integration @checkout @smoke', async ({
@@ -215,8 +174,7 @@ test.describe('checkout integration @integration @checkout', () => {
       await gotoCheckoutFromCart(page, cartPage, checkoutPage);
       await waitForCheckoutReady(checkoutPage);
 
-      const checkoutTotal = CheckoutPage.parsePrice(await checkoutPage.getTotal());
-      expect(checkoutTotal).toBeCloseTo(totalBeforeCoupon, 2);
+      await expectCheckoutTotalCloseTo(checkoutPage, totalBeforeCoupon, 2);
     });
   });
 
@@ -243,8 +201,7 @@ test.describe('checkout integration @integration @checkout', () => {
       await gotoCheckoutFromCart(page, cartPage, checkoutPage);
       await waitForCheckoutReady(checkoutPage);
 
-      const checkoutTotal = CheckoutPage.parsePrice(await checkoutPage.getTotal());
-      expect(checkoutTotal).toBeCloseTo(cartTotal, 2);
+      await expectCheckoutTotalCloseTo(checkoutPage, cartTotal, 2);
     });
 
     test('CHK-INT-E02: high-value order keeps free shipping in checkout @integration @checkout @regression', async ({
@@ -269,8 +226,7 @@ test.describe('checkout integration @integration @checkout', () => {
       await gotoCheckoutFromCart(page, cartPage, checkoutPage);
       await waitForCheckoutReady(checkoutPage);
 
-      const checkoutTotal = CheckoutPage.parsePrice(await checkoutPage.getTotal());
-      expect(checkoutTotal).toBeCloseTo(cartTotal, 2);
+      await expectCheckoutTotalCloseTo(checkoutPage, cartTotal, 2);
     });
 
     test('CHK-INT-E03: valid coupon discount persists from cart to checkout @integration @checkout @regression', async ({
@@ -295,8 +251,7 @@ test.describe('checkout integration @integration @checkout', () => {
       await gotoCheckoutFromCart(page, cartPage, checkoutPage);
       await waitForCheckoutReady(checkoutPage);
 
-      const checkoutTotal = CheckoutPage.parsePrice(await checkoutPage.getTotal());
-      expect(checkoutTotal).toBeCloseTo(cartTotal, 1);
+      await expectCheckoutTotalCloseTo(checkoutPage, cartTotal, 1);
     });
 
     test('CHK-INT-E04: cart quantity updates propagate to checkout total @integration @checkout @regression', async ({
@@ -321,8 +276,7 @@ test.describe('checkout integration @integration @checkout', () => {
       await gotoCheckoutFromCart(page, cartPage, checkoutPage);
       await waitForCheckoutReady(checkoutPage);
 
-      const checkoutTotal = CheckoutPage.parsePrice(await checkoutPage.getTotal());
-      expect(checkoutTotal).toBeCloseTo(totalAfterUpdate, 2);
+      await expectCheckoutTotalCloseTo(checkoutPage, totalAfterUpdate, 2);
     });
 
     test('CHK-INT-E05: session expiry redirects away from checkout @integration @checkout @regression', async ({

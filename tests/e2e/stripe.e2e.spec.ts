@@ -1,9 +1,8 @@
 import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { disableChaos, clearCart } from '@api';
-import { routes } from '@config';
 import { seededProducts } from '@data';
-import type { Page } from '@playwright/test';
-import { CheckoutPage, CartPage } from '@pages';
+import { CheckoutPage } from '@pages';
+import { expectOnCheckoutPath, gotoCheckoutFromCart } from '@test-helpers/helpers/stripe-checkout';
 
 /**
  * =============================================================================
@@ -43,14 +42,6 @@ import { CheckoutPage, CartPage } from '@pages';
  * =============================================================================
  */
 
-const gotoCheckoutFromCart = async (page: Page, cartPage: CartPage) => {
-  await cartPage.goto();
-  await cartPage.proceedToCheckoutWithFallback();
-  await expect(page).toHaveURL(
-    (url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place
-  );
-};
-
 test.use({ seedData: true });
 
 test.describe('stripe checkout integration @e2e @checkout @stripe', () => {
@@ -88,9 +79,7 @@ test.describe('stripe checkout integration @e2e @checkout @stripe', () => {
       const cartTotal = await cartPage.getGrandTotalValue();
 
       await cartPage.proceedToCheckoutWithFallback();
-      await expect(page).toHaveURL(
-        (url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place
-      );
+      await expectOnCheckoutPath(page);
 
       const checkoutTotal = CheckoutPage.parsePrice(await checkoutPage.getTotal());
       expect(checkoutTotal).toBeCloseTo(cartTotal, 2);
@@ -166,9 +155,7 @@ test.describe('stripe checkout integration @e2e @checkout @stripe', () => {
       const beforeReload = CheckoutPage.parsePrice(await checkoutPage.getTotal());
 
       await checkoutPage.reloadDomReady();
-      await expect(page).toHaveURL(
-        (url) => url.pathname === routes.order.checkout || url.pathname === routes.order.place
-      );
+      await expectOnCheckoutPath(page);
       const afterReload = CheckoutPage.parsePrice(await checkoutPage.getTotal());
 
       expect(afterReload).toBeCloseTo(beforeReload, 2);

@@ -1,8 +1,8 @@
-import type { TestInfo } from '@playwright/test';
 import { test, expect, loginAndSyncSession } from '@fixtures';
 import { routes } from '@config';
 import { seededProducts } from '@data';
-import { isLangfuseEnabled, recordLangfuseChatTrace } from '@test-helpers';
+import { isLangfuseEnabled } from '@test-helpers';
+import { withTracedChatbotE2eCase as withTracedCase } from '@test-helpers/helpers/chat-ui';
 
 /**
  * =============================================================================
@@ -36,26 +36,6 @@ import { isLangfuseEnabled, recordLangfuseChatTrace } from '@test-helpers';
  * =============================================================================
  */
 
-const traceCase = async (
-  testInfo: TestInfo,
-  status: 'pass' | 'fail',
-  input: string,
-  output: string,
-  latencyMs?: number,
-  metadata?: Record<string, unknown>
-) => {
-  await recordLangfuseChatTrace({
-    suite: 'chatbot-e2e',
-    caseId: testInfo.title,
-    layer: 'e2e',
-    status,
-    input,
-    output,
-    latencyMs,
-    metadata
-  });
-};
-
 test.use({ seedData: true });
 
 test.describe('chatbot e2e @e2e @chat @ai @ai-mock', () => {
@@ -74,66 +54,63 @@ test.describe('chatbot e2e @e2e @chat @ai @ai-mock', () => {
     test('CHAT-E2E-P01: chat widget opens and closes from home page @e2e @chat @smoke', async ({
       chatWidgetPage
     }, testInfo) => {
-      const input = 'widget-open-close';
-      let output = '';
-      let traceStatus: 'pass' | 'fail' = 'fail';
+      await withTracedCase({
+        testInfo,
+        input: 'widget-open-close',
+        run: async () => {
+          // Act: Open and close chat widget.
+          await chatWidgetPage.expectToggleVisible();
+          await chatWidgetPage.expectWindowHidden();
+          await chatWidgetPage.open();
+          await chatWidgetPage.close();
 
-      try {
-        await chatWidgetPage.expectToggleVisible();
-        await chatWidgetPage.expectWindowHidden();
-
-        await chatWidgetPage.open();
-        await chatWidgetPage.close();
-
-        output = 'open-close-success';
-        traceStatus = 'pass';
-      } finally {
-        await traceCase(testInfo, traceStatus, input, output);
-      }
+          // Assert: Flow completes without widget failures.
+          return { output: 'open-close-success' };
+        }
+      });
     });
 
     test('CHAT-E2E-P02: sending a message renders user and bot messages @e2e @chat @regression', async ({
       chatWidgetPage
     }, testInfo) => {
       const input = 'Can you recommend a starter robot?';
-      let output = '';
-      let latencyMs = 0;
-      let traceStatus: 'pass' | 'fail' = 'fail';
 
-      try {
-        await chatWidgetPage.open();
+      await withTracedCase({
+        testInfo,
+        input,
+        run: async () => {
+          // Act: Open widget and send message by click.
+          await chatWidgetPage.open();
+          const started = Date.now();
+          await chatWidgetPage.sendMessage(input, 'click');
+          const output = await chatWidgetPage.waitForBotReplyAfterUserMessage(input);
 
-        const started = Date.now();
-        await chatWidgetPage.sendMessage(input, 'click');
-        output = await chatWidgetPage.waitForBotReplyAfterUserMessage(input);
-        latencyMs = Date.now() - started;
-
-        traceStatus = 'pass';
-      } finally {
-        await traceCase(testInfo, traceStatus, input, output, latencyMs);
-      }
+          // Assert: Bot reply appears after user message.
+          return { output, latencyMs: Date.now() - started };
+        }
+      });
     });
 
     test('CHAT-E2E-P03: pressing Enter submits chat message @e2e @chat @regression', async ({
       chatWidgetPage
     }, testInfo) => {
       const input = 'Testing submit by Enter key';
-      let output = '';
-      let latencyMs = 0;
-      let traceStatus: 'pass' | 'fail' = 'fail';
 
-      try {
-        await chatWidgetPage.open();
+      await withTracedCase({
+        testInfo,
+        input,
+        metadata: { submitMode: 'enter' },
+        run: async () => {
+          // Act: Open widget and submit message via Enter.
+          await chatWidgetPage.open();
+          const started = Date.now();
+          await chatWidgetPage.sendMessage(input, 'enter');
+          const output = await chatWidgetPage.waitForBotReplyAfterUserMessage(input);
 
-        const started = Date.now();
-        await chatWidgetPage.sendMessage(input, 'enter');
-        output = await chatWidgetPage.waitForBotReplyAfterUserMessage(input);
-        latencyMs = Date.now() - started;
-
-        traceStatus = 'pass';
-      } finally {
-        await traceCase(testInfo, traceStatus, input, output, latencyMs, { submitMode: 'enter' });
-      }
+          // Assert: Submit-by-enter keeps same behavior contract.
+          return { output, latencyMs: Date.now() - started };
+        }
+      });
     });
   });
 
@@ -141,25 +118,22 @@ test.describe('chatbot e2e @e2e @chat @ai @ai-mock', () => {
     test('CHAT-E2E-N01: whitespace-only input is ignored @e2e @chat @regression', async ({
       chatWidgetPage
     }, testInfo) => {
-      const input = '   ';
-      let output = '';
-      let traceStatus: 'pass' | 'fail' = 'fail';
+      await withTracedCase({
+        testInfo,
+        input: 'whitespace-input',
+        run: async () => {
+          // Act: Send whitespace-only input.
+          await chatWidgetPage.open();
+          const userCountBefore = await chatWidgetPage.getUserMessageCount();
+          await chatWidgetPage.sendMessage('   ', 'click');
+          await chatWidgetPage.expectUserMessageCount(userCountBefore, 2_000);
+          const userCountAfter = await chatWidgetPage.getUserMessageCount();
 
-      try {
-        await chatWidgetPage.open();
-
-        const userCountBefore = await chatWidgetPage.getUserMessageCount();
-        await chatWidgetPage.sendMessage(input, 'click');
-        await chatWidgetPage.expectUserMessageCount(userCountBefore, 2_000);
-
-        const userCountAfter = await chatWidgetPage.getUserMessageCount();
-        expect(userCountAfter).toBe(userCountBefore);
-
-        output = `userCountBefore=${userCountBefore}; userCountAfter=${userCountAfter}`;
-        traceStatus = 'pass';
-      } finally {
-        await traceCase(testInfo, traceStatus, 'whitespace-input', output);
-      }
+          // Assert: User message count does not change.
+          expect(userCountAfter).toBe(userCountBefore);
+          return { output: `userCountBefore=${userCountBefore}; userCountAfter=${userCountAfter}` };
+        }
+      });
     });
 
     test('CHAT-E2E-N02: network abort shows fallback error message @e2e @chat @regression', async ({
@@ -167,26 +141,30 @@ test.describe('chatbot e2e @e2e @chat @ai @ai-mock', () => {
       chatWidgetPage
     }, testInfo) => {
       const input = 'Will fail due to network abort';
-      let output = '';
-      let traceStatus: 'pass' | 'fail' = 'fail';
 
-      try {
-        await page.route(routes.api.chat, async (route) => {
-          await route.abort('failed');
-        });
+      await withTracedCase({
+        testInfo,
+        input,
+        metadata: { failureMode: 'network-abort' },
+        run: async () => {
+          // Arrange: Force chat endpoint network abort.
+          await page.route(routes.api.chat, async (route) => {
+            await route.abort('failed');
+          });
 
-        await chatWidgetPage.open();
-        await chatWidgetPage.sendMessage(input, 'click');
+          try {
+            // Act: Send chat message under forced network failure.
+            await chatWidgetPage.open();
+            await chatWidgetPage.sendMessage(input, 'click');
+            await chatWidgetPage.expectLatestBotMessageContains('Connection Error');
 
-        await chatWidgetPage.expectLatestBotMessageContains('Connection Error');
-        output = await chatWidgetPage.getLatestBotMessageText();
-        traceStatus = 'pass';
-      } finally {
-        await page.unroute(routes.api.chat);
-        await traceCase(testInfo, traceStatus, input, output, undefined, {
-          failureMode: 'network-abort'
-        });
-      }
+            // Assert: Fallback error message is shown.
+            return { output: await chatWidgetPage.getLatestBotMessageText() };
+          } finally {
+            await page.unroute(routes.api.chat);
+          }
+        }
+      });
     });
 
     test('CHAT-E2E-N03: malformed server response shows fallback error message @e2e @chat @regression', async ({
@@ -194,30 +172,34 @@ test.describe('chatbot e2e @e2e @chat @ai @ai-mock', () => {
       chatWidgetPage
     }, testInfo) => {
       const input = 'Will fail due to malformed response';
-      let output = '';
-      let traceStatus: 'pass' | 'fail' = 'fail';
 
-      try {
-        await page.route(routes.api.chat, async (route) => {
-          await route.fulfill({
-            status: 500,
-            headers: { 'Content-Type': 'text/plain' },
-            body: 'not-json-response'
+      await withTracedCase({
+        testInfo,
+        input,
+        metadata: { failureMode: 'malformed-json' },
+        run: async () => {
+          // Arrange: Force malformed backend response.
+          await page.route(routes.api.chat, async (route) => {
+            await route.fulfill({
+              status: 500,
+              headers: { 'Content-Type': 'text/plain' },
+              body: 'not-json-response'
+            });
           });
-        });
 
-        await chatWidgetPage.open();
-        await chatWidgetPage.sendMessage(input, 'click');
+          try {
+            // Act: Send chat message under malformed backend payload.
+            await chatWidgetPage.open();
+            await chatWidgetPage.sendMessage(input, 'click');
+            await chatWidgetPage.expectLatestBotMessageContains('Connection Error');
 
-        await chatWidgetPage.expectLatestBotMessageContains('Connection Error');
-        output = await chatWidgetPage.getLatestBotMessageText();
-        traceStatus = 'pass';
-      } finally {
-        await page.unroute(routes.api.chat);
-        await traceCase(testInfo, traceStatus, input, output, undefined, {
-          failureMode: 'malformed-json'
-        });
-      }
+            // Assert: UI shows fallback error message.
+            return { output: await chatWidgetPage.getLatestBotMessageText() };
+          } finally {
+            await page.unroute(routes.api.chat);
+          }
+        }
+      });
     });
   });
 
@@ -226,21 +208,22 @@ test.describe('chatbot e2e @e2e @chat @ai @ai-mock', () => {
       chatWidgetPage
     }, testInfo) => {
       const input = `Need advice: ${'robot '.repeat(80)}`.trim();
-      let output = '';
-      let traceStatus: 'pass' | 'fail' = 'fail';
 
-      try {
-        await chatWidgetPage.open();
-        await chatWidgetPage.sendMessage(input, 'click');
-        output = await chatWidgetPage.waitForBotReplyAfterUserMessage('Need advice:');
+      await withTracedCase({
+        testInfo,
+        input: 'long-message',
+        metadata: { inputLength: input.length },
+        run: async () => {
+          // Act: Send long message payload.
+          await chatWidgetPage.open();
+          await chatWidgetPage.sendMessage(input, 'click');
+          const output = await chatWidgetPage.waitForBotReplyAfterUserMessage('Need advice:');
 
-        await chatWidgetPage.expectInputCleared();
-        traceStatus = 'pass';
-      } finally {
-        await traceCase(testInfo, traceStatus, 'long-message', output, undefined, {
-          inputLength: input.length
-        });
-      }
+          // Assert: Input clears after send.
+          await chatWidgetPage.expectInputCleared();
+          return { output };
+        }
+      });
     });
 
     test('CHAT-E2E-E02: multi-turn conversation keeps message history @e2e @chat @regression', async ({
@@ -248,50 +231,45 @@ test.describe('chatbot e2e @e2e @chat @ai @ai-mock', () => {
     }, testInfo) => {
       const firstInput = 'First question: do you have starter bots?';
       const secondInput = 'Second question: and maybe low maintenance?';
-      let output = '';
-      let traceStatus: 'pass' | 'fail' = 'fail';
 
-      try {
-        await chatWidgetPage.open();
+      await withTracedCase({
+        testInfo,
+        input: 'multi-turn',
+        run: async () => {
+          // Act: Complete two-turn conversation.
+          await chatWidgetPage.open();
+          await chatWidgetPage.sendMessage(firstInput, 'click');
+          const firstReply = await chatWidgetPage.waitForBotReplyAfterUserMessage(firstInput);
+          await chatWidgetPage.sendMessage(secondInput, 'click');
+          const secondReply = await chatWidgetPage.waitForBotReplyAfterUserMessage(secondInput);
 
-        await chatWidgetPage.sendMessage(firstInput, 'click');
-        const firstReply = await chatWidgetPage.waitForBotReplyAfterUserMessage(firstInput);
-
-        await chatWidgetPage.sendMessage(secondInput, 'click');
-        const secondReply = await chatWidgetPage.waitForBotReplyAfterUserMessage(secondInput);
-
-        const userCount = await chatWidgetPage.getUserMessageCount();
-        expect(userCount).toBeGreaterThanOrEqual(2);
-
-        output = `${firstReply} | ${secondReply}`;
-        traceStatus = 'pass';
-      } finally {
-        await traceCase(testInfo, traceStatus, 'multi-turn', output);
-      }
+          // Assert: History keeps at least two user messages.
+          const userCount = await chatWidgetPage.getUserMessageCount();
+          expect(userCount).toBeGreaterThanOrEqual(2);
+          return { output: `${firstReply} | ${secondReply}` };
+        }
+      });
     });
 
     test('CHAT-E2E-E03: widget remains available after page navigation @e2e @chat @regression', async ({
       productPage,
       chatWidgetPage
     }, testInfo) => {
-      const input = 'navigation-availability';
-      let output = '';
-      let traceStatus: 'pass' | 'fail' = 'fail';
+      await withTracedCase({
+        testInfo,
+        input: 'navigation-availability',
+        metadata: { navigatedTo: routes.productDetail(seededProducts[0].id) },
+        run: async () => {
+          // Act: Navigate away from home to product detail page.
+          await productPage.gotoById(seededProducts[0].id);
+          await chatWidgetPage.expectToggleVisible();
+          await chatWidgetPage.open();
+          await chatWidgetPage.expectFirstBotMessageVisible();
 
-      try {
-        await productPage.gotoById(seededProducts[0].id);
-
-        await chatWidgetPage.expectToggleVisible();
-        await chatWidgetPage.open();
-        await chatWidgetPage.expectFirstBotMessageVisible();
-
-        output = 'chat-widget-visible-on-product-page';
-        traceStatus = 'pass';
-      } finally {
-        await traceCase(testInfo, traceStatus, input, output, undefined, {
-          navigatedTo: routes.productDetail(seededProducts[0].id)
-        });
-      }
+          // Assert: Widget remains usable after navigation.
+          return { output: 'chat-widget-visible-on-product-page' };
+        }
+      });
     });
   });
 });

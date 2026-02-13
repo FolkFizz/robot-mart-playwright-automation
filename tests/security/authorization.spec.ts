@@ -1,13 +1,10 @@
-import type { APIRequestContext } from '@playwright/test';
-import { test, expect, seedCart } from '@fixtures';
+import { test, expect } from '@fixtures';
 import { disableChaos, loginAsAdmin, loginAsUser } from '@api';
 import { routes } from '@config';
 import { seededProducts } from '@data';
-import {
-  createIsolatedUserContext,
-  syncSessionFromApi,
-  createOrderWithProviderFallback
-} from '@test-helpers';
+import { hasPotentialStackTrace } from '@utils';
+import { createIsolatedUserContext, syncSessionFromApi } from '@test-helpers';
+import { createOrderForCurrentSession } from '@test-helpers/helpers/authorization';
 
 /**
  * =============================================================================
@@ -52,32 +49,6 @@ import {
  *
  * =============================================================================
  */
-
-type OrderCreateResponse = {
-  status?: 'success' | 'error';
-  orderId?: string;
-  message?: string;
-};
-
-const createOrderForCurrentSession = async (
-  api: APIRequestContext,
-  items: Array<{ id: number; quantity?: number }>
-): Promise<string> => {
-  await seedCart(api, items);
-
-  const result = await createOrderWithProviderFallback(api);
-  expect(result.status).toBe(200);
-
-  const body = result.body as OrderCreateResponse;
-  expect(body.status).toBe('success');
-  expect(body.orderId).toMatch(/^ORD-/);
-
-  return body.orderId as string;
-};
-
-const hasStackTraceSignature = (text: string): boolean => {
-  return /(referenceerror|typeerror|syntaxerror|node_modules|\bat\s+\S+\s*\()/i.test(text);
-};
 
 test.use({ seedData: true });
 
@@ -258,7 +229,7 @@ test.describe('authorization security @security @authz', () => {
 
       expect(res.status()).toBe(404);
       expect(/invoice not found|404/i.test(text)).toBe(true);
-      expect(hasStackTraceSignature(text)).toBe(false);
+      expect(hasPotentialStackTrace(text)).toBe(false);
     });
 
     test('AUTHZ-E03: role switch in same API context updates authorization @security @authz @regression', async ({

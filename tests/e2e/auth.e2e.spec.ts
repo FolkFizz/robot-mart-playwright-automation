@@ -1,8 +1,9 @@
-﻿import { test, expect } from '@fixtures';
+import { test, expect } from '@fixtures';
 import { loginAsUser, clearCart, addToCart } from '@api';
 import { users, authInputs, authErrors, inboxSubjects, seededProducts, resetTestData } from '@data';
 import { routes } from '@config';
 import { randomUser, randomPasswordPair } from '@utils';
+import { resetRequestMessagePattern } from '@test-helpers/constants/auth';
 
 /**
  * =============================================================================
@@ -13,9 +14,9 @@ import { randomUser, randomPasswordPair } from '@utils';
  * ---------------
  * 1. Login & Logout Operations
  * 2. User Registration & Validation
- * 3. Password Reset Flow (Request â†’ Email â†’ Reset)
+ * 3. Password Reset Flow (Request → Email → Reset)
  * 4. Token Security & Expiry Handling
- * 5. Cart Merge on Login (Session â†’ Database)
+ * 5. Cart Merge on Login (Session → Database)
  * 6. Email Notification System
  *
  * Test Cases Coverage:
@@ -54,8 +55,6 @@ import { randomUser, randomPasswordPair } from '@utils';
  */
 
 test.use({ seedData: true });
-
-const resetRequestMessagePattern = /sent|email|inbox|reset link|if that email exists/i;
 
 test.describe('authentication comprehensive @e2e @auth', () => {
   // ========================================================================

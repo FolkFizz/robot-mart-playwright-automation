@@ -1,13 +1,21 @@
-import type { APIRequestContext } from '@playwright/test';
 import { test, expect, seedCart } from '@fixtures';
 import { disableChaos, loginAsUser } from '@api';
-import { routes } from '@config';
-import { seededProducts } from '@data';
+import {
+  ORDER_INVENTORY_FIXED_STOCK as FIXED_STOCK,
+  orderInventoryProductId as productId
+} from '@test-helpers/constants/inventory';
 import {
   ensureProductStock,
-  createIsolatedUserContext,
-  createOrderWithProviderFallback
+  createIsolatedUserContext
 } from '@test-helpers';
+import {
+  addToCartRaw,
+  createOrderFromCart,
+  expectOrderSuccess,
+  expectStockError,
+  extractMessage,
+  getProductStock
+} from '@test-helpers/helpers/inventory-orders';
 
 /**
  * =============================================================================
@@ -47,71 +55,7 @@ import {
  * =============================================================================
  */
 
-type ProductDetailResponse = {
-  ok: boolean;
-  product: {
-    id: number;
-    name: string;
-    stock: number;
-    price: string | number;
-  };
-};
-
-type CartMutationResponse = {
-  status?: 'success' | 'error';
-  message?: string;
-  totalItems?: number;
-};
-
-type OrderCreateResponse = {
-  status?: 'success' | 'error';
-  orderId?: string;
-  message?: string;
-  error?: {
-    message?: string;
-  };
-};
-
-const FIXED_STOCK = 20;
-const productId = seededProducts[0].id;
-
-const extractMessage = (body: CartMutationResponse | OrderCreateResponse): string => {
-  if (typeof body.message === 'string') return body.message;
-  if ('error' in body && typeof body.error?.message === 'string') return body.error.message;
-  return '';
-};
-
-const getProductStock = async (api: APIRequestContext, id: number): Promise<number> => {
-  const res = await api.get(routes.api.productDetail(id), {
-    headers: { Accept: 'application/json' }
-  });
-  expect(res.status()).toBe(200);
-
-  const body = (await res.json()) as ProductDetailResponse;
-  expect(body.ok).toBe(true);
-  expect(body.product.id).toBe(id);
-  expect(typeof body.product.stock).toBe('number');
-  return body.product.stock;
-};
-
-const addToCartRaw = async (api: APIRequestContext, id: number, quantity: number) => {
-  const res = await api.post(routes.api.cartAdd, {
-    data: { productId: id, quantity },
-    headers: { Accept: 'application/json' },
-    maxRedirects: 0
-  });
-
-  const body = (await res.json().catch(() => ({}))) as CartMutationResponse;
-  return { status: res.status(), body };
-};
-
-const createOrderFromCart = async (api: APIRequestContext) => {
-  const result = await createOrderWithProviderFallback(api);
-  return {
-    status: result.status,
-    body: result.body as OrderCreateResponse
-  };
-};
+test.use({ seedData: true });
 
 test.describe('order to inventory integration @integration @orders @inventory', () => {
   test.beforeAll(async () => {
@@ -134,8 +78,7 @@ test.describe('order to inventory integration @integration @orders @inventory', 
       await seedCart(api, [{ id: productId, quantity: 1 }]);
 
       const order = await createOrderFromCart(api);
-      expect(order.status).toBe(200);
-      expect(order.body.status).toBe('success');
+      expectOrderSuccess(order);
       expect(order.body.orderId).toMatch(/^ORD-/);
 
       const stockAfter = await getProductStock(api, productId);
@@ -152,8 +95,7 @@ test.describe('order to inventory integration @integration @orders @inventory', 
       await seedCart(api, [{ id: productId, quantity: orderQuantity }]);
 
       const order = await createOrderFromCart(api);
-      expect(order.status).toBe(200);
-      expect(order.body.status).toBe('success');
+      expectOrderSuccess(order);
 
       const stockAfter = await getProductStock(api, productId);
       expect(stockAfter).toBe(stockBefore - orderQuantity);
@@ -168,8 +110,7 @@ test.describe('order to inventory integration @integration @orders @inventory', 
       await seedCart(api, [{ id: productId, quantity: stockBefore }]);
 
       const order = await createOrderFromCart(api);
-      expect(order.status).toBe(200);
-      expect(order.body.status).toBe('success');
+      expectOrderSuccess(order);
       expect(order.body.orderId).toBeTruthy();
 
       const stockAfter = await getProductStock(api, productId);
@@ -199,8 +140,7 @@ test.describe('order to inventory integration @integration @orders @inventory', 
       await seedCart(api, [{ id: productId, quantity: currentStock }]);
 
       const depletionOrder = await createOrderFromCart(api);
-      expect(depletionOrder.status).toBe(200);
-      expect(depletionOrder.body.status).toBe('success');
+      expectOrderSuccess(depletionOrder);
       expect(await getProductStock(api, productId)).toBe(0);
 
       const addAfterDepletion = await addToCartRaw(api, productId, 1);
@@ -208,9 +148,7 @@ test.describe('order to inventory integration @integration @orders @inventory', 
       expect(addAfterDepletion.body.status).toBe('error');
 
       const orderAfterDepletion = await createOrderFromCart(api);
-      expect(orderAfterDepletion.status).toBe(400);
-      expect(orderAfterDepletion.body.status).toBe('error');
-      expect(extractMessage(orderAfterDepletion.body)).toMatch(/cart is empty/i);
+      expectStockError(orderAfterDepletion);
     });
   });
 
@@ -245,7 +183,7 @@ test.describe('order to inventory integration @integration @orders @inventory', 
 
         const failedOrder = [orderA, orderB].find((order) => order.status !== 200);
         expect(failedOrder?.body.status).toBe('error');
-        expect(extractMessage(failedOrder?.body ?? {})).toMatch(/only|remain|stock/i);
+        expect(extractMessage(failedOrder?.body ?? {})).toMatch(/only|remain|stock|cart is empty/i);
 
         const stockAfter = await getProductStock(api, productId);
         expect(stockAfter).toBe(stockBefore - quantityPerUser);
@@ -269,13 +207,10 @@ test.describe('order to inventory integration @integration @orders @inventory', 
         await seedCart(userB, [{ id: productId, quantity: 1 }]);
 
         const freshOrder = await createOrderFromCart(userB);
-        expect(freshOrder.status).toBe(200);
-        expect(freshOrder.body.status).toBe('success');
+        expectOrderSuccess(freshOrder);
 
         const staleOrder = await createOrderFromCart(userA);
-        expect(staleOrder.status).toBe(400);
-        expect(staleOrder.body.status).toBe('error');
-        expect(extractMessage(staleOrder.body)).toMatch(/only|remain|stock/i);
+        expectStockError(staleOrder);
 
         const stockAfter = await getProductStock(api, productId);
         expect(stockAfter).toBe(stockBefore - 1);

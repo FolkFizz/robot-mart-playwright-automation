@@ -1,7 +1,11 @@
-import type { APIRequestContext } from '@playwright/test';
 import { test, expect } from '@fixtures';
-import { env, routes } from '@config';
-import { expectNoServerError, expectSecurityHeaders } from '@utils';
+import { routes } from '@config';
+import { expectNoServerError, expectSecurityHeaders, hasPotentialStackTrace } from '@utils';
+import {
+  getHeaders,
+  isLocalTarget,
+  isStrictHeaderMode
+} from '@test-helpers/helpers/security-headers';
 
 /**
  * =============================================================================
@@ -42,36 +46,6 @@ import { expectNoServerError, expectSecurityHeaders } from '@utils';
  *
  * =============================================================================
  */
-
-type HeaderMap = Record<string, string>;
-
-const getHostname = (baseUrl: string): string => {
-  try {
-    return new URL(baseUrl).hostname.toLowerCase();
-  } catch {
-    return 'localhost';
-  }
-};
-
-const isLocalTarget = (): boolean => {
-  const hostname = getHostname(env.baseUrl);
-  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
-};
-
-const isStrictHeaderMode = (): boolean => {
-  const value = process.env.STRICT_SECURITY_HEADERS?.trim().toLowerCase();
-  return value === '1' || value === 'true' || value === 'yes' || value === 'on';
-};
-
-const isPotentialStackTrace = (text: string): boolean => {
-  return /(referenceerror|typeerror|syntaxerror|node_modules|\bat\s+\S+\s*\()/i.test(text);
-};
-
-const getHeaders = async (api: APIRequestContext, path: string): Promise<HeaderMap> => {
-  const res = await api.get(path, { maxRedirects: 0 });
-  expectNoServerError(res);
-  return res.headers();
-};
 
 test.describe('security headers @security @headers', () => {
   test.describe('positive cases', () => {
@@ -189,7 +163,7 @@ test.describe('security headers @security @headers', () => {
       expect(res.status()).toBe(404);
 
       const body = await res.text();
-      expect(isPotentialStackTrace(body)).toBe(false);
+      expect(hasPotentialStackTrace(body)).toBe(false);
     });
 
     test('SEC-HDR-E02: header values are non-empty when provided @security @headers @regression', async ({

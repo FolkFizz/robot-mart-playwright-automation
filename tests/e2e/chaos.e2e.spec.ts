@@ -1,9 +1,13 @@
 import { test, expect, loginAndSyncSession, seedCart } from '@fixtures';
 import { disableChaos, resetChaos, setChaosConfig } from '@api';
 import { chaosStatusText, chaosToggles, seededProducts } from '@data';
+import { allChaosToggles, fullChaosConfig } from '@test-helpers/constants/chaos';
 import { routes } from '@config';
-import type { Page } from '@playwright/test';
-import { CartPage } from '@pages';
+import {
+  chaosConfigForSingleToggle,
+  gotoWithRetries,
+  reachCheckoutFromSeededCart
+} from '@test-helpers/helpers/chaos';
 
 /**
  * =============================================================================
@@ -56,92 +60,7 @@ import { CartPage } from '@pages';
  * =============================================================================
  */
 
-const allChaosToggles = [
-  chaosToggles.dynamicIds,
-  chaosToggles.flakyElements,
-  chaosToggles.layoutShift,
-  chaosToggles.zombieClicks,
-  chaosToggles.textScramble,
-  chaosToggles.latency,
-  chaosToggles.randomErrors,
-  chaosToggles.brokenAssets
-] as const;
-
-const gotoWithRetries = async (page: Page, url: string, attempts = 5): Promise<boolean> => {
-  for (let i = 0; i < attempts; i++) {
-    try {
-      const res = await page.goto(url, { waitUntil: 'domcontentloaded' });
-      if (!res || res.status() < 500) return true;
-    } catch {
-      // ignore and retry
-    }
-  }
-  return false;
-};
-
-const isCheckoutUrl = (url: string) =>
-  url.includes(routes.order.checkout) || url.includes(routes.order.place);
-const checkoutPaths = [routes.order.checkout, routes.order.place];
-const waitForCheckoutUrl = async (page: Page, timeoutMs = 2_500): Promise<boolean> => {
-  try {
-    await page.waitForURL((url) => isCheckoutUrl(url.toString()), {
-      timeout: timeoutMs,
-      waitUntil: 'domcontentloaded'
-    });
-    return true;
-  } catch {
-    return isCheckoutUrl(page.url());
-  }
-};
-
-const chaosConfigForSingleToggle = (toggle: (typeof allChaosToggles)[number]) => ({
-  dynamicIds: toggle === chaosToggles.dynamicIds,
-  flakyElements: toggle === chaosToggles.flakyElements,
-  layoutShift: toggle === chaosToggles.layoutShift,
-  zombieClicks: toggle === chaosToggles.zombieClicks,
-  textScramble: toggle === chaosToggles.textScramble,
-  latency: toggle === chaosToggles.latency,
-  randomErrors: toggle === chaosToggles.randomErrors,
-  brokenAssets: toggle === chaosToggles.brokenAssets
-});
-
-const reachCheckoutFromSeededCart = async (page: Page, attempts = 10): Promise<boolean> => {
-  const cartPage = new CartPage(page);
-
-  for (let i = 0; i < attempts; i++) {
-    try {
-      await cartPage.goto();
-      const itemCount = await cartPage.getItemCount();
-      if (itemCount < 1) {
-        await page.waitForLoadState('networkidle', { timeout: 1_500 }).catch(() => undefined);
-        continue;
-      }
-
-      await cartPage.proceedToCheckoutWithFallback().catch(() => null);
-      if (await waitForCheckoutUrl(page, 3_000)) {
-        return true;
-      }
-    } catch {
-      await page.waitForLoadState('domcontentloaded', { timeout: 1_000 }).catch(() => undefined);
-    }
-  }
-
-  // Recovery fallback: customer retries by opening checkout directly.
-  for (const path of checkoutPaths) {
-    for (let i = 0; i < 4; i++) {
-      try {
-        await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 15_000 });
-        if (isCheckoutUrl(page.url())) {
-          return true;
-        }
-      } catch {
-        await page.waitForLoadState('domcontentloaded', { timeout: 1_000 }).catch(() => undefined);
-      }
-    }
-  }
-
-  return false;
-};
+test.use({ seedData: true });
 
 test.describe('chaos comprehensive @e2e @chaos', () => {
   test.beforeAll(async () => {
@@ -269,16 +188,7 @@ test.describe('chaos comprehensive @e2e @chaos', () => {
       page,
       chaosPage
     }) => {
-      await setChaosConfig({
-        dynamicIds: true,
-        flakyElements: true,
-        layoutShift: true,
-        zombieClicks: true,
-        textScramble: true,
-        latency: true,
-        randomErrors: true,
-        brokenAssets: true
-      });
+      await setChaosConfig(fullChaosConfig);
 
       const loaded = await gotoWithRetries(page, routes.home, 5);
       expect(loaded).toBe(true);
@@ -419,16 +329,7 @@ test.describe('chaos comprehensive @e2e @chaos', () => {
       await loginAndSyncSession(api, page);
       await seedCart(api, [{ id: seededProducts[0].id }]);
 
-      await setChaosConfig({
-        dynamicIds: true,
-        flakyElements: true,
-        layoutShift: true,
-        zombieClicks: true,
-        textScramble: true,
-        latency: true,
-        randomErrors: true,
-        brokenAssets: true
-      });
+      await setChaosConfig(fullChaosConfig);
 
       const reachedUnderFullChaos = await reachCheckoutFromSeededCart(page, 10);
 

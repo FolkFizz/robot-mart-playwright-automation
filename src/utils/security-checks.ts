@@ -33,3 +33,7 @@ export const expectSecurityHeaders = (headers: HeaderMap, required = defaultSecu
 export const expectNoServerError = (res: APIResponse) => {
   expect(res.status(), 'Expected not to be 5xx').toBeLessThan(500);
 };
+
+export const hasPotentialStackTrace = (text: string): boolean => {
+  return /(referenceerror|typeerror|syntaxerror|node_modules|\bat\s+\S+\s*\()/i.test(text);
+};

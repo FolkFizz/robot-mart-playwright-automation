@@ -1,8 +1,12 @@
-import type { APIRequestContext } from '@playwright/test';
 import { test, expect, loginAndSyncSession } from '@fixtures';
 import { disableChaos } from '@api';
 import { routes } from '@config';
 import { HomePage, NotificationsPage } from '@pages';
+import type { NotificationsResponse } from '@test-helpers/types/integration-contracts';
+import {
+  fetchNotifications,
+  openDropdownAndGetUiCount
+} from '@test-helpers/helpers/notifications';
 
 /**
  * =============================================================================
@@ -46,36 +50,6 @@ import { HomePage, NotificationsPage } from '@pages';
  * =============================================================================
  */
 
-type NotificationDto = {
-  id: number;
-  type: string;
-  message: string;
-  link?: string | null;
-  is_read: boolean;
-  created_at: string;
-};
-
-type NotificationsResponse = {
-  status: 'success' | 'error';
-  notifications: NotificationDto[];
-  unreadCount: number;
-  message?: string;
-};
-
-const fetchNotifications = async (api: APIRequestContext): Promise<NotificationsResponse> => {
-  const res = await api.get(routes.api.notifications, {
-    headers: { Accept: 'application/json' }
-  });
-  expect(res.status()).toBe(200);
-
-  const body = (await res.json()) as NotificationsResponse;
-  expect(body.status).toBe('success');
-  expect(Array.isArray(body.notifications)).toBe(true);
-  expect(typeof body.unreadCount).toBe('number');
-  expect(body.unreadCount).toBeGreaterThanOrEqual(0);
-  return body;
-};
-
 test.use({ seedData: true });
 
 test.describe('notifications integration @integration @notifications', () => {
@@ -93,9 +67,7 @@ test.describe('notifications integration @integration @notifications', () => {
       homePage,
       notificationsPage
     }) => {
-      await homePage.goto();
-      await notificationsPage.open();
-      const uiCount = await notificationsPage.getNotificationCount();
+      const uiCount = await openDropdownAndGetUiCount(homePage, notificationsPage);
 
       const body = await fetchNotifications(api);
       expect(uiCount).toBeLessThanOrEqual(body.notifications.length);
@@ -171,9 +143,7 @@ test.describe('notifications integration @integration @notifications', () => {
       homePage,
       notificationsPage
     }) => {
-      await homePage.goto();
-      await notificationsPage.open();
-      const uiCount = await notificationsPage.getNotificationCount();
+      const uiCount = await openDropdownAndGetUiCount(homePage, notificationsPage);
 
       const body = await fetchNotifications(api);
       // Backend list endpoint is capped (LIMIT 10)
@@ -187,9 +157,7 @@ test.describe('notifications integration @integration @notifications', () => {
       homePage,
       notificationsPage
     }) => {
-      await homePage.goto();
-      await notificationsPage.open();
-      const uiCount = await notificationsPage.getNotificationCount();
+      const uiCount = await openDropdownAndGetUiCount(homePage, notificationsPage);
 
       const body = await fetchNotifications(api);
       // SSR dropdown renders up to 5 items; live refresh endpoint can return up to 10.
