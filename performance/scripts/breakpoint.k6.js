@@ -1,4 +1,4 @@
-import http from 'k6/http';
+﻿import http from 'k6/http';
 import { check } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 import { app } from '../lib/config.js';
@@ -6,22 +6,8 @@ import { breakpoint } from '../scenarios/index.js';
 import { breakpointThresholds } from '../thresholds/index.js';
 
 /**
- * =============================================================================
- * BREAKPOINT TEST - Maximum Throughput Discovery
- * =============================================================================
- *
- * Goal:
- * - Discover maximum sustainable requests/second before quality degrades.
- *
- * Method:
- * - Use ramping-arrival-rate scenario (10 -> 300 req/s over 4 minutes).
- * - Hit a lightweight representative endpoint: GET /api/products.
- * - Track success/failure split and response-time degradation by load.
- *
- * Notes:
- * - No explicit sleep is used; arrival-rate executor controls pacing.
- * - Non-200 responses are counted as failures for capacity analysis.
- * =============================================================================
+ * Overview: Arrival-rate breakpoint test to find maximum sustainable throughput on a lightweight catalog endpoint.
+ * Summary: Ramps request rate in stages and records latency/failure inflection points to estimate practical capacity headroom.
  */
 
 const totalRequests = new Counter('total_requests');
@@ -80,3 +66,4 @@ export function teardown() {
   console.log('4) Plan steady-state traffic at ~60-70% of that limit.');
   console.log('========================================\n');
 }
+

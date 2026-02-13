@@ -1,4 +1,4 @@
-import http from 'k6/http';
+﻿import http from 'k6/http';
 import { check, group, sleep } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 import { app, perfAuth } from '../lib/config.js';
@@ -16,23 +16,8 @@ import {
 } from '../lib/perf-helpers.js';
 
 /**
- * =============================================================================
- * RACE CONDITION TEST - Overselling Protection During Concurrent Checkout
- * =============================================================================
- *
- * Scenario:
- * - 20 VUs / 20 shared iterations (from `concurrent` scenario)
- * - All VUs try to checkout the same product at nearly the same time
- *
- * Expected outcome:
- * - Some checkouts succeed (HTTP 200)
- * - Remaining requests are rejected (HTTP 400 or cart guard redirect)
- * - No 5xx errors and no overselling behavior
- *
- * Notes:
- * - Use PERF_RESET_STOCK=true to reset inventory before running.
- * - Checkout uses mock payment endpoint to avoid real payment integration.
- * =============================================================================
+ * Overview: Concurrency stress test focused on overselling protection when many users checkout the same product simultaneously.
+ * Summary: Verifies contention handling by expecting mixed success/rejection outcomes without 5xx errors or inconsistent checkout behavior.
  */
 
 const TEST_USER = {
@@ -283,3 +268,4 @@ export function teardown() {
   console.log('Expected: controlled rejections when stock is exhausted, with no 5xx.');
   console.log('========================================\n');
 }
+

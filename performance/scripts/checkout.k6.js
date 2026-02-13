@@ -1,4 +1,4 @@
-import http from 'k6/http';
+﻿import http from 'k6/http';
 import { group, sleep, check } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 import { app, perfAuth } from '../lib/config.js';
@@ -17,40 +17,8 @@ import {
 } from '../lib/perf-helpers.js';
 
 /**
- * =============================================================================
- * CHECKOUT PERFORMANCE TESTS - Buyer Critical Path Under Spike
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Authenticate as customer (form login)
- * 2. Add item to cart
- * 3. Complete mock checkout (POST /order/api/mock-pay)
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES:
- *   - PERF-CHECKOUT-01: Checkout succeeds (200) with order creation
- *
- * CONTROLLED BUSINESS REJECTION:
- *   - PERF-CHECKOUT-02: Checkout may return 400 when stock is depleted
- *
- * Business Rules Tested:
- * ----------------------
- * - Auth Gate: Checkout requires authenticated session
- * - Transaction Integrity: Successful payment returns orderId
- * - Inventory Protection: Stock depletion returns controlled 400 responses
- *
- * Note:
- * - Modes:
- *   - CHECKOUT_MODE=strict (default): enforce checkout quality gates.
- *   - CHECKOUT_MODE=acceptance: measurement mode for unstable/shared environments.
- * - Uses mock payment intentionally to avoid calling real Stripe API.
- * - 400 responses are treated as expected business outcomes (not transport errors).
- * - If configured product IDs have no stock, setup falls back to any in-stock API product.
- * - checkout_attempts must be > 0 to avoid false-pass runs with empty cart path.
- *
- * =============================================================================
+ * Overview: Spike-oriented checkout performance test for the critical buyer path from auth to mock payment completion.
+ * Summary: Assesses checkout resilience during flash-sale load, including cart setup, auth recovery, and expected stock-based rejections.
  */
 
 // Metrics for outcome-level analysis
@@ -392,3 +360,4 @@ export default function (data) {
 
   sleep(0.5);
 }
+

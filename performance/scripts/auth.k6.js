@@ -1,4 +1,4 @@
-import http from 'k6/http';
+﻿import http from 'k6/http';
 import { check, group, sleep } from 'k6';
 import { Counter } from 'k6/metrics';
 import { app, perfAuth } from '../lib/config.js';
@@ -8,18 +8,8 @@ import { authThresholds } from '../thresholds/index.js';
 import { getLocation, isAuthRedirect } from '../lib/perf-helpers.js';
 
 /**
- * =============================================================================
- * AUTH PERFORMANCE TEST - Session Gate Stability
- * =============================================================================
- *
- * Flow per iteration:
- * 1) Submit form login
- * 2) Verify authenticated access to /profile
- *
- * Why this test exists:
- * - Auth is a hard dependency for cart/checkout scripts.
- * - It isolates login/session regressions from inventory or order side effects.
- * =============================================================================
+ * Overview: Performance checks for authentication session flow using login and post-login profile access.
+ * Summary: Measures auth gate stability under ramping load, tracking successful logins, auth redirects, and unexpected session failures.
  */
 
 const loginSuccess = new Counter('login_success');
@@ -97,3 +87,4 @@ export default function () {
   authUnexpected.add(1);
   sleep(1);
 }
+

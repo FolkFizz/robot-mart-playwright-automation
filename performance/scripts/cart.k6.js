@@ -1,4 +1,4 @@
-import http from 'k6/http';
+﻿import http from 'k6/http';
 import { check, group, sleep } from 'k6';
 import { Counter } from 'k6/metrics';
 import { app } from '../lib/config.js';
@@ -14,27 +14,8 @@ import {
 } from '../lib/perf-helpers.js';
 
 /**
- * =============================================================================
- * CART PERFORMANCE TESTS - User Journey: Shopper
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Add Item to Cart
- * 2. Get Cart Details
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES:
- *   - PERF-CART-01: Add to cart returns updated cart state
- *   - PERF-CART-02: Get cart handles empty and populated states
- *
- * Business Rules Tested:
- * ----------------------
- * - Data Consistency: Cart writes must be durable
- * - Concurrency: Multiple users adding items shouldn't deadlock
- *
- * =============================================================================
+ * Overview: Cart performance test for add-to-cart writes and cart read consistency under concurrent shopper traffic.
+ * Summary: Tracks successful adds versus controlled stock rejections while ensuring cart APIs stay responsive and free of server errors.
  */
 
 const cartCustomThresholds = {
@@ -140,3 +121,4 @@ export default function (data) {
 
   sleep(1);
 }
+

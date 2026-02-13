@@ -1,4 +1,4 @@
-import http from 'k6/http';
+﻿import http from 'k6/http';
 import { group, sleep, check } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 import { app, perfAuth } from '../lib/config.js';
@@ -17,20 +17,8 @@ import {
 } from '../lib/perf-helpers.js';
 
 /**
- * =============================================================================
- * STRESS TEST - Finding the System Breaking Point
- * =============================================================================
- *
- * Workload Mix:
- * - 50% Browse API reads (GET /api/products)
- * - 30% Cart writes (POST /api/cart/add)
- * - 20% Checkout attempts (POST /order/api/mock-pay)
- *
- * Notes:
- * - A VU maintains session and re-authenticates when needed.
- * - Checkout and cart stock rejections are treated as expected business outcomes.
- * - Use STRESS_QUICK=true for shorter local validation runs.
- * =============================================================================
+ * Overview: Stress workload with weighted browse/cart/checkout mix to locate degradation under rising pressure.
+ * Summary: Tracks performance decay and error concentration while preserving expected business rejections from stock and cart guards.
  */
 
 const QUICK_MODE = String(__ENV.STRESS_QUICK || 'false').toLowerCase() === 'true';
@@ -361,3 +349,4 @@ export function teardown() {
   console.log('   - Set auto-scaling threshold before breaking point');
   console.log('========================================\n');
 }
+

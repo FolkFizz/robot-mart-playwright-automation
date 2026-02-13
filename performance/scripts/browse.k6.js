@@ -1,4 +1,4 @@
-import http from 'k6/http';
+﻿import http from 'k6/http';
 import { check, group, sleep } from 'k6';
 import { app } from '../lib/config.js';
 import { ramping } from '../scenarios/index.js';
@@ -6,29 +6,8 @@ import { browseThresholds } from '../thresholds/index.js';
 import { toPositiveInt, createProductPool } from '../lib/perf-helpers.js';
 
 /**
- * =============================================================================
- * BROWSE PERFORMANCE TESTS - User Journey: Visitor
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Visit Home Page
- * 2. Browse Product Catalog API
- * 3. View Product Details (simulating user interest)
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES:
- *   - PERF-BROWSE-01: Home page loads within threshold
- *   - PERF-BROWSE-02: Product listing API returns 200 JSON
- *   - PERF-BROWSE-03: Product details API returns 200 JSON
- *
- * Business Rules Tested:
- * ----------------------
- * - Response Time: 95% of requests must be under 500ms
- * - Availability: Error rate must be under 1%
- *
- * =============================================================================
+ * Overview: Visitor browse performance journey covering home page, product list API, and product detail API.
+ * Summary: Validates response contract and latency behavior for read-heavy catalog interactions under a ramping traffic profile.
  */
 
 export const options = {
@@ -112,3 +91,4 @@ export default function () {
 
   sleep(1.5);
 }
+

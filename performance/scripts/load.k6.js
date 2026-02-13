@@ -1,4 +1,4 @@
-import http from 'k6/http';
+﻿import http from 'k6/http';
 import { group, sleep, check } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 import { app, perfAuth } from '../lib/config.js';
@@ -14,27 +14,8 @@ import {
 } from '../lib/perf-helpers.js';
 
 /**
- * =============================================================================
- * CONFIGURABLE LOAD TEST - End-to-End Customer Journey
- * =============================================================================
- *
- * Flow per iteration:
- * 1) Login
- * 2) Browse home page
- * 3) Add random product to cart
- * 4) Attempt mock checkout
- *
- * Modes (TEST_MODE):
- * - balanced (default): Enforce thresholds
- * - acceptance: Measurement only (no thresholds)
- *
- * Notes:
- * - Checkout uses POST /order/api/mock-pay.
- * - HTTP 400 at checkout is treated as expected business rejection (e.g. stock depletion).
- * - Optional stock reset before setup: PERF_RESET_STOCK=true with RESET_KEY.
- * - Balanced mode requires at least one in-stock target product; setup fails fast otherwise.
- * - full_journey_success is counted only when checkout returns a successful order.
- * =============================================================================
+ * Overview: Configurable end-to-end load journey combining login, browse, cart add, and mock checkout actions.
+ * Summary: Compares balanced versus acceptance run modes while monitoring full-journey completion and stage-level latency trends.
  */
 
 const TEST_MODE =
@@ -259,3 +240,4 @@ export default function (data) {
 export function teardown() {
   console.log(`\n[Teardown] Load Test Complete - mode=${TEST_MODE.toUpperCase()}\n`);
 }
+

@@ -1,36 +1,12 @@
-import http from 'k6/http';
+﻿import http from 'k6/http';
 import { check, group, sleep } from 'k6';
 import { app } from '../lib/config.js';
 import { smoke } from '../scenarios/index.js';
 import { smokeThresholds } from '../thresholds/index.js';
 
 /**
- * =============================================================================
- * SMOKE PERFORMANCE TESTS - System Health Check
- * =============================================================================
- *
- * Test Scenarios:
- * ---------------
- * 1. Home Page Availability
- * 2. Product API Basic Availability
- *
- * Test Cases Coverage:
- * --------------------
- * POSITIVE CASES:
- *   - PERF-SMOKE-01: Home page returns 200 OK
- *   - PERF-SMOKE-02: Product API returns 200 OK with JSON payload
- *   - PERF-SMOKE-03: Response time remains within smoke thresholds
- *
- * Business Rules Tested:
- * ----------------------
- * - Availability: Core entry points must be reachable (Status 200)
- * - Latency: Quick response required for basic health check
- * - Stability: No failures allowed during smoke test
- *
- * Note: This test is designed to run FAST. If this fails, do not proceed
- * to larger load tests (Browse/Cart/Checkout).
- *
- * =============================================================================
+ * Overview: Fast smoke performance probe for core availability of home and products API endpoints.
+ * Summary: Acts as preflight validation before heavier workloads by checking status, payload shape, and basic latency thresholds.
  */
 
 export const options = {
@@ -78,3 +54,4 @@ export default function () {
 
   sleep(1);
 }
+

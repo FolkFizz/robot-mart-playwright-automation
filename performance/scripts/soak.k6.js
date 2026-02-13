@@ -1,4 +1,4 @@
-import http from 'k6/http';
+﻿import http from 'k6/http';
 import { group, sleep, check } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 import { app, perfAuth } from '../lib/config.js';
@@ -16,21 +16,8 @@ import {
 } from '../lib/perf-helpers.js';
 
 /**
- * =============================================================================
- * SOAK TEST - Long-Duration Stability Validation
- * =============================================================================
- *
- * Workload per iteration:
- * 1) Ensure authenticated session
- * 2) Browse product listing API
- * 3) Add one item to cart
- * 4) Attempt mock checkout (200 success or controlled rejection)
- *
- * Notes:
- * - Use SOAK_QUICK=true for shorter local validation.
- * - Uses in-stock product IDs discovered during setup.
- * - checkout_attempts must be > 0 to avoid false-pass runs.
- * =============================================================================
+ * Overview: Long-duration soak test for endurance stability across browse, cart, and checkout operations.
+ * Summary: Monitors drift over time, including early-vs-late response trends, auth durability, and accumulation of unexpected failures.
  */
 
 const QUICK_MODE = String(__ENV.SOAK_QUICK || 'false').toLowerCase() === 'true';
@@ -348,3 +335,4 @@ export function teardown() {
   console.log('If last quarter is slower with rising errors, investigate leaks or exhaustion.');
   console.log('========================================\n');
 }
+
