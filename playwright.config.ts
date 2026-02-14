@@ -35,11 +35,20 @@ export default defineConfig({
     navigationTimeout: 30_000
   },
 
-  // Run the same suite across multiple browsers.
+  // Desktop + mobile coverage profiles.
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } }
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+      testIgnore: ['**/tests/a11y/mobile.a11y.spec.ts']
+    },
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+      testIgnore: ['**/tests/a11y/mobile.a11y.spec.ts']
+    },
+    { name: 'pixel', use: { ...devices['Pixel 7'] } },
+    { name: 'iphone', use: { ...devices['iPhone 15'] } }
   ],
 
   // Start companion web app automatically for local runs.

@@ -14,7 +14,7 @@ export type ApiTestFixtures = {
 
 export const apiTestFixtures = {
   api: async (
-    _: unknown,
+    { request: _request }: { request: APIRequestContext },
     use: (context: APIRequestContext) => Promise<void>
   ) => {
     const ctx = await createApiContext();
@@ -38,13 +38,13 @@ export const apiTestFixtures = {
     });
   },
   runA11y: async (
-    _: unknown,
+    { request: _request }: { request: APIRequestContext },
     use: (runner: typeof runA11y) => Promise<void>
   ) => {
     await use(runA11y);
   },
   expectNoA11yViolations: async (
-    _: unknown,
+    { request: _request }: { request: APIRequestContext },
     use: (runner: typeof expectNoA11yViolations) => Promise<void>
   ) => {
     await use(expectNoA11yViolations);

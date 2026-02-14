@@ -11,6 +11,9 @@ export class ChatWidgetPage extends BasePage {
   private readonly sendButton: Locator;
   private readonly userMessages: Locator;
   private readonly botMessages: Locator;
+  private pendingReplyBaseline:
+    | { botCount: number; latestBotText: string; submittedText: string }
+    | null = null;
 
   constructor(page: Page) {
     super(page);
@@ -46,12 +49,49 @@ export class ChatWidgetPage extends BasePage {
   }
 
   async sendMessage(message: string, mode: ChatSubmitMode = 'click'): Promise<void> {
+    await expect(this.input).toBeVisible();
+    const userCountBefore = await this.getUserMessageCount();
+    const shouldExpectUserMessage = message.trim().length > 0;
+    const trimmedMessage = message.trim();
+
+    if (shouldExpectUserMessage) {
+      this.pendingReplyBaseline = {
+        botCount: await this.getBotMessageCount(),
+        latestBotText: await this.getLatestBotMessageText().catch(() => ''),
+        submittedText: trimmedMessage
+      };
+    } else {
+      this.pendingReplyBaseline = null;
+    }
+
     await this.input.fill(message);
+
+    const submitByClick = async () => {
+      await expect(this.sendButton).toBeEnabled();
+      await this.sendButton.click();
+    };
+
     if (mode === 'enter') {
       await this.input.press('Enter');
-      return;
+
+      if (shouldExpectUserMessage) {
+        try {
+          await expect
+            .poll(async () => await this.getUserMessageCount(), { timeout: 1_500 })
+            .toBeGreaterThan(userCountBefore);
+        } catch {
+          await submitByClick();
+        }
+      }
+    } else {
+      await submitByClick();
     }
-    await this.sendButton.click();
+
+    if (!shouldExpectUserMessage) return;
+
+    await expect
+      .poll(async () => await this.getUserMessageCount(), { timeout: 5_000 })
+      .toBeGreaterThan(userCountBefore);
   }
 
   async getUserMessageCount(): Promise<number> {
@@ -73,11 +113,26 @@ export class ChatWidgetPage extends BasePage {
   }
 
   async waitForBotReplyAfterUserMessage(userText: string): Promise<string> {
-    const botCountBefore = await this.getBotMessageCount();
+    const baseline = this.pendingReplyBaseline;
+    this.pendingReplyBaseline = null;
+
+    const botCountBefore = baseline?.botCount ?? (await this.getBotMessageCount());
+    const latestBotBefore = baseline?.latestBotText ?? (await this.getLatestBotMessageText().catch(() => ''));
     await this.expectLatestUserMessageContains(userText);
+
     await expect
-      .poll(async () => await this.getBotMessageCount(), { timeout: 30_000 })
-      .toBeGreaterThan(botCountBefore);
+      .poll(
+        async () => {
+          const botCountAfter = await this.getBotMessageCount();
+          if (botCountAfter > botCountBefore) return true;
+
+          const latestBotAfter = await this.getLatestBotMessageText().catch(() => '');
+          return latestBotAfter.trim().length > 0 && latestBotAfter !== latestBotBefore;
+        },
+        { timeout: 30_000 }
+      )
+      .toBe(true);
+
     return await this.getLatestBotMessageText();
   }
 

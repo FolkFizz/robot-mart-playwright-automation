@@ -28,6 +28,7 @@
     "report:allure": "allure generate allure-results -o allure-report --clean",
     "report:open": "allure open allure-report",
     "report:snapshots": "node scripts/capture-report-snapshots.js",
+    "report:test": "node generate-report.js",
     "env:use:local": "node scripts/switch-env.js local",
     "env:use:prod": "node scripts/switch-env.js prod",
     "env:targets": "node scripts/show-targets.js",

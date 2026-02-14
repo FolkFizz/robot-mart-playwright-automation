@@ -93,6 +93,23 @@ export class CartPage extends BasePage {
     return await this.getItemQuantity(id);
   }
 
+  private async waitForQuantityChange(
+    id: number | string,
+    previousQuantity: number,
+    direction: 'increase' | 'decrease',
+    timeoutMs = 5_000
+  ): Promise<number> {
+    const quantityPoll = expect.poll(async () => await this.getItemQuantity(id), {
+      timeout: timeoutMs
+    });
+    if (direction === 'increase') {
+      await quantityPoll.toBeGreaterThan(previousQuantity);
+    } else {
+      await quantityPoll.toBeLessThan(previousQuantity);
+    }
+    return await this.getItemQuantity(id);
+  }
+
   // Read subtotal text.
   async getSubtotal(): Promise<string> {
     return await this.subtotalLabel.innerText();
@@ -147,13 +164,23 @@ export class CartPage extends BasePage {
 
   // Increase item quantity in cart.
   async increaseQtyById(id: number | string): Promise<void> {
+    const beforeQuantity = await this.getItemQuantity(id);
     await this.getByTestId(`cart-qty-increase-${id}`).click();
+    await this.waitForQuantityChange(id, beforeQuantity, 'increase');
     await this.waitForNetworkIdle();
   }
 
   // Decrease item quantity in cart.
   async decreaseQtyById(id: number | string): Promise<void> {
+    const beforeQuantity = await this.getItemQuantity(id);
     await this.getByTestId(`cart-qty-decrease-${id}`).click();
+    if (beforeQuantity > 1) {
+      await this.waitForQuantityChange(id, beforeQuantity, 'decrease');
+    } else {
+      await expect
+        .poll(async () => await this.getItemQuantity(id), { timeout: 3_000 })
+        .toBe(1);
+    }
     await this.waitForNetworkIdle();
   }
 

@@ -1,0 +1,17 @@
+{
+  "A11Y-MOB-P03: hidden QA menu stays non-readable when collapsed @a11y @mobile @regression": {
+    "ticket": "A11Y-101",
+    "root_cause": "QA menu trigger is implemented as a non-semantic div without interactive role/name contract.",
+    "status": "Fixing"
+  },
+  "A11Y-MOB-P02: default mobile layout reflows without horizontal overflow @a11y @mobile @regression": {
+    "ticket": "RESP-224",
+    "root_cause": "iPhone Safari layout still overflows horizontally due to fixed-width nav/content containers.",
+    "status": "Investigating"
+  },
+  "API-AUTH-N99: tampered token should be rejected @api @security": {
+    "ticket": "SEC-999",
+    "root_cause": "Dummy known issue example for reporting workflow demonstration.",
+    "status": "Won't Fix"
+  }
+}

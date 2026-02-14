@@ -2,7 +2,6 @@
 import { disableChaos } from '@api';
 import { routes } from '@config';
 import { seededProducts, catalogSearch, coupons, uiMessages } from '@data';
-import { mobileViewport } from '@test-helpers/constants/ui';
 
 /**
  * Overview: Mobile viewport E2E checks for responsive navigation and core shopping flows.
@@ -10,8 +9,7 @@ import { mobileViewport } from '@test-helpers/constants/ui';
  */
 
 test.use({
-  seedData: true,
-  viewport: mobileViewport // iPhone SE
+  seedData: true
 });
 
 test.describe('mobile viewport @e2e @mobile', () => {
@@ -24,17 +22,22 @@ test.describe('mobile viewport @e2e @mobile', () => {
   });
 
   test.describe('positive cases', () => {
-    test('MOBILE-P01: mobile navigation menu accessible @e2e @mobile @smoke', async ({
-      page,
-      homePage
-    }) => {
+    test('MOBILE-P01: mobile navigation menu accessible @e2e @mobile @smoke', async (
+      { page, homePage },
+      testInfo
+    ) => {
       // Act: Navigate to home on mobile
       await homePage.goto();
 
-      // Assert: Page loads in mobile viewport
+      // Assert: Runtime viewport matches active project device profile.
       const viewport = page.viewportSize();
-      expect(viewport?.width).toBe(mobileViewport.width);
-      expect(viewport?.height).toBe(mobileViewport.height);
+      const configuredViewport = testInfo.project.use.viewport as
+        | { width: number; height: number }
+        | undefined;
+      expect(viewport).toBeTruthy();
+      expect(configuredViewport).toBeTruthy();
+      expect(viewport?.width).toBe(configuredViewport?.width);
+      expect(viewport?.height).toBe(configuredViewport?.height);
 
       // Verify navigation exists (hamburger menu or nav links)
       expect(await homePage.isNavigationVisible()).toBe(true);
@@ -232,7 +235,12 @@ test.describe('mobile viewport @e2e @mobile', () => {
     }) => {
       // Arrange: Seed cart and rotate to landscape
       await seedCart(api, [{ id: seededProducts[0].id, quantity: 1 }]);
-      await page.setViewportSize({ width: mobileViewport.height, height: mobileViewport.width });
+      const currentViewport = page.viewportSize();
+      expect(currentViewport).toBeTruthy();
+      await page.setViewportSize({
+        width: currentViewport!.height,
+        height: currentViewport!.width
+      });
 
       // Act: Go cart -> checkout in landscape
       await cartPage.goto();
